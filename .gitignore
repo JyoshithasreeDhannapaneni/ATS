@@ -1,0 +1,26 @@
+# Ignore sensitive and environment-specific files
+config.php
+CREDENTIALS.txt
+composer.phar
+
+# Ignore runtime directories
+upload/
+attachments/
+temp/
+uploads/
+
+# Node/IDE files
+.vscode/
+.idea/
+*.swp
+
+# Composer vendor
+vendor/
+
+# CI and metadata
+.github/
+.travis.yml
+
+# OS files
+.DS_Store
+

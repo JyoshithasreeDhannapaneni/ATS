@@ -1,0 +1,43 @@
+═══════════════════════════════════════════════════════
+  OPENCATS - RUN COMMANDS
+═══════════════════════════════════════════════════════
+
+🚀 TO START THE SERVER:
+───────────────────────────────────────────────────────
+
+Option 1: Using the batch file (Easiest)
+   Double-click: START_SERVER.bat
+
+Option 2: Manual command
+   Open PowerShell/Command Prompt in the project folder:
+   
+   cd C:\Users\BhanuSrikakulam\bhanuproject\OpenCATS
+   php -S localhost:8000
+
+───────────────────────────────────────────────────────
+
+🌐 TO ACCESS THE APPLICATION:
+───────────────────────────────────────────────────────
+
+Open your web browser and go to:
+   http://localhost:8000
+
+───────────────────────────────────────────────────────
+
+🛑 TO STOP THE SERVER:
+───────────────────────────────────────────────────────
+
+Press: Ctrl + C (in the terminal where server is running)
+
+Or close the terminal window.
+
+───────────────────────────────────────────────────────
+
+📋 QUICK REFERENCE:
+───────────────────────────────────────────────────────
+
+Start Server:    php -S localhost:8000
+Access URL:      http://localhost:8000
+Stop Server:     Ctrl + C
+
+═══════════════════════════════════════════════════════
