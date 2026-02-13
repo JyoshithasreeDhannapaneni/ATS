@@ -108,9 +108,77 @@ class DatabaseConnection
      */
     public function connect()
     {
-        $this->_connection = @mysqli_connect(
-            DATABASE_HOST, DATABASE_USER, DATABASE_PASS
-        );
+        // Prefer environment variables when available, but fall back to constants.
+        $envHost = getenv('DATABASE_HOST') ?: getenv('DB_HOST') ?: getenv('MYSQL_HOST') ?: getenv('MYSQLHOST');
+        $envPort = getenv('DATABASE_PORT') ?: getenv('DB_PORT') ?: getenv('MYSQL_PORT') ?: getenv('MYSQLPORT');
+        $envUser = getenv('DATABASE_USER') ?: getenv('DB_USER') ?: getenv('MYSQL_USER') ?: getenv('MYSQLUSER');
+        $envPass = getenv('DATABASE_PASS') ?: getenv('DB_PASS') ?: getenv('MYSQL_PASS') ?: getenv('MYSQLPASSWORD');
+        $envName = getenv('DATABASE_NAME') ?: getenv('DB_NAME') ?: getenv('MYSQL_DATABASE') ?: getenv('MYSQL_DATABASE');
+
+        $host = $envHost ?: (defined('DATABASE_HOST') ? DATABASE_HOST : 'localhost');
+        $port = ($envPort !== false && $envPort !== '') ? (int) $envPort : (defined('DATABASE_PORT') ? (int) DATABASE_PORT : 0);
+        $user = $envUser ?: (defined('DATABASE_USER') ? DATABASE_USER : '');
+        $pass = $envPass ?: (defined('DATABASE_PASS') ? DATABASE_PASS : '');
+        $dbName = $envName ?: (defined('DATABASE_NAME') ? DATABASE_NAME : '');
+
+        // Try connecting using provided host/port. If DATABASE_NAME is available, pass it to mysqli_connect
+        $this->_connection = false;
+        if ($port > 0)
+        {
+            if (!empty($dbName))
+            {
+                $this->_connection = @mysqli_connect($host, $user, $pass, $dbName, $port);
+            }
+            else
+            {
+                $this->_connection = @mysqli_connect($host, $user, $pass, null, $port);
+            }
+        }
+        else
+        {
+            if (!empty($dbName))
+            {
+                $this->_connection = @mysqli_connect($host, $user, $pass, $dbName);
+            }
+            else
+            {
+                $this->_connection = @mysqli_connect($host, $user, $pass);
+            }
+        }
+
+        // If connection failed due to missing socket (common when 'localhost' tries UNIX socket),
+        // retry using TCP loopback address.
+        if (!$this->_connection)
+        {
+            $connectErr = mysqli_connect_error();
+            if ($host === 'localhost' || stripos($connectErr, 'No such file or directory') !== false)
+            {
+                $tcpHost = '127.0.0.1';
+                if ($port > 0)
+                {
+                    if (!empty($dbName))
+                    {
+                        $this->_connection = @mysqli_connect($tcpHost, $user, $pass, $dbName, $port);
+                    }
+                    else
+                    {
+                        $this->_connection = @mysqli_connect($tcpHost, $user, $pass, null, $port);
+                    }
+                }
+                else
+                {
+                    if (!empty($dbName))
+                    {
+                        $this->_connection = @mysqli_connect($tcpHost, $user, $pass, $dbName);
+                    }
+                    else
+                    {
+                        $this->_connection = @mysqli_connect($tcpHost, $user, $pass);
+                    }
+                }
+            }
+        }
+
         // handle connection failures
         if (!$this->_connection)
         {
@@ -125,20 +193,27 @@ class DatabaseConnection
             );
             return false;
         }
-        mysqli_set_charset($this->_connection, SQL_CHARACTER_SET);
-        $isDBSelected = @mysqli_select_db($this->_connection, DATABASE_NAME);
-        if (!$isDBSelected)
-        {
-            $error = "errno: " . mysqli_connect_errno() . ", ";
-            $error .= "error: " . mysqli_connect_error();
 
-            die(
-                '<!-- NOSPACEFILTER --><p style="background: #ec3737; '
-                . 'padding: 4px; margin-top: 0; font: normal normal bold '
-                . '12px/130% Arial, Tahoma, sans-serif;">Error Selecting '
-                . "Database</p><pre>\n\n" . $error . "</pre>\n\n"
-            );
-            return false;
+        // Ensure charset is set.
+        mysqli_set_charset($this->_connection, SQL_CHARACTER_SET);
+
+        // If we didn't pass the DB name to mysqli_connect above, select it now.
+        if (!empty($dbName))
+        {
+            $isDBSelected = @mysqli_select_db($this->_connection, $dbName);
+            if (!$isDBSelected)
+            {
+                $error = "errno: " . mysqli_connect_errno() . ", ";
+                $error .= "error: " . mysqli_connect_error();
+
+                die(
+                    '<!-- NOSPACEFILTER --><p style="background: #ec3737; '
+                    . 'padding: 4px; margin-top: 0; font: normal normal bold '
+                    . '12px/130% Arial, Tahoma, sans-serif;">Error Selecting '
+                    . "Database</p><pre>\n\n" . $error . "</pre>\n\n"
+                );
+                return false;
+            }
         }
 
         return true;
