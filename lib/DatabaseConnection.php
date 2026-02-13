@@ -108,76 +108,24 @@ class DatabaseConnection
      */
     public function connect()
     {
-        // Prefer environment variables when available, but fall back to constants.
-        $envHost = getenv('DATABASE_HOST') ?: getenv('DB_HOST') ?: getenv('MYSQL_HOST') ?: getenv('MYSQLHOST');
-        $envPort = getenv('DATABASE_PORT') ?: getenv('DB_PORT') ?: getenv('MYSQL_PORT') ?: getenv('MYSQLPORT');
-        $envUser = getenv('DATABASE_USER') ?: getenv('DB_USER') ?: getenv('MYSQL_USER') ?: getenv('MYSQLUSER');
-        $envPass = getenv('DATABASE_PASS') ?: getenv('DB_PASS') ?: getenv('MYSQL_PASS') ?: getenv('MYSQLPASSWORD');
-        $envName = getenv('DATABASE_NAME') ?: getenv('DB_NAME') ?: getenv('MYSQL_DATABASE') ?: getenv('MYSQL_DATABASE');
+        // Disable mysqli exception mode so we can handle errors gracefully.
+        // PHP 8.1+ defaults to throwing mysqli_sql_exception which bypasses @ suppression.
+        mysqli_report(MYSQLI_REPORT_OFF);
 
-        $host = $envHost ?: (defined('DATABASE_HOST') ? DATABASE_HOST : 'localhost');
-        $port = ($envPort !== false && $envPort !== '') ? (int) $envPort : (defined('DATABASE_PORT') ? (int) DATABASE_PORT : 0);
-        $user = $envUser ?: (defined('DATABASE_USER') ? DATABASE_USER : '');
-        $pass = $envPass ?: (defined('DATABASE_PASS') ? DATABASE_PASS : '');
-        $dbName = $envName ?: (defined('DATABASE_NAME') ? DATABASE_NAME : '');
+        // Read from constants (set in config.php, which reads env vars on Render).
+        $host   = defined('DATABASE_HOST') ? DATABASE_HOST : '127.0.0.1';
+        $user   = defined('DATABASE_USER') ? DATABASE_USER : '';
+        $pass   = defined('DATABASE_PASS') ? DATABASE_PASS : '';
+        $dbName = defined('DATABASE_NAME') ? DATABASE_NAME : '';
+        $port   = defined('DATABASE_PORT') ? (int) DATABASE_PORT : 3306;
 
-        // Try connecting using provided host/port. If DATABASE_NAME is available, pass it to mysqli_connect
-        $this->_connection = false;
-        if ($port > 0)
-        {
-            if (!empty($dbName))
-            {
-                $this->_connection = @mysqli_connect($host, $user, $pass, $dbName, $port);
-            }
-            else
-            {
-                $this->_connection = @mysqli_connect($host, $user, $pass, null, $port);
-            }
-        }
-        else
-        {
-            if (!empty($dbName))
-            {
-                $this->_connection = @mysqli_connect($host, $user, $pass, $dbName);
-            }
-            else
-            {
-                $this->_connection = @mysqli_connect($host, $user, $pass);
-            }
+        // Force TCP if someone still has 'localhost' — prevents socket error
+        if ($host === 'localhost') {
+            $host = '127.0.0.1';
         }
 
-        // If connection failed due to missing socket (common when 'localhost' tries UNIX socket),
-        // retry using TCP loopback address.
-        if (!$this->_connection)
-        {
-            $connectErr = mysqli_connect_error();
-            if ($host === 'localhost' || stripos($connectErr, 'No such file or directory') !== false)
-            {
-                $tcpHost = '127.0.0.1';
-                if ($port > 0)
-                {
-                    if (!empty($dbName))
-                    {
-                        $this->_connection = @mysqli_connect($tcpHost, $user, $pass, $dbName, $port);
-                    }
-                    else
-                    {
-                        $this->_connection = @mysqli_connect($tcpHost, $user, $pass, null, $port);
-                    }
-                }
-                else
-                {
-                    if (!empty($dbName))
-                    {
-                        $this->_connection = @mysqli_connect($tcpHost, $user, $pass, $dbName);
-                    }
-                    else
-                    {
-                        $this->_connection = @mysqli_connect($tcpHost, $user, $pass);
-                    }
-                }
-            }
-        }
+        // Attempt connection with host, user, pass, db name AND port
+        $this->_connection = $this->_tryConnect($host, $user, $pass, $dbName, $port);
 
         // handle connection failures
         if (!$this->_connection)
@@ -189,15 +137,16 @@ class DatabaseConnection
                 '<!-- NOSPACEFILTER --><p style="background: #ec3737; padding:'
                 . ' 4px; margin-top: 0; font: normal normal bold 12px/130% '
                 . 'Arial, Tahoma, sans-serif;">Error Connecting '
-                . "to Database</p><pre>\n\n" . $error . "</pre>\n\n"
+                . "to Database</p><pre>\n\nHost: " . $host . ", Port: " . $port
+                . ", User: " . $user . ", DB: " . $dbName
+                . "\n\n" . $error . "</pre>\n\n"
             );
             return false;
         }
 
-        // Ensure charset is set.
         mysqli_set_charset($this->_connection, SQL_CHARACTER_SET);
 
-        // If we didn't pass the DB name to mysqli_connect above, select it now.
+        // Select DB if not already selected via the connect call
         if (!empty($dbName))
         {
             $isDBSelected = @mysqli_select_db($this->_connection, $dbName);
@@ -217,6 +166,23 @@ class DatabaseConnection
         }
 
         return true;
+    }
+
+    /**
+     * Helper: attempt a single mysqli_connect, catching exceptions (PHP 8.1+).
+     * Returns the connection resource on success, or false on failure.
+     */
+    private function _tryConnect($host, $user, $pass, $dbName, $port)
+    {
+        try
+        {
+            return @mysqli_connect($host, $user, $pass, $dbName ?: null, $port);
+        }
+        catch (\Exception $e)
+        {
+            // Connection failed — return false so the caller can report.
+            return false;
+        }
     }
 
     /**

@@ -20,11 +20,31 @@ if( !defined('LEGACY_ROOT') )
     define('LEGACY_ROOT', '.');
 }
 
-/* Database configuration. */
-define('DATABASE_USER', 'YOUR_DATABASE_USER');
-define('DATABASE_PASS', 'YOUR_DATABASE_PASSWORD');
-define('DATABASE_HOST', 'localhost');
-define('DATABASE_NAME', 'cats_dev');
+/* Database configuration for Render deployment.
+ *
+ * Set these as Environment Variables in Render Dashboard:
+ *   DATABASE_HOST, DATABASE_PORT, DATABASE_USER, DATABASE_PASS, DATABASE_NAME
+ *
+ * NEVER use 'localhost' on Render — there is no local MySQL server.
+ */
+define('DATABASE_USER', getenv('DATABASE_USER') ?: '');
+define('DATABASE_PASS', getenv('DATABASE_PASS') ?: '');
+define('DATABASE_NAME', getenv('DATABASE_NAME') ?: '');
+
+/* Force TCP connection — avoids UNIX socket "No such file or directory" error */
+$dbHost = getenv('DATABASE_HOST') ?: '127.0.0.1';
+if ($dbHost === 'localhost') {
+    $dbHost = '127.0.0.1';
+}
+define('DATABASE_HOST', $dbHost);
+
+/* Default MySQL port */
+define('DATABASE_PORT', getenv('DATABASE_PORT') ?: 3306);
+
+/* Safety check — stop the app early if DB is not configured */
+if (!DATABASE_HOST || !DATABASE_USER || !DATABASE_NAME) {
+    die('Database environment variables are not set. Please configure DATABASE_HOST, DATABASE_USER, DATABASE_PASS, DATABASE_NAME in Render Environment.');
+}
 
 /* Authentication Configuration
  * Options are sql, ldap, sql+ldap
