@@ -17,19 +17,44 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
         <script type="text/javascript">
             window.CATSUserDateFormat = '<?php echo($_SESSION['CATS']->isDateDMY() ? 'DD-MM-YY' : 'MM-DD-YY'); ?>';
             
+            // Initialize tabs on page load
+            window.addEventListener('DOMContentLoaded', function() {
+                // Hide all tabs first
+                document.getElementById('resumeTabContent').style.setProperty('display', 'none', 'important');
+                document.getElementById('feedbackTabContent').style.setProperty('display', 'none', 'important');
+                document.getElementById('emailTabContent').style.setProperty('display', 'none', 'important');
+                
+                // Show only Resume tab by default
+                var resumeTab = document.getElementById('resumeTabContent');
+                resumeTab.style.setProperty('display', 'flex', 'important');
+                resumeTab.style.setProperty('flex-direction', 'row', 'important');
+                resumeTab.style.setProperty('width', '100%', 'important');
+            });
+            
             function showTab(tabName) {
-                // Hide all tab contents
-                document.getElementById('resumeTabContent').style.display = 'none';
-                document.getElementById('feedbackTabContent').style.display = 'none';
-                document.getElementById('emailTabContent').style.display = 'none';
+                // Hide all tab contents with !important override
+                var resumeTab = document.getElementById('resumeTabContent');
+                var feedbackTab = document.getElementById('feedbackTabContent');
+                var emailTab = document.getElementById('emailTabContent');
+                
+                resumeTab.style.setProperty('display', 'none', 'important');
+                feedbackTab.style.setProperty('display', 'none', 'important');
+                emailTab.style.setProperty('display', 'none', 'important');
                 
                 // Remove active class from all tabs
                 document.getElementById('resumeTab').classList.remove('active');
                 document.getElementById('feedbackTab').classList.remove('active');
                 document.getElementById('emailTab').classList.remove('active');
                 
-                // Show selected tab content
-                document.getElementById(tabName + 'TabContent').style.display = 'block';
+                // Show selected tab content with !important
+                var tabContent = document.getElementById(tabName + 'TabContent');
+                if (tabName === 'resume' || tabName === 'feedback' || tabName === 'email') {
+                    tabContent.style.setProperty('display', 'flex', 'important');
+                    tabContent.style.setProperty('flex-direction', 'row', 'important');
+                    tabContent.style.setProperty('width', '100%', 'important');
+                } else {
+                    tabContent.style.setProperty('display', 'block', 'important');
+                }
                 document.getElementById(tabName + 'Tab').classList.add('active');
             }
             
@@ -51,426 +76,660 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
         </script>
 
         <style type="text/css">
-            * {
-                box-sizing: border-box;
-            }
-            /* Override main.css styles that cause spacing issues */
-            body {
-                padding: 8px 0 8px 0 !important;
-            }
-            #main {
-                padding: 0 !important;
-                margin: 0 !important;
-            }
+            * { box-sizing: border-box; }
+
+            /* Page-level overrides for candidate detail */
+            body { padding: 0 !important; }
+            #main { margin: 0 16px !important; padding-top: 1.8em !important; }
             #contents {
                 position: relative;
-                background: #f5f5f5 !important;
+                background: var(--gray-50, #f9fafb) !important;
                 min-height: 100vh;
                 width: 100% !important;
-                margin: 0 !important;
                 padding: 0 !important;
                 box-shadow: none !important;
+                border-radius: 0 0 8px 8px !important;
             }
+
             .candidate-page-wrapper {
-                background: #f5f5f5;
+                background: var(--gray-50, #f9fafb);
                 min-height: 100vh;
                 padding: 0;
                 position: relative;
                 width: 100%;
-                margin: 0;
             }
+
             .status-indicator-top-right {
                 position: absolute;
-                top: 20px;
+                top: 16px;
                 right: 20px;
-                font-weight: bold;
-                font-size: 14px;
-                z-index: 1000;
+                font-weight: 600;
+                font-size: 13px;
+                z-index: 100;
                 background: #fff;
-                padding: 10px 15px;
-                border-radius: 4px;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                padding: 8px 16px;
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+                border: 1px solid var(--gray-200, #e5e7eb);
             }
+
             .candidate-main-panel {
                 background: #fff;
                 border-radius: 0;
                 box-shadow: none;
                 margin: 0 !important;
-                max-width: 100% !important;
                 width: 100% !important;
                 display: flex;
                 flex-direction: column;
                 padding: 0 !important;
             }
+
             .candidate-header-section {
-                padding: 25px 30px 20px 30px;
-                border-bottom: 1px solid #e0e0e0;
+                padding: 24px 28px 0 28px;
+                border-bottom: none;
                 position: relative;
                 background: #fff;
             }
+
             .candidate-header-section h1 {
-                font-size: 32px;
-                font-weight: bold;
-                color: #333;
+                font-size: 36px;
+                font-weight: 700;
+                color: var(--gray-900, #111827);
                 margin: 0 0 20px 0;
                 padding: 0;
                 line-height: 1.2;
+                letter-spacing: -0.02em;
+                font-family: 'Inter', system-ui, sans-serif;
             }
+
             .status-badge {
-                padding: 6px 12px;
-                border-radius: 4px;
-                font-size: 13px;
+                padding: 5px 12px;
+                border-radius: 20px;
+                font-size: 12px;
+                font-weight: 600;
                 display: inline-block;
+                letter-spacing: 0.02em;
             }
-            .status-selected {
-                background: #28a745;
-                color: #fff;
-            }
-            .status-rejected {
-                background: #dc3545;
-                color: #fff;
-            }
-            .status-none {
-                background: #6c757d;
-                color: #fff;
-            }
+
+            .status-selected { background: #dcfce7; color: #16a34a; }
+            .status-rejected { background: #fee2e2; color: #dc2626; }
+            .status-none     { background: #f3f4f6; color: #6b7280; }
+
             .candidate-tabs {
                 display: flex;
                 list-style: none;
                 margin: 0;
-                padding: 0;
-                border-bottom: 2px solid #e0e0e0;
+                padding: 0 28px;
+                border-bottom: 2px solid var(--gray-200, #e5e7eb);
+                background: #fff;
+                gap: 0;
+                align-items: center;
+                justify-content: space-between;
             }
-            .candidate-tabs li {
+            
+            .candidate-tabs-wrapper {
+                display: flex;
+                align-items: center;
+                gap: 0;
+            }
+            
+            .candidate-status-inline {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 0 20px;
+                font-size: 14px;
+                font-weight: 500;
+                color: var(--gray-600, #4b5563);
+            }
+
+            .candidate-tabs li { margin: 0; padding: 0; }
+            
+            .candidate-tabs ul {
+                display: flex;
+                list-style: none;
                 margin: 0;
                 padding: 0;
+                gap: 0;
             }
+
             .candidate-tabs li a {
                 display: block;
-                padding: 12px 25px;
-                text-decoration: none;
-                color: #666;
+                padding: 12px 24px;
+                text-decoration: none !important;
+                color: var(--gray-500, #6b7280);
                 font-weight: 500;
+                font-size: 14px;
                 border-bottom: 3px solid transparent;
                 cursor: pointer;
-                transition: all 0.3s;
+                transition: all 0.2s ease;
+                font-family: 'Inter', system-ui, sans-serif;
+                margin-bottom: -2px;
             }
+
             .candidate-tabs li.active a {
-                color: #28a745;
-                border-bottom: 3px solid #28a745;
+                color: var(--primary, #2563eb);
+                border-bottom-color: var(--primary, #2563eb);
+                font-weight: 600;
             }
+
             .candidate-tabs li a:hover {
-                color: #28a745;
-                background: #f8f9fa;
+                color: var(--primary, #2563eb);
+                background: var(--gray-50, #f9fafb);
+                border-radius: 6px 6px 0 0;
             }
+
             .tab-content-container {
                 display: flex !important;
                 flex-direction: row !important;
-                min-height: 600px;
-                align-items: flex-start;
+                min-height: 550px;
+                align-items: stretch;
                 width: 100% !important;
                 margin: 0 !important;
                 padding: 0 !important;
                 gap: 0 !important;
                 border: none !important;
+                box-sizing: border-box !important;
             }
+            
+            /* Make resumeTabContent a flex container for side-by-side layout */
+            #resumeTabContent {
+                display: flex;
+                flex-direction: row;
+                width: 100%;
+                min-height: 550px;
+                align-items: stretch;
+                margin: 0;
+                padding: 0;
+                gap: 0;
+                box-sizing: border-box;
+            }
+            
+            /* Make feedbackTabContent a flex container for side-by-side layout */
+            #feedbackTabContent {
+                display: none;
+                flex-direction: row;
+                width: 100%;
+                min-height: 550px;
+                align-items: stretch;
+                margin: 0;
+                padding: 0;
+                gap: 0;
+                box-sizing: border-box;
+            }
+            
+            #feedbackTabContent .tab-left-panel {
+                flex: 0 0 65% !important;
+                width: 65% !important;
+                max-width: 65% !important;
+                min-width: 65% !important;
+                border-right: 1px solid var(--gray-200, #e5e7eb) !important;
+            }
+            
+            /* Make emailTabContent a flex container for side-by-side layout */
+            #emailTabContent {
+                display: none;
+                flex-direction: row;
+                width: 100%;
+                min-height: 550px;
+                align-items: stretch;
+                margin: 0;
+                padding: 0;
+                gap: 0;
+                box-sizing: border-box;
+            }
+            
+            #emailTabContent .tab-left-panel {
+                flex: 0 0 65% !important;
+                width: 65% !important;
+                max-width: 65% !important;
+                min-width: 65% !important;
+                border-right: 1px solid var(--gray-200, #e5e7eb) !important;
+            }
+            
             .tab-left-panel {
-                flex: 0 0 60% !important;
-                width: 60% !important;
-                max-width: 60% !important;
-                min-width: 60% !important;
-                padding: 25px 30px;
-                border-right: 1px solid #e0e0e0;
-                background: #fafafa;
+                flex: 0 0 70% !important;
+                width: 70% !important;
+                max-width: 70% !important;
+                min-width: 70% !important;
+                padding: 24px 28px;
+                border-right: 1px solid var(--gray-200, #e5e7eb);
+                background: var(--gray-50, #f9fafb);
                 overflow-y: auto;
-                max-height: calc(100vh - 250px);
-                min-height: 600px;
+                max-height: calc(100vh - 200px);
+                min-height: 550px;
                 margin: 0 !important;
                 float: none !important;
+                box-sizing: border-box !important;
             }
+            
+            #resumeTabContent .tab-left-panel {
+                flex: 0 0 65% !important;
+                width: 65% !important;
+                max-width: 65% !important;
+                min-width: 65% !important;
+                border-right: 1px solid var(--gray-200, #e5e7eb) !important;
+            }
+            
             .tab-right-panel {
-                flex: 0 0 40% !important;
-                width: 40% !important;
-                max-width: 40% !important;
-                min-width: 40% !important;
-                padding: 25px 30px;
-                background: #fff;
+                flex: 0 0 30% !important;
+                width: 30% !important;
+                max-width: 30% !important;
+                min-width: 30% !important;
+                padding: 20px 24px;
+                background: #fff !important;
                 overflow-y: auto;
-                max-height: calc(100vh - 250px);
-                min-height: 600px;
+                max-height: calc(100vh - 200px);
+                min-height: 550px;
                 position: sticky;
                 top: 0;
                 align-self: flex-start;
                 margin: 0 !important;
                 float: none !important;
+                display: flex !important;
+                flex-direction: column !important;
+                box-sizing: border-box !important;
             }
+            
+            #resumeTabContent .tab-right-panel {
+                flex: 0 0 35% !important;
+                width: 35% !important;
+                min-width: 35% !important;
+                max-width: 35% !important;
+                display: flex !important;
+                flex-direction: column !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+                height: auto !important;
+                overflow-y: auto !important;
+                background: #fff !important;
+                padding: 20px 24px !important;
+            }
+            
+            .tab-right-panel h3 {
+                font-size: 15px !important;
+                margin-top: 0 !important;
+                margin-bottom: 16px !important;
+                color: #1f2937 !important;
+                font-weight: 700 !important;
+            }
+            
+            .tab-right-panel .action-buttons {
+                flex-direction: column;
+                gap: 8px;
+                margin-top: 16px;
+                width: 100%;
+            }
+            
+            .tab-right-panel .action-buttons .btn {
+                font-size: 12px;
+                padding: 10px 12px;
+                width: 100%;
+                white-space: normal;
+                word-wrap: break-word;
+            }
+
             .status-badge-panel {
-                background: #f0f7ff;
-                padding: 12px 15px;
+                background: #eff6ff;
+                padding: 12px 16px;
                 margin-bottom: 20px;
-                border-left: 4px solid #0066cc;
-                font-weight: bold;
-                border-radius: 4px;
+                margin-top: 0;
+                border-left: 4px solid var(--primary, #2563eb);
+                font-weight: 600;
+                border-radius: 0 6px 6px 0;
+                font-size: 13px;
+                width: 100%;
+                box-sizing: border-box;
             }
+
             .status-badge-panel.selected {
-                border-left-color: #28a745;
-                background: #f0fff4;
-                color: #28a745;
+                border-left-color: #16a34a;
+                background: #f0fdf4;
+                color: #16a34a;
             }
+
             .status-badge-panel.rejected {
-                border-left-color: #dc3545;
-                background: #fff5f5;
-                color: #dc3545;
+                border-left-color: #dc2626;
+                background: #fef2f2;
+                color: #dc2626;
             }
+            
+            .tab-right-panel .status-badge-panel {
+                margin-top: 0;
+                margin-bottom: 20px;
+            }
+
             .resume-viewer {
                 background: #fff;
-                padding: 25px;
-                border: 1px solid #e0e0e0;
-                border-radius: 4px;
+                padding: 24px;
+                border: 1px solid var(--gray-200, #e5e7eb);
+                border-radius: 8px;
                 white-space: pre-wrap;
-                font-family: 'Arial', sans-serif;
-                font-size: 14px;
+                font-family: 'Inter', system-ui, sans-serif;
+                font-size: 13px;
                 line-height: 1.8;
-                color: #333;
-                min-height: 500px;
+                color: var(--gray-700, #374151);
+                min-height: 400px;
+                box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+                width: 100%;
+                max-width: 100%;
+                box-sizing: border-box;
             }
+
             .resume-viewer h3,
             .resume-viewer h4 {
-                margin-top: 20px;
-                margin-bottom: 10px;
-                color: #333;
+                margin-top: 18px;
+                margin-bottom: 8px;
+                color: var(--gray-800, #1f2937);
             }
-            .resume-viewer p {
-                margin-bottom: 15px;
-            }
-            .resume-viewer ul {
-                margin-left: 20px;
-                margin-bottom: 15px;
-            }
+
+            .resume-viewer p { margin-bottom: 12px; }
+            .resume-viewer ul { margin-left: 18px; margin-bottom: 12px; }
+
             .feedback-two-column {
                 display: flex;
-                gap: 20px;
+                gap: 16px;
                 align-items: flex-start;
                 width: 100%;
             }
-            .feedback-input-column {
-                flex: 1;
-                background: #fff;
-                padding: 20px;
-                border: 1px solid #e0e0e0;
-                border-radius: 4px;
-                min-height: 500px;
-                box-sizing: border-box;
-            }
+
+            .feedback-input-column,
             .feedback-display-column {
                 flex: 1;
                 background: #fff;
                 padding: 20px;
-                border: 1px solid #e0e0e0;
-                border-radius: 4px;
-                min-height: 500px;
-                box-sizing: border-box;
+                border: 1px solid var(--gray-200, #e5e7eb);
+                border-radius: 8px;
+                min-height: 400px;
+                box-shadow: 0 1px 2px rgba(0,0,0,0.04);
             }
-            .form-group {
-                margin-bottom: 15px;
-            }
+
+            .form-group { margin-bottom: 14px; }
+
             .form-group label {
                 display: block;
-                font-weight: bold;
+                font-weight: 600;
                 margin-bottom: 5px;
-                color: #333;
+                color: var(--gray-700, #374151);
                 font-size: 13px;
+                font-family: 'Inter', system-ui, sans-serif;
             }
+
             .form-group select,
             .form-group textarea {
                 width: 100%;
-                padding: 8px;
-                border: 1px solid #ddd;
-                border-radius: 4px;
+                padding: 8px 10px;
+                border: 1px solid var(--gray-300, #d1d5db);
+                border-radius: 6px;
                 font-size: 13px;
-                font-family: Arial, sans-serif;
+                font-family: 'Inter', system-ui, sans-serif;
+                transition: all 0.2s ease;
+                outline: none;
             }
+
+            .form-group select:focus,
+            .form-group textarea:focus {
+                border-color: var(--primary, #2563eb);
+                box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+            }
+
             .form-group textarea {
-                min-height: 100px;
+                min-height: 90px;
                 resize: vertical;
             }
+
             .btn-primary {
-                background: #28a745;
+                background: var(--primary, #2563eb);
                 color: #fff;
                 border: none;
-                padding: 10px 20px;
-                border-radius: 4px;
+                padding: 10px 22px;
+                border-radius: 6px;
                 cursor: pointer;
-                font-weight: bold;
+                font-weight: 600;
                 font-size: 13px;
+                font-family: 'Inter', system-ui, sans-serif;
+                transition: all 0.2s ease;
             }
+
             .btn-primary:hover {
-                background: #218838;
+                background: var(--primary-dark, #1d4ed8);
+                box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
             }
+
             .email-two-column {
                 display: flex;
-                gap: 20px;
+                gap: 16px;
                 align-items: flex-start;
                 width: 100%;
             }
-            .email-list-column {
-                flex: 1;
-                background: #fff;
-                padding: 20px;
-                border: 1px solid #e0e0e0;
-                border-radius: 4px;
-                max-height: 600px;
-                overflow-y: auto;
-                min-height: 500px;
-                box-sizing: border-box;
-            }
+
+            .email-list-column,
             .email-detail-column {
                 flex: 1;
                 background: #fff;
                 padding: 20px;
-                border: 1px solid #e0e0e0;
-                border-radius: 4px;
-                min-height: 500px;
-                box-sizing: border-box;
+                border: 1px solid var(--gray-200, #e5e7eb);
+                border-radius: 8px;
+                min-height: 400px;
+                box-shadow: 0 1px 2px rgba(0,0,0,0.04);
             }
+
+            .email-list-column {
+                max-height: 550px;
+                overflow-y: auto;
+            }
+
             .email-list-item {
-                padding: 15px;
-                margin-bottom: 10px;
-                border: 1px solid #e0e0e0;
-                border-radius: 4px;
-                cursor: pointer;
-                transition: all 0.2s;
-            }
-            .email-list-item:hover {
-                background: #f8f9fa;
-                border-color: #28a745;
-            }
-            .email-list-item.active {
-                background: #f0fff4;
-                border-color: #28a745;
-            }
-            .email-sender {
-                font-weight: bold;
-                color: #333;
-                margin-bottom: 5px;
-            }
-            .email-recipient {
-                color: #666;
-                font-size: 12px;
-                margin-bottom: 5px;
-            }
-            .email-date {
-                color: #999;
-                font-size: 11px;
-                margin-bottom: 5px;
-            }
-            .email-subject {
-                color: #0066cc;
-                font-weight: 500;
+                padding: 14px;
                 margin-bottom: 8px;
+                border: 1px solid var(--gray-200, #e5e7eb);
+                border-radius: 8px;
+                cursor: pointer;
+                transition: all 0.2s ease;
             }
+
+            .email-list-item:hover {
+                background: var(--gray-50, #f9fafb);
+                border-color: var(--primary, #2563eb);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+            }
+
+            .email-list-item.active {
+                background: #eff6ff;
+                border-color: var(--primary, #2563eb);
+            }
+
+            .email-sender {
+                font-weight: 600;
+                color: var(--gray-800, #1f2937);
+                margin-bottom: 4px;
+                font-size: 13px;
+            }
+
+            .email-recipient {
+                color: var(--gray-500, #6b7280);
+                font-size: 12px;
+                margin-bottom: 4px;
+            }
+
+            .email-date {
+                color: var(--gray-400, #9ca3af);
+                font-size: 11px;
+                margin-bottom: 4px;
+            }
+
+            .email-subject {
+                color: var(--primary, #2563eb);
+                font-weight: 500;
+                margin-bottom: 6px;
+                font-size: 13px;
+            }
+
             .email-preview {
-                color: #666;
+                color: var(--gray-500, #6b7280);
                 font-size: 12px;
                 line-height: 1.5;
             }
+
             .email-detail-title {
-                font-size: 18px;
-                font-weight: bold;
-                margin-bottom: 15px;
-                color: #333;
+                font-size: 17px;
+                font-weight: 700;
+                margin-bottom: 12px;
+                color: var(--gray-800, #1f2937);
             }
+
             .email-detail-content {
-                color: #333;
-                line-height: 1.8;
-                margin-bottom: 20px;
+                color: var(--gray-700, #374151);
+                line-height: 1.7;
+                margin-bottom: 16px;
+                font-size: 13px;
             }
+
             .candidate-details-table {
                 width: 100%;
                 border-collapse: collapse;
+                margin-top: 0;
             }
+
             .candidate-details-table td {
-                padding: 12px 0;
+                padding: 0;
                 vertical-align: top;
-                border-bottom: 1px solid #f0f0f0;
-            }
-            .candidate-details-table tr:last-child td {
                 border-bottom: none;
+                font-size: 13px;
             }
+
+            .candidate-details-table tr:last-child td { border-bottom: none; }
+            
+            .tab-right-panel .candidate-details-table {
+                width: 100%;
+                display: table;
+            }
+
             .candidate-details-table td.label {
                 font-weight: 600;
-                color: #666;
+                color: var(--gray-500, #6b7280);
                 width: 40%;
-                font-size: 13px;
-                padding-right: 15px;
+                font-size: 11px;
+                padding-right: 12px;
+                padding-bottom: 10px;
+                padding-top: 10px;
+                text-transform: uppercase;
+                letter-spacing: 0.02em;
+                display: table-cell;
+                vertical-align: top;
             }
+            
             .candidate-details-table td.value {
-                color: #333;
-                font-size: 13px;
-                line-height: 1.6;
+                display: table-cell;
+                padding-bottom: 10px;
+                padding-top: 10px;
+                border-bottom: 1px solid var(--gray-100, #f3f4f6);
+                color: var(--gray-800, #1f2937);
+                font-size: 12px;
+                line-height: 1.5;
+                word-wrap: break-word;
+                vertical-align: top;
             }
+            
+            .candidate-details-table tr {
+                display: table-row;
+                margin-bottom: 0;
+            }
+            
+            .candidate-details-table tr:last-child td.value {
+                border-bottom: none;
+                padding-bottom: 10px;
+            }
+            
+            .tab-right-panel .candidate-details-table {
+                width: 100%;
+                table-layout: fixed;
+            }
+            
+            .tab-right-panel .candidate-details-table td.label {
+                width: 38%;
+                font-size: 10px;
+                padding-right: 8px;
+                word-wrap: break-word;
+            }
+            
+            .tab-right-panel .candidate-details-table td.value {
+                width: 62%;
+                font-size: 11px;
+                padding-left: 0;
+                word-wrap: break-word;
+            }
+
             .action-buttons {
                 margin-top: 20px;
                 display: flex;
-                gap: 10px;
+                gap: 8px;
             }
+
             .action-buttons .btn {
                 flex: 1;
                 padding: 10px;
                 border: none;
-                border-radius: 4px;
-                font-weight: bold;
+                border-radius: 6px;
+                font-weight: 600;
                 cursor: pointer;
                 font-size: 13px;
+                font-family: 'Inter', system-ui, sans-serif;
+                transition: all 0.2s ease;
             }
+
             .btn-success {
-                background: #28a745;
+                background: var(--primary, #2563eb);
                 color: #fff;
             }
+
             .btn-success:hover {
-                background: #218838;
+                background: var(--primary-dark, #1d4ed8);
+                box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
             }
         </style>
 
         <div id="contents">
-            <!-- Status Indicator Top Right (Outside main panel) -->
-            <div class="status-indicator-top-right">
-                Status: 
-                <?php if (!empty($this->candidateStatus)): ?>
-                    <span class="status-badge status-<?php echo strtolower($this->candidateStatus); ?>">
-                        <?php $this->_($this->candidateStatus); ?>
-                    </span>
-                <?php else: ?>
-                    <span class="status-badge status-none">Not Set</span>
-                <?php endif; ?>
-            </div>
-
             <div class="candidate-page-wrapper">
                 <div class="candidate-main-panel">
                     <!-- Candidate Header Section -->
                     <div class="candidate-header-section">
                         <h1><?php $this->_($this->data['firstName']); ?> <?php $this->_($this->data['middleName']); ?> <?php $this->_($this->data['lastName']); ?></h1>
 
-                        <!-- Tabs -->
-                        <ul class="candidate-tabs">
-                            <li id="resumeTab" class="active">
-                                <a href="javascript:void(0);" onclick="showTab('resume');">Resume</a>
-                            </li>
-                            <li id="feedbackTab">
-                                <a href="javascript:void(0);" onclick="showTab('feedback');">Feedback</a>
-                            </li>
-                            <li id="emailTab">
-                                <a href="javascript:void(0);" onclick="showTab('email');">Email</a>
-                            </li>
-                        </ul>
+                        <!-- Tabs with Status -->
+                        <div class="candidate-tabs">
+                            <div class="candidate-tabs-wrapper">
+                                <ul style="display: flex; list-style: none; margin: 0; padding: 0; gap: 0;">
+                                    <li id="resumeTab" class="active">
+                                        <a href="javascript:void(0);" onclick="showTab('resume');">Resume</a>
+                                    </li>
+                                    <li id="feedbackTab">
+                                        <a href="javascript:void(0);" onclick="showTab('feedback');">Feedback</a>
+                                    </li>
+                                    <li id="emailTab">
+                                        <a href="javascript:void(0);" onclick="showTab('email');">Email</a>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="candidate-status-inline">
+                                Status: 
+                                <?php if (!empty($this->candidateStatus)): ?>
+                                    <span class="status-badge status-<?php echo strtolower($this->candidateStatus); ?>">
+                                        <?php $this->_($this->candidateStatus); ?>
+                                    </span>
+                                <?php else: ?>
+                                    <span class="status-badge status-none">Not Set</span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Tab Content Container -->
                     <div class="tab-content-container">
                         <!-- Resume Tab Content -->
-                        <div id="resumeTabContent" style="display: block;">
+                        <div id="resumeTabContent" style="display: flex; flex-direction: row; width: 100%;">
                             <div class="tab-left-panel">
-                                <h3 style="margin-top: 0; margin-bottom: 20px; font-size: 18px; color: #333; font-weight: 600;">Resume / CV</h3>
+                                <h3 style="margin-top: 0; margin-bottom: 16px; font-size: 16px; color: #1f2937; font-weight: 700; font-family: 'Inter', system-ui, sans-serif; letter-spacing: -0.01em;">Resume / CV</h3>
                                 <?php if (!empty($this->resumeText)): ?>
                                     <div class="resume-viewer">
                                         <?php echo nl2br(htmlspecialchars($this->resumeText)); ?>
@@ -482,7 +741,16 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                                 <?php endif; ?>
                             </div>
                             <div class="tab-right-panel">
-                                <h3 style="margin-top: 0; margin-bottom: 20px; font-size: 18px; color: #333; font-weight: 600;">Candidate Details</h3>
+                                <?php if (!empty($this->candidateStatus)): ?>
+                                    <div class="status-badge-panel <?php echo strtolower($this->candidateStatus); ?>" style="margin-bottom: 20px; margin-top: 0;">
+                                        Status: <?php $this->_($this->candidateStatus); ?>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="status-badge-panel status-none" style="margin-bottom: 20px; margin-top: 0;">
+                                        Status: Not Set
+                                    </div>
+                                <?php endif; ?>
+                                <h3 style="margin-top: 0; margin-bottom: 16px; font-size: 16px; color: #1f2937; font-weight: 700; font-family: 'Inter', system-ui, sans-serif; letter-spacing: -0.01em;">Candidate Details</h3>
                                 <table class="candidate-details-table">
                                     <tr>
                                         <td class="label">Name:</td>
@@ -547,9 +815,9 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                         </div>
 
                         <!-- Feedback Tab Content -->
-                        <div id="feedbackTabContent" style="display: none;">
+                        <div id="feedbackTabContent" style="display: none; flex-direction: row; width: 100%;">
                             <div class="tab-left-panel">
-                                <h3 style="margin-top: 0; margin-bottom: 20px; font-size: 18px; color: #333; font-weight: 600;">Feedback</h3>
+                                <h3 style="margin-top: 0; margin-bottom: 16px; font-size: 16px; color: #1f2937; font-weight: 700; font-family: 'Inter', system-ui, sans-serif; letter-spacing: -0.01em;">Feedback</h3>
                                 <div class="feedback-two-column">
                                     <!-- Left Column: Input Form -->
                                     <div class="feedback-input-column">
@@ -625,7 +893,7 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                                         Status: <?php $this->_($this->candidateStatus); ?>
                                     </div>
                                 <?php endif; ?>
-                                <h3 style="margin-top: 0; margin-bottom: 20px; font-size: 18px; color: #333; font-weight: 600;">Candidate Details</h3>
+                                <h3 style="margin-top: 0; margin-bottom: 16px; font-size: 16px; color: #1f2937; font-weight: 700; font-family: 'Inter', system-ui, sans-serif; letter-spacing: -0.01em;">Candidate Details</h3>
                                 <table class="candidate-details-table">
                                     <tr>
                                         <td class="label">Name:</td>
@@ -684,9 +952,9 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                         </div>
 
                         <!-- Email Tab Content -->
-                        <div id="emailTabContent" style="display: none;">
+                        <div id="emailTabContent" style="display: none; flex-direction: row; width: 100%;">
                             <div class="tab-left-panel">
-                        <h3 style="margin-top: 0; margin-bottom: 20px; font-size: 18px; color: #333; font-weight: 600;">Email</h3>
+                        <h3 style="margin-top: 0; margin-bottom: 16px; font-size: 16px; color: #1f2937; font-weight: 700; font-family: 'Inter', system-ui, sans-serif; letter-spacing: -0.01em;">Email</h3>
                         <div class="email-two-column">
                             <!-- Left Column: Email List -->
                             <div class="email-list-column">
@@ -737,7 +1005,7 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                                 Status: <?php $this->_($this->candidateStatus); ?>
                             </div>
                         <?php endif; ?>
-                                <h3 style="margin-top: 0; margin-bottom: 20px; font-size: 18px; color: #333; font-weight: 600;">Candidate Details</h3>
+                                <h3 style="margin-top: 0; margin-bottom: 16px; font-size: 16px; color: #1f2937; font-weight: 700; font-family: 'Inter', system-ui, sans-serif; letter-spacing: -0.01em;">Candidate Details</h3>
                                 <table class="candidate-details-table">
                                     <tr>
                                         <td class="label">Name:</td>

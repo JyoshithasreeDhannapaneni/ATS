@@ -1,314 +1,359 @@
 /*
- * CATS
- * Login CSS Library
- *
- * Portions Copyright (C) 2005 - 2007 Cognizo Technologies, Inc.
- *
- * $Id: main.css 742 2005-10-24 22:08:19Z will $
+ * Neutara ATS Tool
+ * Modern Login CSS
  */
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-/*** Begin Generic Tag Rules ***/
-body
-{
-       background: #f1f3f5; 
-    padding: 8px 18px 8px 18px;
-    margin: 0px;
+:root {
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --primary-light: #dbeafe;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --gray-900: #111827;
+    --font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    --radius: 8px;
+    --shadow: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06);
+    --shadow-lg: 0 20px 40px rgba(0,0,0,0.1), 0 8px 16px rgba(0,0,0,0.06);
+    --transition: all 0.2s ease;
 }
 
-p
-{
-    color: #000;
+/* Base */
+body, html {
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 50%, #dbeafe 100%);
+    font-family: var(--font-family);
+    min-height: 100vh;
 }
 
-form
-{
-    margin: 0px;
-    padding: 0px;
+body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 20px;
 }
 
-.button
-{
-  height: 20px;
-  color: #333;
-  font-size: 12px;
-  padding-left: 8px;
-  padding-right: 8px;
-  background: url('../../images/button_bg.gif') repeat-x #f0f0f0;
-  border: 1px solid #a4a4a4;
+p {
+    color: var(--gray-700);
+    font: normal 14px/1.5 var(--font-family);
 }
 
-a:link, a:visited
-{
-    color: #2f4f88;
+form {
+    margin: 0;
+    padding: 0;
+}
+
+a:link, a:visited {
+    color: var(--primary);
     text-decoration: none;
-    font: normal normal normal 12px/130% Arial, Tahoma, sans-serif;
+    font: normal 13px/1.5 var(--font-family);
+    transition: var(--transition);
 }
 
-a:hover
-{
+a:hover {
+    color: var(--primary-dark);
     text-decoration: underline;
-    font: normal normal normal 12px/130% Arial, Tahoma, sans-serif;
 }
-/*** End Generic Tag Rules ***/
 
+/* Contents */
+div#contents {
+    text-align: center;
+    font: normal 14px var(--font-family);
+    width: 100%;
+    max-width: 440px;
+    margin: 0 auto;
+}
 
-/*** Header / Footer ***/
-div#headerBlock
-{
+/* Login Container */
+div#login {
+    margin: 0 auto;
+    padding: 0;
+    width: 100%;
+    text-align: center;
+}
+
+/* Form Block */
+div#formBlock {
+    text-align: center;
+    width: 100%;
+    max-width: 440px;
+    height: auto;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: var(--shadow-lg);
+    padding: 40px 36px 32px;
+    margin: 0 auto;
+    float: none;
+}
+
+div#formBlock img {
+    max-height: 60px;
+    max-width: 220px;
+    height: auto;
+    width: auto;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto 24px;
+}
+
+div#formBlockNewSite {
+    text-align: center;
+    width: 100%;
+    max-width: 900px;
+}
+
+div#formBlockBelow {
+    text-align: center;
+    display: block;
+}
+
+div#subFormBlock {
+    border: none;
+    background: transparent;
+    padding: 0;
+    text-align: left;
+}
+
+div#loginText {
+    text-align: left;
+    width: 100%;
+    float: none;
+    display: none;
+}
+
+/* Form Labels */
+form#loginForm label {
+    font-weight: 500;
+    text-align: left;
+    display: block;
+    margin-bottom: 6px;
+    color: var(--gray-700);
+    font-size: 14px;
+    font-family: var(--font-family);
+}
+
+/* Form Input */
+form#loginForm input.login-input-box {
+    width: 100%;
+    margin: 0 0 20px 0;
+    border: 1px solid var(--gray-300);
+    padding: 12px 14px;
+    border-radius: var(--radius);
+    font-size: 14px;
+    font-family: var(--font-family);
+    transition: var(--transition);
+    outline: none;
+    background: var(--gray-50);
+}
+
+form#loginForm .login-input-box:focus {
+    background-color: #fff;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+/* Buttons */
+.button {
+    height: auto;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: var(--font-family);
+    padding: 12px 24px;
+    background: var(--primary);
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: var(--transition);
+    width: 100%;
+    margin-bottom: 8px;
+}
+
+.button:hover {
+    background: var(--primary-dark);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.button:active {
+    transform: translateY(1px);
+}
+
+input[type="reset"].button {
+    background: var(--gray-100);
+    color: var(--gray-600);
+    border: 1px solid var(--gray-300);
+    width: 100%;
+}
+
+input[type="reset"].button:hover {
+    background: var(--gray-200);
+    box-shadow: none;
+}
+
+div.clear {
+    clear: both;
+}
+
+/* Header Block */
+div#headerBlock {
     position: relative;
     margin: 0 auto;
     text-align: center;
 }
 
-div#headerBlock span#mainLogo
-{
-    color: #2f4f88;
+div#headerBlock span#mainLogo {
+    color: var(--primary-dark);
     position: relative;
-    margin: 0 auto -5 auto;
+    margin: 0 auto;
     text-align: center;
-    font: normal normal bold 48px veranda, Tahoma, sans-serif;
+    font: 700 42px var(--font-family);
+    letter-spacing: -0.03em;
 }
 
-div#headerBlock span#subMainLogo
-{
-    color: #6084c8;
+div#headerBlock span#subMainLogo {
+    color: var(--gray-500);
     position: relative;
-    margin: 0 auto -5 auto;
+    margin: 0 auto;
     text-align: center;
-    font: normal normal bold 18px veranda, Tahoma, sans-serif;
+    font: 500 16px var(--font-family);
 }
 
-#footerBlock
-{
-    bottom: 0;
-    position: absolute;
-    font: normal normal normal 12px Arial, Tahoma, sans-serif;
-}
-
-#footerBlock p#footerQuotation
-{
-    font: italic normal normal 8pt/130% Arial, Tahoma, sans-serif;
-}
-
-#footerBlock p#footerText
-{
-    font: normal normal normal 8pt/130% Arial, Tahoma, sans-serif;
-}
-
-#footerBlock span#footerCopyright
-{
-    font: normal normal normal 8pt/130% Arial, Tahoma, sans-serif;
-}
-/*** End Header / Footer ***/
-
-p.failure
-{
-    background: #ec3737;
-    padding: 4px;
-    margin-top: 0;
-    font: normal normal bold 12px/130% Arial, Tahoma, sans-serif;
-}
-
-p.success
-{
-    background: #419933;
-    padding: 4px;
-    margin-top: 0;
-    font: normal normal bold 12px/130% Arial, Tahoma, sans-serif;
-}
-
-
-div#contents
-{
+/* Footer */
+#footerBlock {
+    margin-top: 24px;
+    padding: 16px;
+    font: normal 12px var(--font-family);
+    color: var(--gray-400);
     text-align: center;
-    font: normal normal normal 12px Arial, Tahoma, sans-serif;
+    position: relative;
 }
 
-div#login
-{
-    margin-left: auto;
-    margin-right: auto;
-    margin-top: 5em;
-    padding: 15px;
-/*    border: 1px solid #ccc; */
-    width: 288px;
-/*    background: #f1f3f5; */
-    text-align: center;
+#footerBlock a {
+    color: var(--primary);
+    font-size: 12px;
 }
 
-div#formBlock
-{
- /*   text-align: left; */
-    float: right;
-    
-    /* display: inline; */
-    text-align: center; 
-    width:288px;
-    height:266px;
-    -webkit-border-radius: 20px;
-    -moz-border-radius: 20px;
-    border-radius: 20px;
-    /* background-color:#f1f3f5F; */
-        background: #fff; 
-    -webkit-box-shadow: #B3B3B3 6px 6px 6px;
-    -moz-box-shadow: #B3B3B3 6px 6px 6px;
-    box-shadow: #B3B3B3 6px 6px 6px;
+#footerBlock p#footerQuotation {
+    font: italic 11px/1.4 var(--font-family);
+    color: var(--gray-400);
 }
 
-div#formBlock img
-{
-    max-height: 80px;
-    max-width: 250px;
-    height: auto;
-    width: auto;
-    object-fit: contain;
-    display: block;
-    margin: 10px auto;
-}
-    
-    
-div#formBlockNewSite
-{
-    text-align: center;
-    width: 900px;
+#footerBlock p#footerText {
+    font: normal 11px/1.4 var(--font-family);
+    color: var(--gray-400);
 }
 
-div#formBlockBelow
-{
-    text-align: center;
-    float: bottom;
- /*   width: 60%; */
-    display: block;
+#footerBlock span#footerCopyright,
+.footerCopyright {
+    font: normal 11px/1.4 var(--font-family);
+    color: var(--gray-400);
 }
 
-div#subFormBlock
-{
-    border: 1px solid #ccc;
-    background: #e9ecef;
-    padding: 15px 10px 10px 10px;
-}
-
-div#loginText
-{
-    text-align: left;
-    width: 40%;
-    float: left;
-    display: inline;
-}
-
-form#loginForm label
-{
-    font-weight: bold;
+/* Messages */
+p.failure {
+    background: #fef2f2;
+    border-left: 4px solid #dc2626;
+    padding: 12px 16px;
+    margin: 16px 0;
+    font: 500 13px/1.5 var(--font-family);
+    color: #dc2626;
+    border-radius: 0 var(--radius) var(--radius) 0;
     text-align: left;
 }
 
-form#loginForm input.login-input-box
-{
-    width: 150px;
-    margin: 0px 0px 1em 0px;
-    border: 1px solid #ccc;
+p.success {
+    background: #f0fdf4;
+    border-left: 4px solid #16a34a;
+    padding: 12px 16px;
+    margin: 16px 0;
+    font: 500 13px/1.5 var(--font-family);
+    color: #16a34a;
+    border-radius: 0 var(--radius) var(--radius) 0;
+    text-align: left;
 }
 
-form#loginForm .login-input-box:focus
-{
-    background-color: #f9f9d9;
+/* Select View */
+.selectView {
+    margin: 4px 0 8px 0;
+    border-collapse: collapse;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
 }
 
-div.clear
-{
-    clear: both;
+.selectView td {
+    border: none;
+    padding: 6px 8px;
+    font: normal 13px var(--font-family);
 }
 
-/**
- * POPUP CONTAINER STYLES
- */
-#popupMask
-{
+/* Popup Styles */
+#popupMask {
     position: absolute;
     z-index: 200;
-    top: 0px;
-    left: 0px;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
-    opacity: .40;
-    -moz-opacity: .40;
-    filter: alpha(opacity=40);
-    /* this hack is so it works in IE
-     * I find setting the color in the css gives me more flexibility
-     * than the PNG solution.
-     */
+    opacity: 0.5;
     background-color: transparent !important;
-    background-color: #333;
-    /* background-image\**\: url('images/maskBG.gif') !important; */
+    background-color: var(--gray-900);
     background-image: none;
-    background-repeat: repeat;
     display: none;
 }
 
-#popupContainer
-{
+#popupContainer {
     position: absolute;
     z-index: 201;
-    top: 0px;
-    left: 0px;
+    top: 0;
+    left: 0;
     display: none;
-    padding: 0px;
+    padding: 0;
 }
 
-#popupInner
-{
-    border: 1px solid #000;
-    background-color: #eee;
+#popupInner {
+    border: none;
+    background-color: #fff;
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
 }
 
-#popupFrame
-{
-    margin: 0px;
+#popupFrame {
+    margin: 0;
     width: 100%;
     height: 100%;
     position: relative;
     z-index: 202;
 }
 
-#popupTitleBar
-{
-    background-color: #486cae;
+#popupTitleBar {
+    background: linear-gradient(135deg, var(--primary) 0%, #1e40af 100%);
     color: #fff;
-    font-weight: bold;
-    height: 1.3em;
-    padding: 5px;
-    border-bottom: 1px solid #000;
-    border-top: 1px solid #78a3f2;
-    border-left: 1px solid #78a3f2;
-    border-right: 1px solid #204095;
+    font-weight: 600;
+    height: auto;
+    padding: 12px 16px;
+    border: none;
     position: relative;
     z-index: 203;
 }
 
-#popupTitle
-{
+#popupTitle {
     float: left;
-    font: normal normal bold 17px Arial, Tahoma, sans-serif;
+    font: 600 16px var(--font-family);
 }
 
-#popupControls
-{
+#popupControls {
     float: right;
     cursor: pointer;
-    /*cursor: hand;*/
-}
-
-.selectView
-{
-    margin: 2px 0px 5px 0px;
-    border-collapse: collapse;
-    border: 1px solid #bbb;
-}
-
-.selectView td
-{
-    border: none;
-    padding: 3px 4px 3px 4px;
-    font: normal normal normal 12px Arial, Tahoma, sans-serif;
 }

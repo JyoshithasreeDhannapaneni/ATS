@@ -14,31 +14,29 @@
 
         <div id="contents"<?php echo !$this->totalCandidates ? ' style="background-color: #E6EEFF; padding: 0px;"' : ''; ?>>
             <?php if ($this->totalCandidates): ?>
-            <table width="100%">
-                <tr>
-                    <td width="3%">
-                        <img src="images/candidate.gif" width="24" height="24" alt="Candidates" style="border: none; margin-top: 3px;" />&nbsp;
-                    </td>
-                    <td><h2>Candidates: Home</h2></td>
-                    <td align="right">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <img src="images/candidate.gif" width="24" height="24" alt="Candidates" style="border: none; flex-shrink: 0;" />
+                    <h2 style="margin: 0;">Candidates: Home</h2>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
                         <form name="candidatesViewSelectorForm" id="candidatesViewSelectorForm" action="<?php echo(CATSUtility::getIndexName()); ?>" method="get">
                             <input type="hidden" name="m" value="candidates" />
                             <input type="hidden" name="a" value="listByView" />
 
-                            <table class="viewSelector">
-                                <tr>
-                                    <td valign="top" align="right" nowrap="nowrap">
+                            <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+                                    <div style="display: flex; align-items: center;">
                                         <?php $this->dataGrid->printNavigation(false); ?>
-                                    </td>
-                                    <td valign="top" align="right" nowrap="nowrap">
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 6px;">
                                         <input type="checkbox" name="onlyMyCandidates" id="onlyMyCandidates" <?php if ($this->dataGrid->getFilterValue('OwnerID') ==  $this->userID): ?>checked<?php endif; ?> onclick="<?php echo $this->dataGrid->getJSAddRemoveFilterFromCheckbox('OwnerID', '==',  $this->userID); ?>" />
-                                        Only My Candidates&nbsp;
-                                    </td>
-                                    <td valign="top" align="right" nowrap="nowrap">
+                                        <label for="onlyMyCandidates" style="margin: 0; font-size: 13px;">Only My Candidates</label>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 6px;">
                                         <input type="checkbox" name="onlyHotCandidates" id="onlyHotCandidates" <?php if ($this->dataGrid->getFilterValue('IsHot') == '1'): ?>checked<?php endif; ?> onclick="<?php echo $this->dataGrid->getJSAddRemoveFilterFromCheckbox('IsHot', '==', '\'1\''); ?>" />
-                                        <label for="onlyHotCandidates">Only Hot Candidates</label>&nbsp;
-                                    </td>
-                                    <td valign="top" align="right" nowrap="nowrap">
+                                        <label for="onlyHotCandidates" style="margin: 0; font-size: 13px;">Only Hot Candidates</label>
+                                    </div>
+                                    <div style="display: flex; align-items: center;">
 	                					<a href="javascript:void(0);" id="exportBoxLink<?= $md5InstanceName ?>" onclick="toggleHideShowControls('<?= $md5InstanceName ?>-tags'); return false;">Filter by tag</a>
 	                					<div id="tagsContainer" style="position:relative">
 	                					<div class="ajaxSearchResults" id="ColumnBox<?= $md5InstanceName ?>-tags" align="left"  style="position:absolute;width:200px;right:0<?= isset($this->globalStyle)?$this->globalStyle:"" ?>">
@@ -80,13 +78,11 @@
 	                					</div>
 	                					</div>
 										<span style="display:none;" id="ajaxTableIndicator<?= $md5InstanceName ?>"><img src="images/indicator_small.gif" alt="" /></span>
-                                    </td>
-                                </tr>
-                            </table>
+                                    </div>
+                            </div>
                         </form>
-                    </td>
-                </tr>
-            </table>
+                </div>
+            </div>
 
             <?php if ($this->topLog != ''): ?>
             <div style="margin: 20px 0px 20px 0px;">
@@ -95,39 +91,33 @@
             <?php endif; ?>
 
             <?php if ($this->errMessage != ''): ?>
-            <div id="errorMessage" style="padding: 25px 0px 25px 0px; border-top: 1px solid #800000; border-bottom: 1px solid #800000; background-color: #f7f7f7;margin-bottom: 15px;">
-            <table>
-                <tr>
-                    <td align="left" valign="center" style="padding-right: 5px;">
-                        <img src="images/large_error.gif" align="left">
-                    </td>
-                    <td align="left" valign="center">
-                        <span style="font-size: 12pt; font-weight: bold; color: #800000; line-height: 12pt;">There was a problem with your request:</span>
-                        <div style="font-size: 10pt; font-weight: bold; padding: 3px 0px 0px 0px;"><?php echo $this->errMessage; ?></div>
-                    </td>
-                </tr>
-            </table>
+            <div id="errorMessage" style="padding: 16px 20px; border-left: 4px solid #dc2626; background-color: #fef2f2; margin-bottom: 16px; border-radius: 0 6px 6px 0; display: flex; align-items: flex-start; gap: 12px;">
+                <img src="images/large_error.gif" style="flex-shrink: 0; margin-top: 2px;" alt="Error">
+                <div>
+                    <div style="font-size: 14px; font-weight: 600; color: #dc2626; margin-bottom: 4px;">There was a problem with your request:</div>
+                    <div style="font-size: 13px; color: #991b1b;"><?php echo $this->errMessage; ?></div>
+                </div>
             </div>
             <?php endif; ?>
 
-            <p class="note">
-                <span style="float:left;">Candidates - Page <?php echo($this->dataGrid->getCurrentPageHTML()); ?> (<?php echo($this->dataGrid->getNumberOfRows()); ?> Items)</span>
-                <span style="float:right;">
+            <div class="note" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                <span>Candidates - Page <?php echo($this->dataGrid->getCurrentPageHTML()); ?> (<?php echo($this->dataGrid->getNumberOfRows()); ?> Items)</span>
+                <div style="display: flex; align-items: center; gap: 12px;">
                     <?php $this->dataGrid->drawRowsPerPageSelector(); ?>
                     <?php $this->dataGrid->drawShowFilterControl(); ?>
-                </span>&nbsp;
-            </p>
+                </div>
+            </div>
 
             <?php $this->dataGrid->drawFilterArea(); ?>
             <?php $this->dataGrid->draw();  ?>
 
-            <div style="display:block;">
-                <span style="float:left;">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 16px;">
+                <div>
                     <?php $this->dataGrid->printActionArea(); ?>
-                </span>
-                <span style="float:right;">
+                </div>
+                <div>
                     <?php $this->dataGrid->printNavigation(true); ?>
-                </span>&nbsp;
+                </div>
             </div>
 
             <?php else: ?>

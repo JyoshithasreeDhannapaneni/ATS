@@ -103,11 +103,9 @@ class TemplateUtility
         echo '<div id="headerBlock">', "\n";
 
         /* Neutara ATS Tool Logo */
-        echo '<table cellspacing="0" cellpadding="0" style="margin: 0px; padding: 0px; float: left;">', "\n";
-        echo '<tr>', "\n";
-        echo '<td rowspan="2" style="vertical-align: middle; padding-right: 10px;"><img src="images/Neutaralogo.jpg" border="0" alt="Neutara ATS Tool" style="max-height: 45px; max-width: 200px; height: auto; width: auto; display: block;" /></td>', "\n";
-        echo '</tr>', "\n";
-        echo '</table>', "\n";
+        echo '<div style="display: flex; align-items: center; gap: 12px;">', "\n";
+        echo '<img src="images/Neutaralogo.jpg" border="0" alt="Neutara ATS Tool" style="max-height: 42px; max-width: 180px; height: auto; width: auto; display: block;" />', "\n";
+        echo '</div>', "\n";
 
         if (!eval(Hooks::get('TEMPLATE_LIVE_CHAT'))) return;
 
@@ -129,7 +127,7 @@ class TemplateUtility
             /* Top Right Corner */
             echo '<div id="topRight">', "\n";
 
-            echo '<div style="padding-bottom: 8px;">';
+            echo '<div style="display: flex; align-items: center; gap: 12px; justify-content: flex-end; flex-wrap: wrap;">';
             // Begin top-right action block
             if (!eval(Hooks::get('TEMPLATE_LOGIN_INFO_TOP_RIGHT_UPGRADE'))) return;
 
@@ -139,34 +137,31 @@ class TemplateUtility
                 if (abs(LicenseUtility::getExpirationDate() - time()) < 60*60*24*30)
                 {
                     $daysLeft = abs(LicenseUtility::getExpirationDate() - time())/60/60/24;
-                    echo '<a href="http://www.catsone.com/professional" target="_blank">';
-                    echo '<img src="images/tabs/small_upgrade.jpg" border="0" /> ';
-                    echo 'License expires in ' . number_format($daysLeft, 0) . ' days, Renew?</a>&nbsp;&nbsp;&nbsp;&nbsp;', "\n";
+                    echo '<a href="http://www.catsone.com/professional" target="_blank" style="font-size:12px;">';
+                    echo 'License expires in ' . number_format($daysLeft, 0) . ' days, Renew?</a>', "\n";
                 }
                 else
                 {
-                    echo '<a href="http://www.opencats.org" target="_blank">';
-                    echo '<img src="images/tabs/small_upgrade.jpg" border="0" /> ';
-                    echo 'OpenCATS.org</a>&nbsp;&nbsp;&nbsp;&nbsp;', "\n";
+                    echo '<a href="https://www.neutara.com/" target="_blank" style="font-size:12px;">';
+                    echo 'OpenCATS.org</a>', "\n";
                 }
             }
 
-            echo '<a href="', $indexName, '?m=logout">';
-            echo '<img src="images/tabs/small_logout.jpg" border="0" /> ';
+            echo '<a href="', $indexName, '?m=logout" style="font-size:12px; padding: 5px 14px; background: #fee2e2; color: #dc2626; border-radius: 6px; text-decoration: none;">';
             echo 'Logout</a>', "\n";
             echo '</div>', "\n";
             // End top-right action block
 
             if (!eval(Hooks::get('TEMPLATE_LOGIN_INFO_EXTENDED_SITE_NAME'))) return;
 
-            echo '<span>', $fullName, '&nbsp;&lt;', $username, '&gt;&nbsp;(', $siteName, ')</span>', "\n";
+            echo '<div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; color: #4b5563;">', "\n";
+            echo '<span>Neutara ATS</span>', "\n";
 
             if ($_SESSION['CATS']->getAccessLevel(ACL::SECOBJ_ROOT) >= ACCESS_LEVEL_SA)
             {
-                echo '&nbsp;<span style="font-weight:bold;">Administrator</span>', "\n";
+                echo '<span style="font-weight:600; color: #2563eb; padding: 2px 8px; background: #dbeafe; border-radius: 4px;">Administrator</span>', "\n";
             }
-
-            echo '<br />';
+            echo '</div>', "\n";
 
             $systemInfo = new SystemInfo();
             $systemInfoData = $systemInfo->getSystemInfo();
@@ -177,17 +172,17 @@ class TemplateUtility
                 !$systemInfoData['disable_version_check'] &&
                 $_SESSION['CATS']->getAccessLevel(ACL::SECOBJ_ROOT) >= ACCESS_LEVEL_SA)
             {
-                echo '<a href="http://www.catsone.com/download.php" target="catsdl">A new CATS version is available!</a><br />';
+                echo '<div style="margin-top: 4px;"><a href="http://www.catsone.com/download.php" target="catsdl" style="font-size: 11px; color: #f59e0b; font-weight: 500;">A new CATS version is available!</a></div>', "\n";
             }
 
             /* Disabled notice */
             if (!$_SESSION['CATS']->accountActive())
             {
-                echo '<span style="font-weight:bold;">Account Inactive</span><br />', "\n";
+                echo '<div style="margin-top: 4px;"><span style="font-weight:600; color: #dc2626; font-size: 11px;">Account Inactive</span></div>', "\n";
             }
             else if ($_SESSION['CATS']->getAccessLevel(ACL::SECOBJ_ROOT) == ACCESS_LEVEL_READ)
             {
-                echo '<span>Read Only Access</span><br />', "\n";
+                echo '<div style="margin-top: 4px;"><span style="font-size: 11px; color: #6b7280;">Read Only Access</span></div>', "\n";
             }
             else
             {
@@ -828,7 +823,7 @@ class TemplateUtility
 
         echo '<div class="footerBlock">', "\n";
         echo '<p id="footerText">Neutara ATS Tool Version ', CATS_VERSION, $buildString,
-             '. <span id="toolbarVersion"></span>Powered by <a href="http://www.opencats.org/"><strong>Neutara ATS Tool</strong></a>.</p>', "\n";
+             '. <span id="toolbarVersion"></span>Powered by <a href="https://www.neutara.com/"><strong>Neutara ATS Tool</strong></a>.</p>', "\n";
         echo '<span id="footerResponse">Server Response Time: ', $loadTime, ' seconds.</span><br />';
         echo '<span id="footerCopyright">', COPYRIGHT_HTML, '</span>', "\n";
         if (!eval(Hooks::get('TEMPLATEUTILITY_SHOWPRIVACYPOLICY'))) return;
@@ -1181,6 +1176,10 @@ class TemplateUtility
         echo '<head>', "\n";
         echo '<title>Neutara ATS Tool - ', $pageTitle, '</title>', "\n";
         echo '<meta http-equiv="Content-Type" content="text/html; charset=', HTML_ENCODING, '" />', "\n";
+        echo '<meta name="viewport" content="width=device-width, initial-scale=1.0" />', "\n";
+        echo '<link rel="preconnect" href="https://fonts.googleapis.com" />', "\n";
+        echo '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />', "\n";
+        echo '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />', "\n";
         echo '<link rel="icon" href="images/favicon.ico" type="image/x-icon" />', "\n";
         echo '<link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon" />', "\n";
         echo '<link rel="alternate" type="application/rss+xml" title="RSS" href="',

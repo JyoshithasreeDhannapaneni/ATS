@@ -95,6 +95,23 @@ define('CATS_TEMP_DIR', './temp');
  */
 define('ENABLE_HOSTNAME_LOOKUP', false);
 
+/* Microsoft Teams Integration
+ * Enable automatic creation of Microsoft Teams meetings when scheduling calls/meetings
+ * 
+ * To set up Microsoft Teams integration:
+ * 1. Register an application in Azure Active Directory (Azure AD)
+ * 2. Get your Client ID, Client Secret, and Tenant ID
+ * 3. Grant the following permissions to your app:
+ *    - OnlineMeetings.ReadWrite (Application permission)
+ *    - User.Read.All (Application permission)
+ * 4. Set the configuration values below
+ */
+define('MS_TEAMS_ENABLED', false);
+define('MS_TEAMS_CLIENT_ID', 'YOUR_CLIENT_ID_HERE');
+define('MS_TEAMS_CLIENT_SECRET', 'YOUR_CLIENT_SECRET_HERE');
+define('MS_TEAMS_TENANT_ID', 'YOUR_TENANT_ID_HERE');
+define('MS_TEAMS_USER_ID', 'YOUR_USER_EMAIL_OR_ID_HERE'); // Email or user ID of the meeting organizer
+
 /* CATS can optionally use Sphinx to speed up document searching.
  * Install Sphinx and set ENABLE_SPHINX (below) to true to enable Sphinx.
  */

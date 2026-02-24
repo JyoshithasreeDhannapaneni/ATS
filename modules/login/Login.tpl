@@ -5,6 +5,10 @@
     <head>
         <title>Neutara ATS Tool - Login</title>
         <meta http-equiv="Content-Type" content="text/html; charset=<?php echo(HTML_ENCODING); ?>" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
         <style type="text/css" media="all">@import "modules/login/login.css";</style>
         <script type="text/javascript" src="js/lib.js"></script>
         <script type="text/javascript" src="modules/login/validator.js"></script>
@@ -14,34 +18,17 @@
     <body>
     <!-- CATS_LOGIN -->
     <?php TemplateUtility::printPopupContainer(); ?>
-<!--       <div id="headerBlock"> 
-            <span id="mainLogo">opencats</span><br /> 
-             <span id="subMainLogo">Applicant Tracking System</span> 
-       </div> -->
-<p>
-	&nbsp;</p>
-<p>
-	&nbsp;</p>
-<p>
-	&nbsp;</p>
-
 
         <div id="contents">
-            <div id="login">
+            <div id="login" style="margin-top: 0;">
                 <div id="loginText">
-                    <div class="ctr">
-                    </div>
-                    <br />
-
                     <?php if (ENABLE_DEMO_MODE && !($this->siteName != '' && $this->siteName != 'choose') || ($this->siteName == 'demo')): ?>
-                        <br /><br />
                         <a href="javascript:void(0);" onclick="demoLogin(); return false;">Login to Demo Account</a><br />
                     <?php endif; ?>
                 </div>
 
                 <div id="formBlock">
-                    <img src="images/Neutaralogo.jpg" alt="Neutara ATS Tool" style="max-height: 80px; max-width: 250px; height: auto; width: auto; display: block; margin: 10px auto;" />
-                    <br />
+                    <img src="images/Neutaralogo.jpg" alt="Neutara ATS Tool" />
                     <form name="loginForm" id="loginForm" action="<?php echo(CATSUtility::getIndexName()); ?>?m=login&amp;a=attemptLogin<?php if ($this->reloginVars != ''): ?>&amp;reloginVars=<?php echo($this->reloginVars); ?><?php endif; ?>" method="post" onsubmit="return checkLoginForm(document.loginForm);" autocomplete="off">
                         <div id="subFormBlock">
                             <?php if ($this->siteName != '' && $this->siteName != 'choose'): ?>
@@ -75,7 +62,7 @@
                         </div>
                     </form>
                 
-                    <span style="line-height: 30px;font-size: 10px;padding-LEFT: 10px;">Version <?php echo(CATSUtility::getVersion()); ?></span>
+                    <span style="line-height: 24px; font-size: 11px; color: #9ca3af; display: block; text-align: center; margin-top: 8px;">Version <?php echo(CATSUtility::getVersion()); ?></span>
                 </div>
                 <div style="clear: both;"></div>
             </div>
@@ -103,26 +90,20 @@
                 <?php endif; ?>
             </script>
 
-          <p>
-	&nbsp;</p>  
-<p>
-	&nbsp;</p>  
-
-	<span style="font-size: 12px;"><a href="http://forums.opencats.org ">Neutara ATS Tool support forum</a></span>
-	           <div id="login">
+            <div id="login" style="margin-top: 16px; width: 100%; max-width: 440px;">
                 <?php if (!empty($this->message)): ?>
                     <div>
                         <?php if ($this->messageSuccess): ?>
-                            <p class="success"><?php $this->_($this->message); ?><br /></p>
+                            <p class="success"><?php $this->_($this->message); ?></p>
                         <?php else: ?>
-                            <p class="failure"><?php $this->_($this->message); ?><br /></p>
+                            <p class="failure"><?php $this->_($this->message); ?></p>
                         <?php endif; ?>
                     </div>
                 <?php endif; ?>
-	</div>
-	  <div id="footerBlock">
-                <span class="footerCopyright"><?php echo(COPYRIGHT_HTML); ?></span>
-                Based upon original work and Powered by <a href="http://www.opencats.org" target="_blank">Neutara ATS Tool</a>.</div>
+            </div>
+            <div id="footerBlock">
+                <span class="footerCopyright"><?php echo(COPYRIGHT_HTML); ?></span><br />
+                Powered by <a href="http://www.opencats.org" target="_blank">Neutara ATS Tool</a>
             </div>
         </div>
 

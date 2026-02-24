@@ -13,14 +13,12 @@ use OpenCATS\UI\QuickActionMenu;
 <?php endif; ?>
 
         <div id="contents">
-            <table>
-                <tr>
-                    <td width="3%">
-                        <img src="images/job_orders.gif" width="24" height="24" border="0" alt="Job Orders" style="margin-top: 3px;" />&nbsp;
-                    </td>
-                    <td><h2>Job Orders: Job Order Details</h2></td>
-                </tr>
-            </table>
+            <div class="page-header-row">
+                <div class="page-header-left">
+                    <img src="images/job_orders.gif" width="24" height="24" border="0" alt="Job Orders" style="border: none;" />
+                    <h2 style="margin: 0;">Job Orders: Job Order Details</h2>
+                </div>
+            </div>
 
             <p class="note">Job Order Details</p>
 

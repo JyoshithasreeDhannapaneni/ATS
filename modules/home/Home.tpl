@@ -5,29 +5,26 @@
     <div id="main" class="home">
         <?php TemplateUtility::printQuickSearch(); ?>
 
-        <div id="contents" style="padding-top: 10px;">
+        <div id="contents" style="padding-top: 16px;">
 
-            <table>
-                <tr>
-                    <td align="left" valign="top" style="text-align: left; height:50px;">
-                        <div class="noteUnsizedSpan">My Recent Calls</div>
-                        <?php $this->dataGrid2->drawHTML();  ?>
-                    </td>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                <div>
+                    <div class="noteUnsizedSpan">My Recent Calls</div>
+                    <?php $this->dataGrid2->drawHTML();  ?>
+                </div>
 
-                    <td align="center" valign="top" style="text-align: left; font-size:11px; height:50px;">
-                        <?php echo($this->upcomingEventsFupHTML); ?>
-                    </td>
+                <div style="font-size: 12px;">
+                    <?php echo($this->upcomingEventsFupHTML); ?>
+                </div>
 
-                    <td align="center" valign="top" style="text-align: left;font-size:11px; height:50px;">
-                        <?php echo($this->upcomingEventsHTML); ?>
-                    </td>
-                </tr>
-            </table>
+                <div style="font-size: 12px;">
+                    <?php echo($this->upcomingEventsHTML); ?>
+                </div>
+            </div>
 
-            <table>
-                <tr>
-                    <td align="left" valign="top" style="text-align: left; width: 50%; height: 240px;">
-                        <div class="noteUnsizedSpan">Recent Hires</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;">
+                <div>
+                    <div class="noteUnsizedSpan">Recent Hires</div>
 
                         <table class="sortable" style="margin: 0 0 4px 0;">
                             <tr>
@@ -51,10 +48,10 @@
                                 &nbsp;
                             </div>
                         <?php endif; ?>
-                    </td>
+                </div>
 
-                    <td align="center" valign="top" style="text-align: left; width: 50%; height: 240px;">
-                        <div class="noteUnsizedSpan">Hiring Overview</div>
+                <div>
+                    <div class="noteUnsizedSpan">Hiring Overview</div>
                         <map name="dashboardmap" id="dashboardmap">
                            <area href="#" alt="Weekly" title="Weekly"
                                  shape="rect" coords="398,0,461,24" onclick="swapHomeGraph(<?php echo(DASHBOARD_GRAPH_WEEKLY); ?>);" />
@@ -99,14 +96,11 @@
                             img.style.display = 'block';
                         }
                         </script>
-                    </td>
-                </tr>
-            </table>
+                </div>
+            </div>
 
-            <table>
-                <tr>
-                    <td align="left" valign="top" style="text-align: left; width: 50%; height: 260px;">
-                        <div class="noteUnsizedSpan">Important Candidates (Submitted, Interviewing, Offered in Active Job Orders) - Page <?php echo($this->dataGrid->getCurrentPageHTML()); ?> (<?php echo($this->dataGrid->getNumberOfRows()); ?> Items)</div>
+            <div style="margin-top: 16px;">
+                <div class="noteUnsizedSpan">Important Candidates (Submitted, Interviewing, Offered in Active Job Orders) - Page <?php echo($this->dataGrid->getCurrentPageHTML()); ?> (<?php echo($this->dataGrid->getNumberOfRows()); ?> Items)</div>
                         <?php $this->dataGrid->draw(); ?>
                         <div style="float:right;"><?php $this->dataGrid->printNavigation(false); ?>&nbsp;&nbsp;&nbsp;&nbsp;<?php $this->dataGrid->printShowAll(); ?>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
 
@@ -115,9 +109,7 @@
                             &nbsp;
                         </div>
                         <?php endif; ?>
-                    </td>
-                </tr>
-            </table>
+            </div>
         </div>
     </div>
 <?php TemplateUtility::printFooter(); ?>

@@ -39,6 +39,7 @@ include_once(LEGACY_ROOT . '/lib/JobOrders.php');
 include_once(LEGACY_ROOT . '/lib/Export.php');
 include_once(LEGACY_ROOT . '/lib/ExtraFields.php');
 include_once(LEGACY_ROOT . '/lib/Calendar.php');
+include_once(LEGACY_ROOT . '/lib/MicrosoftTeams.php');
 include_once(LEGACY_ROOT . '/lib/SavedLists.php');
 include_once(LEGACY_ROOT . '/lib/EmailTemplates.php');
 include_once(LEGACY_ROOT . '/lib/DocumentToText.php');
@@ -3337,6 +3338,9 @@ class CandidatesUI extends UserInterface
                 );
             }
 
+            /* Automatically create Microsoft Teams meeting for scheduled calls/meetings */
+            $this->createTeamsMeetingForCandidateEvent($eventID, $eventTypeID, $date, $duration, $title, $description);
+
             /* Extract the date parts from the specified date. */
             $parsedDate = strtotime($date);
             $formattedDate = date('l, F jS, Y', $parsedDate);
@@ -3679,6 +3683,68 @@ class CandidatesUI extends UserInterface
         $candidates->addDuplicates($newCandidateID, $oldCandidateID);
         $this->_template->assign('isFinishedMode', true);
         $this->_template->display('./modules/candidates/LinkDuplicity.tpl');
+    }
+
+    /**
+     * Create Microsoft Teams meeting for a candidate calendar event
+     * This is automatically called when a calendar event is created from candidates module
+     *
+     * @param integer $eventID Calendar event ID
+     * @param integer $type Event type ID
+     * @param string $date Event date/time
+     * @param integer $duration Event duration in minutes
+     * @param string $title Event title
+     * @param string $description Event description
+     * @return void
+     */
+    private function createTeamsMeetingForCandidateEvent($eventID, $type, $date, $duration, $title, $description)
+    {
+        // Check if Teams integration is enabled
+        if (!defined('MS_TEAMS_ENABLED') || !MS_TEAMS_ENABLED) {
+            return;
+        }
+
+        // Only create Teams meetings for Call and Meeting event types
+        // Event types: 100=Call, 200=Email, 300=Meeting, 400=Interview, 500=Personal, 600=Other
+        $callEventTypes = array(100, 300, 400); // Call, Meeting, Interview
+        
+        if (!in_array($type, $callEventTypes)) {
+            return;
+        }
+
+        try {
+            $teams = new MicrosoftTeams($this->_siteID);
+            
+            if (!$teams->isEnabled()) {
+                return;
+            }
+
+            // Calculate end date/time
+            $startDateTime = new DateTime($date);
+            $endDateTime = clone $startDateTime;
+            $endDateTime->modify('+' . $duration . ' minutes');
+
+            // Format dates for Microsoft Graph API (ISO 8601)
+            $startDateTimeISO = $startDateTime->format('Y-m-d\TH:i:s');
+            $endDateTimeISO = $endDateTime->format('Y-m-d\TH:i:s');
+
+            // Get organizer email if available
+            $organizerEmail = '';
+            if (isset($_SESSION['CATS']) && $_SESSION['CATS']->getEmail()) {
+                $organizerEmail = $_SESSION['CATS']->getEmail();
+            }
+
+            // Create Teams meeting
+            $meetingLink = $teams->createMeetingLink($title, $startDateTimeISO, $endDateTimeISO);
+
+            if ($meetingLink) {
+                // Update calendar event with Teams meeting link
+                $teams->updateCalendarEventWithMeetingLink($eventID, $meetingLink);
+            }
+        } catch (Exception $e) {
+            // Log error but don't fail the calendar event creation
+            error_log("Microsoft Teams integration error: " . $e->getMessage());
+        }
     }
 }
 

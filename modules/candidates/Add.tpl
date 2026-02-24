@@ -11,14 +11,12 @@
 
         <div id="contents">
 
-            <table>
-                <tr>
-                    <td width="3%">
-                        <img src="images/candidate.gif" width="24" height="24" alt="Candidates" style="border: none; margin-top: 3px;" />&nbsp;
-                    </td>
-                    <td><h2>Candidates: Add Candidate</h2></td>
-                </tr>
-            </table>
+            <div class="page-header-row">
+                <div class="page-header-left">
+                    <img src="images/candidate.gif" width="24" height="24" alt="Candidates" style="border: none;" />
+                    <h2 style="margin: 0;">Candidates: Add Candidate</h2>
+                </div>
+            </div>
 
 <?php endif; ?>
 
