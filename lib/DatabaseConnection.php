@@ -176,7 +176,36 @@ class DatabaseConnection
     {
         try
         {
-            return @mysqli_connect($host, $user, $pass, $dbName ?: null, $port);
+            $sslMode = getenv('DATABASE_SSL') ?: '';
+
+            if (strtolower($sslMode) === 'required')
+            {
+                // Aiven and other cloud MySQL providers require SSL
+                $mysqli = mysqli_init();
+                mysqli_ssl_set($mysqli, null, null, null, null, null);
+                $flags = MYSQLI_CLIENT_SSL;
+
+                // Don't verify the server certificate (avoids CA cert issues)
+                if (defined('MYSQLI_CLIENT_SSL_DONT_VERIFY_SERVER_CERT'))
+                {
+                    $flags = MYSQLI_CLIENT_SSL_DONT_VERIFY_SERVER_CERT;
+                }
+
+                @mysqli_real_connect(
+                    $mysqli, $host, $user, $pass,
+                    $dbName ?: null, $port, null, $flags
+                );
+
+                if (mysqli_connect_errno())
+                {
+                    return false;
+                }
+                return $mysqli;
+            }
+            else
+            {
+                return @mysqli_connect($host, $user, $pass, $dbName ?: null, $port);
+            }
         }
         catch (\Exception $e)
         {
