@@ -667,20 +667,19 @@ class CATSSession
     public function processLogin($username, $password, $addToHistory = true)
     {
         $db = DatabaseConnection::getInstance();
-        $users = new Users(-1);
 
-        /* Quick validation before hitting the database. */
-        if (empty($username) || empty($password))
+        /* Is the login information supplied correct? Get the status flag. */
+        $users = new Users(-1);
+        $loginStatus = $users->isCorrectLogin($username, $password);
+
+        if ($loginStatus == LOGIN_INVALID_USER)
         {
             $this->_isLoggedIn = false;
             $this->_loginError = 'Invalid username or password.';
+
             return;
         }
 
-        /* Performance: Fetch ALL user + site data in a SINGLE query instead
-         * of two separate queries. On a remote cloud database (Aiven/Render),
-         * each round-trip costs 100-200ms, so this saves one full round-trip.
-         */
         $sql = sprintf(
             "SELECT
                 user.user_id AS userID,
@@ -722,60 +721,12 @@ class CATSSession
         );
         $rs = $db->getAssoc($sql);
 
-        /* No user found in database. */
+        /* Invalid username or password. */
         if (!$rs || $db->isEOF())
         {
-            if (AUTH_MODE == 'ldap' || AUTH_MODE == 'sql+ldap')
-            {
-                /* For LDAP mode, still attempt LDAP authentication for new
-                 * users who haven't been created in the local DB yet. */
-                $loginStatus = $users->isCorrectLogin($username, $password);
-                if ($loginStatus == LOGIN_PENDING_APPROVAL)
-                {
-                    $this->_isLoggedIn = false;
-                    $this->_loginError = 'Your account has been created and is pending approval.';
-                    return;
-                }
-            }
-
             $this->_isLoggedIn = false;
             $this->_loginError = 'Invalid username or password.';
             return;
-        }
-
-        /* Determine login status from the already-fetched data (saves a
-         * separate DB round-trip that isCorrectLogin() would have made). */
-        if (AUTH_MODE === 'sql')
-        {
-            /* SQL-only auth: validate password and access level in PHP. */
-            if ($rs['password'] !== md5($password))
-            {
-                $loginStatus = LOGIN_INVALID_PASSWORD;
-            }
-            else if ($rs['accessLevel'] <= ACCESS_LEVEL_DISABLED)
-            {
-                $loginStatus = LOGIN_DISABLED;
-            }
-            else if (CATS_SLAVE && $rs['accessLevel'] < ACCESS_LEVEL_ROOT)
-            {
-                $loginStatus = LOGIN_ROOT_ONLY;
-            }
-            else
-            {
-                $loginStatus = LOGIN_SUCCESS;
-            }
-        }
-        else
-        {
-            /* LDAP or sql+ldap mode: use the original isCorrectLogin() which
-             * handles LDAP authentication logic. */
-            $loginStatus = $users->isCorrectLogin($username, $password);
-            if ($loginStatus == LOGIN_INVALID_USER)
-            {
-                $this->_isLoggedIn = false;
-                $this->_loginError = 'Invalid username or password.';
-                return;
-            }
         }
 
         if (isset($_SERVER['REMOTE_ADDR']))

@@ -199,10 +199,6 @@ class DatabaseConnection
             {
                 // Aiven and other cloud MySQL providers require SSL
                 $mysqli = mysqli_init();
-
-                // Set a connection timeout so the page doesn't hang forever
-                $mysqli->options(MYSQLI_OPT_CONNECT_TIMEOUT, 10);
-
                 mysqli_ssl_set($mysqli, null, null, null, null, null);
                 $flags = MYSQLI_CLIENT_SSL;
 
@@ -225,15 +221,7 @@ class DatabaseConnection
             }
             else
             {
-                $mysqli = mysqli_init();
-                $mysqli->options(MYSQLI_OPT_CONNECT_TIMEOUT, 10);
-                @$mysqli->real_connect($host, $user, $pass, $dbName ?: null, $port);
-
-                if (mysqli_connect_errno())
-                {
-                    return false;
-                }
-                return $mysqli;
+                return @mysqli_connect($host, $user, $pass, $dbName ?: null, $port);
             }
         }
         catch (\Exception $e)
