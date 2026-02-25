@@ -668,18 +668,23 @@ class CATSSession
     {
         $db = DatabaseConnection::getInstance();
 
-        /* Is the login information supplied correct? Get the status flag. */
-        $users = new Users(-1);
-        $loginStatus = $users->isCorrectLogin($username, $password);
-
-        if ($loginStatus == LOGIN_INVALID_USER)
+        if (empty($username))
         {
             $this->_isLoggedIn = false;
             $this->_loginError = 'Invalid username or password.';
-
             return;
         }
 
+        if (empty($password))
+        {
+            $this->_isLoggedIn = false;
+            $this->_loginError = 'Invalid username or password.';
+            return;
+        }
+
+        /* Fetch all user + site data in a SINGLE query instead of two
+         * separate queries (isCorrectLogin + user/site fetch). This
+         * eliminates one full DB round-trip to the remote database. */
         $sql = sprintf(
             "SELECT
                 user.user_id AS userID,
@@ -716,18 +721,93 @@ class CATSSession
             LEFT JOIN site
                 ON site.site_id = user.site_id
             WHERE
-                user.user_name = %s",
+                user.user_name = %s
+            LIMIT 1",
             $db->makeQueryString($username)
         );
         $rs = $db->getAssoc($sql);
 
-        /* Invalid username or password. */
+        /* Invalid username — no such user found. */
         if (!$rs || $db->isEOF())
         {
-            $this->_isLoggedIn = false;
-            $this->_loginError = 'Invalid username or password.';
-            return;
+            /* For LDAP mode, delegate to isCorrectLogin which handles
+             * LDAP authentication and auto-creation of local user. */
+            if (AUTH_MODE == 'ldap' || AUTH_MODE == 'sql+ldap')
+            {
+                $users = new Users(-1);
+                $loginStatus = $users->isCorrectLogin($username, $password);
+
+                if ($loginStatus == LOGIN_INVALID_USER)
+                {
+                    $this->_isLoggedIn = false;
+                    $this->_loginError = 'Invalid username or password.';
+                    return;
+                }
+                else if ($loginStatus == LOGIN_PENDING_APPROVAL)
+                {
+                    $this->_isLoggedIn = false;
+                    $this->_loginError = 'Your account has been created and is pending approval.';
+                    return;
+                }
+
+                /* LDAP user was created/found, re-fetch from DB */
+                $rs = $db->getAssoc($sql);
+                if (!$rs || $db->isEOF())
+                {
+                    $this->_isLoggedIn = false;
+                    $this->_loginError = 'Invalid username or password.';
+                    return;
+                }
+            }
+            else
+            {
+                $this->_isLoggedIn = false;
+                $this->_loginError = 'Invalid username or password.';
+                return;
+            }
         }
+
+        /* Determine login status from the fetched data (for SQL auth mode).
+         * This replaces the separate isCorrectLogin() call. */
+        $loginStatus = LOGIN_SUCCESS;
+
+        if (AUTH_MODE == 'ldap' || AUTH_MODE == 'sql+ldap')
+        {
+            /* For LDAP users, delegate password check to isCorrectLogin
+             * only if the user has LDAP password marker. */
+            if (defined('LDAPUSER_PASSWORD') && $rs['password'] == LDAPUSER_PASSWORD)
+            {
+                $users = new Users(-1);
+                $loginStatus = $users->isCorrectLogin($username, $password);
+            }
+            else if ($rs['password'] !== md5($password))
+            {
+                $loginStatus = LOGIN_INVALID_PASSWORD;
+            }
+        }
+        else
+        {
+            /* SQL auth: verify password directly from fetched data. */
+            if ($rs['password'] !== md5($password))
+            {
+                $loginStatus = LOGIN_INVALID_PASSWORD;
+            }
+        }
+
+        /* Check account status. */
+        if ($loginStatus == LOGIN_SUCCESS)
+        {
+            if ($rs['accessLevel'] <= ACCESS_LEVEL_DISABLED)
+            {
+                $loginStatus = LOGIN_DISABLED;
+            }
+            else if (CATS_SLAVE && $rs['accessLevel'] < ACCESS_LEVEL_ROOT)
+            {
+                $loginStatus = LOGIN_ROOT_ONLY;
+            }
+        }
+
+        $users = new Users(-1);
 
         if (isset($_SERVER['REMOTE_ADDR']))
         {

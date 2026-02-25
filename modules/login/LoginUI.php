@@ -283,12 +283,12 @@ class LoginUI extends UserInterface
             return;
         }
 
-        $systemInfoDb = new SystemInfo();
-
         $accessLevel = $_SESSION['CATS']->getAccessLevel(ACL::SECOBJ_ROOT);
 
-        $mailerSettings = new MailerSettings($_SESSION['CATS']->getSiteID());
-        $mailerSettingsRS = $mailerSettings->getAll();
+        /* Defer MailerSettings DB queries — only load when actually needed
+         * (for the mailer-not-configured check below). This avoids 2+ DB
+         * round-trips to Pipelines + settings tables on every login. */
+        $mailerSettingsRS = null;
 
         /***************************** BEGIN NEW WIZARD *****************************************/
         /**
@@ -402,18 +402,34 @@ class LoginUI extends UserInterface
             CATSUtility::transferRelativeURI('m=settings&a=upgradeSiteName');
         }
 
-        /* If the default email is set in the configuration, complain to the admin. */
-        else if ($accessLevel >= ACCESS_LEVEL_SA &&
-                 $mailerSettingsRS['configured'] == '0')
+        /* If the default email is set in the configuration, complain to the admin.
+         * Lazy-load mailer settings only for SA+ users to avoid unnecessary
+         * DB queries (Pipelines + settings) on every non-admin login. */
+        else if ($accessLevel >= ACCESS_LEVEL_SA)
         {
-            NewVersionCheck::checkForUpdate();
+            $mailerSettings = new MailerSettings($_SESSION['CATS']->getSiteID());
+            $mailerSettingsRS = $mailerSettings->getAll();
 
-            $this->_template->assign('inputType', 'conclusion');
-            $this->_template->assign('title', 'E-Mail Disabled');
-            $this->_template->assign('prompt', 'E-mail features are disabled. In order to enable e-mail features (such as e-mail notifications), please configure your e-mail settings by clicking on the Settings tab and then clicking on Administration.');
-            $this->_template->assign('action', $this->getAction());
-            $this->_template->assign('home', 'home');
-            $this->_template->display('./modules/settings/NewInstallWizard.tpl');
+            if ($mailerSettingsRS['configured'] == '0')
+            {
+                NewVersionCheck::checkForUpdate();
+
+                $this->_template->assign('inputType', 'conclusion');
+                $this->_template->assign('title', 'E-Mail Disabled');
+                $this->_template->assign('prompt', 'E-mail features are disabled. In order to enable e-mail features (such as e-mail notifications), please configure your e-mail settings by clicking on the Settings tab and then clicking on Administration.');
+                $this->_template->assign('action', $this->getAction());
+                $this->_template->assign('home', 'home');
+                $this->_template->display('./modules/settings/NewInstallWizard.tpl');
+            }
+            else if (trim($_SESSION['CATS']->getEmail()) == '')
+            {
+                CATSUtility::transferRelativeURI('m=settings&a=forceEmail');
+            }
+            else
+            {
+                if (!eval(Hooks::get('LOGGED_IN_HOME_PAGE'))) return;
+                CATSUtility::transferRelativeURI('m=home');
+            }
         }
 
         /* If no E-Mail set for current user, make user set E-Mail address. */

@@ -458,7 +458,8 @@ class Users
                 WHERE
                 user.site_id = %s
                 AND
-                user.user_id = %s",
+                user.user_id = %s
+                LIMIT 1",
                 $this->_siteID,
                 $this->_db->makeQueryInteger($userID)
                 );
@@ -802,7 +803,8 @@ class Users
                 FROM
                 user
                 WHERE
-                user.user_name = %s",
+                user.user_name = %s
+                LIMIT 1",
                 $this->_db->makeQueryString($username)
                 );
         $rs = $this->_db->getAssoc($sql);
@@ -1020,7 +1022,8 @@ class Users
                 WHERE
                 user_login_id = %s
                 AND
-                site_id = %s",
+                site_id = %s
+                LIMIT 1",
                 $this->_db->makeQueryInteger($userLoginID),
                 $this->_db->makeQueryInteger($siteID)
                 );
@@ -1034,7 +1037,8 @@ class Users
                 SET
                 page_views = page_views + 1
                 WHERE
-                site_id = %s",
+                site_id = %s
+                LIMIT 1",
                 $this->_db->makeQueryInteger($siteID)
                 );
 

@@ -60,15 +60,25 @@ class DatabaseConnection
         }
 
         // FIXME: Remove Session tight-coupling here.
-        if (isset($_SESSION['CATS']) && $_SESSION['CATS']->isLoggedIn())
+        // Only update timezone/DMY settings when session login state changes,
+        // not on every single getInstance() call (called dozens of times per request).
+        static $lastLoggedInState = null;
+        $currentLoggedIn = isset($_SESSION['CATS']) && $_SESSION['CATS']->isLoggedIn();
+
+        if ($lastLoggedInState !== $currentLoggedIn)
         {
-            self::$_instance->_timeZone = $_SESSION['CATS']->getTimeZoneOffset();
-            self::$_instance->_dateDMY = $_SESSION['CATS']->isDateDMY();
-        }
-        else
-        {
-            self::$_instance->_timeZone = OFFSET_GMT * -1;
-            self::$_instance->_dateDMY = false;
+            $lastLoggedInState = $currentLoggedIn;
+
+            if ($currentLoggedIn)
+            {
+                self::$_instance->_timeZone = $_SESSION['CATS']->getTimeZoneOffset();
+                self::$_instance->_dateDMY = $_SESSION['CATS']->isDateDMY();
+            }
+            else
+            {
+                self::$_instance->_timeZone = OFFSET_GMT * -1;
+                self::$_instance->_dateDMY = false;
+            }
         }
 
         return self::$_instance;
@@ -188,6 +198,9 @@ class DatabaseConnection
     /**
      * Helper: attempt a single mysqli_connect, catching exceptions (PHP 8.1+).
      * Returns the connection resource on success, or false on failure.
+     *
+     * Uses persistent connections (p: prefix) to avoid costly TCP+SSL
+     * handshake on every request — critical for cloud-hosted MySQL (Aiven/Render).
      */
     private function _tryConnect($host, $user, $pass, $dbName, $port)
     {
@@ -195,10 +208,19 @@ class DatabaseConnection
         {
             $sslMode = getenv('DATABASE_SSL') ?: '';
 
+            /* Use persistent connection prefix to reuse connections across
+             * requests. This avoids DNS + TCP + SSL handshake overhead
+             * (~200-500ms) on every single page load. */
+            $persistentHost = 'p:' . $host;
+
             if (strtolower($sslMode) === 'required')
             {
                 // Aiven and other cloud MySQL providers require SSL
                 $mysqli = mysqli_init();
+
+                // Set a connection timeout so we don't hang forever
+                mysqli_options($mysqli, MYSQLI_OPT_CONNECT_TIMEOUT, 5);
+
                 mysqli_ssl_set($mysqli, null, null, null, null, null);
                 $flags = MYSQLI_CLIENT_SSL;
 
@@ -209,7 +231,7 @@ class DatabaseConnection
                 }
 
                 @mysqli_real_connect(
-                    $mysqli, $host, $user, $pass,
+                    $mysqli, $persistentHost, $user, $pass,
                     $dbName ?: null, $port, null, $flags
                 );
 
@@ -221,7 +243,17 @@ class DatabaseConnection
             }
             else
             {
-                return @mysqli_connect($host, $user, $pass, $dbName ?: null, $port);
+                $mysqli = mysqli_init();
+                mysqli_options($mysqli, MYSQLI_OPT_CONNECT_TIMEOUT, 5);
+                @mysqli_real_connect(
+                    $mysqli, $persistentHost, $user, $pass,
+                    $dbName ?: null, $port
+                );
+                if (mysqli_connect_errno())
+                {
+                    return false;
+                }
+                return $mysqli;
             }
         }
         catch (\Exception $e)
