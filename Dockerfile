@@ -25,10 +25,12 @@ COPY . /var/www/html/
 RUN composer install --no-dev --optimize-autoloader
 
 # Create config.php from example if it doesn't exist
+# Strip Windows CRLF from all PHP files — heredoc EOF markers break with \r on Linux
 RUN if [ ! -f config.php ] && [ -f config.php.example ]; then \
         cp config.php.example config.php && \
         chmod 644 config.php; \
-    fi
+    fi \
+    && find /var/www/html -name '*.php' -exec sed -i 's/\r$//' {} +
 
 # Set proper permissions
 RUN chown -R www-data:www-data /var/www/html \
