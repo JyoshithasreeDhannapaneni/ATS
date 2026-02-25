@@ -78,17 +78,6 @@ class NewVersionCheck
             return;
         }
 
-        /* Only check once per day to avoid slow external HTTP calls on
-         * every login. This is the same throttle used by getNews(). */
-        if (!empty($systemInfo['date_version_checked']))
-        {
-            $lastCheck = strtotime($systemInfo['date_version_checked']);
-            if ($lastCheck !== false && $lastCheck > (time() - SECONDS_IN_A_DAY))
-            {
-                return;
-            }
-        }
-
         if (isset($_SERVER['SERVER_SOFTWARE']))
         {
             $serverSoftware = $_SERVER['SERVER_SOFTWARE'];
@@ -208,13 +197,13 @@ class NewVersionCheck
      */
     private static function getDataFromServer($host, $port, $path, $data)
     {
-        $socket = @fsockopen($host, $port, $errorno, $errorstr, 1);
+        $socket = @fsockopen($host, $port, $errorno, $errorstr, 5);
         if ($socket === false)
         {
             return false;
         }
 
-        stream_set_timeout($socket, 1);
+        stream_set_timeout($socket, 5);
         fputs($socket, sprintf("GET %s?%s HTTP/1.1\r\n", $path, $data));
         fputs($socket, sprintf("Host: %s\r\n", $host));
         fputs($socket, sprintf("User-Agent: MSIE\r\n"));
