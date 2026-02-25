@@ -188,10 +188,6 @@ class DatabaseConnection
     /**
      * Helper: attempt a single mysqli_connect, catching exceptions (PHP 8.1+).
      * Returns the connection resource on success, or false on failure.
-     *
-     * Performance: Uses persistent connections (p: prefix) to avoid the
-     * expensive TCP + SSL handshake on every request. On a remote cloud DB
-     * (Aiven/Render), this saves 200-500ms per page load.
      */
     private function _tryConnect($host, $user, $pass, $dbName, $port)
     {
@@ -199,17 +195,12 @@ class DatabaseConnection
         {
             $sslMode = getenv('DATABASE_SSL') ?: '';
 
-            /* Use persistent connections to reuse TCP+SSL sockets across
-             * requests. The 'p:' prefix tells mysqli to keep the connection
-             * alive between PHP requests instead of reconnecting every time. */
-            $persistentHost = 'p:' . $host;
-
             if (strtolower($sslMode) === 'required')
             {
                 // Aiven and other cloud MySQL providers require SSL
                 $mysqli = mysqli_init();
 
-                // Set a connection timeout so the page doesn't hang
+                // Set a connection timeout so the page doesn't hang forever
                 $mysqli->options(MYSQLI_OPT_CONNECT_TIMEOUT, 10);
 
                 mysqli_ssl_set($mysqli, null, null, null, null, null);
@@ -222,7 +213,7 @@ class DatabaseConnection
                 }
 
                 @mysqli_real_connect(
-                    $mysqli, $persistentHost, $user, $pass,
+                    $mysqli, $host, $user, $pass,
                     $dbName ?: null, $port, null, $flags
                 );
 
@@ -236,7 +227,7 @@ class DatabaseConnection
             {
                 $mysqli = mysqli_init();
                 $mysqli->options(MYSQLI_OPT_CONNECT_TIMEOUT, 10);
-                @$mysqli->real_connect($persistentHost, $user, $pass, $dbName ?: null, $port);
+                @$mysqli->real_connect($host, $user, $pass, $dbName ?: null, $port);
 
                 if (mysqli_connect_errno())
                 {
