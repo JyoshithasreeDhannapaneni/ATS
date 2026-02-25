@@ -130,8 +130,25 @@ class DatabaseConnection
         // handle connection failures
         if (!$this->_connection)
         {
-            $error = "errno: " . mysqli_connect_errno() . ", ";
-            $error .= "error: " . mysqli_connect_error();
+            $errno = mysqli_connect_errno();
+            $errMsg = mysqli_connect_error();
+            $error = "errno: " . $errno . ", error: " . $errMsg;
+
+            // Provide helpful hints for common errors
+            $hint = '';
+            if ($errno == 2002 && strpos($errMsg, 'getaddrinfo') !== false) {
+                $hint = "\n\n<b>HINT:</b> DNS resolution failed for host '" . $host . "'."
+                    . "\nPossible causes:"
+                    . "\n  1. Your Aiven free-tier MySQL service may have hibernated."
+                    . "\n     → Go to https://console.aiven.io and power it back on."
+                    . "\n  2. The DATABASE_HOST value may be incorrect."
+                    . "\n     → Copy the exact hostname from your Aiven dashboard."
+                    . "\n  3. Wait a few minutes after powering on for DNS to propagate.";
+            } else if ($errno == 2002) {
+                $hint = "\n\n<b>HINT:</b> Connection refused. Check DATABASE_HOST and DATABASE_PORT.";
+            } else if ($errno == 1045) {
+                $hint = "\n\n<b>HINT:</b> Access denied. Check DATABASE_USER and DATABASE_PASS.";
+            }
 
             die(
                 '<!-- NOSPACEFILTER --><p style="background: #ec3737; padding:'
@@ -139,7 +156,7 @@ class DatabaseConnection
                 . 'Arial, Tahoma, sans-serif;">Error Connecting '
                 . "to Database</p><pre>\n\nHost: " . $host . ", Port: " . $port
                 . ", User: " . $user . ", DB: " . $dbName
-                . "\n\n" . $error . "</pre>\n\n"
+                . "\n\n" . $error . $hint . "</pre>\n\n"
             );
             return false;
         }

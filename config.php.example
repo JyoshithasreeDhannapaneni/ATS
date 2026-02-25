@@ -43,7 +43,17 @@ define('DATABASE_PORT', getenv('DATABASE_PORT') ?: 3306);
 
 /* Safety check — stop the app early if DB is not configured */
 if (!DATABASE_HOST || !DATABASE_USER || !DATABASE_NAME) {
-    die('Database environment variables are not set. Please configure DATABASE_HOST, DATABASE_USER, DATABASE_PASS, DATABASE_NAME in Render Environment.');
+    die('<div style="font-family:Arial;padding:20px;background:#f8d7da;color:#721c24;border:1px solid #f5c6cb;border-radius:4px;margin:20px;">'
+        . '<h2>Database Not Configured</h2>'
+        . '<p>Set these Environment Variables in Render Dashboard:</p>'
+        . '<ul>'
+        . '<li><b>DATABASE_HOST</b> = your Aiven MySQL hostname</li>'
+        . '<li><b>DATABASE_PORT</b> = your Aiven port (e.g. 15598)</li>'
+        . '<li><b>DATABASE_USER</b> = avnadmin</li>'
+        . '<li><b>DATABASE_PASS</b> = your Aiven password</li>'
+        . '<li><b>DATABASE_NAME</b> = defaultdb</li>'
+        . '<li><b>DATABASE_SSL</b> = required</li>'
+        . '</ul></div>');
 }
 
 /* Authentication Configuration

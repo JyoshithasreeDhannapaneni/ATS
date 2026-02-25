@@ -1,0 +1,10 @@
+.git
+.gitignore
+.github
+.vscode
+.idea
+docker
+*.md
+cats_dev_backup.sql
+CREDENTIALS.txt
+config.php
