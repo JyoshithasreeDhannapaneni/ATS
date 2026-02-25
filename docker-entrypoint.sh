@@ -1,6 +1,12 @@
 #!/bin/bash
 set -e
 
+# Set Apache to listen on Render's $PORT (defaults to 10000)
+export APACHE_PORT="${PORT:-10000}"
+echo "=== Apache will listen on port $APACHE_PORT ==="
+sed -i "s/\${APACHE_PORT}/$APACHE_PORT/g" /etc/apache2/ports.conf
+sed -i "s/\${APACHE_PORT}/$APACHE_PORT/g" /etc/apache2/sites-available/000-default.conf
+
 # Ensure config.php exists
 if [ ! -f /var/www/html/config.php ] && [ -f /var/www/html/config.php.example ]; then
     echo "Creating config.php from config.php.example..."
