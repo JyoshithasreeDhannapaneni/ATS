@@ -41,11 +41,19 @@ RUN a2enmod rewrite
 
 # Configure Apache to use port 8080 (Render requirement)
 RUN sed -i 's/Listen 80/Listen 8080/' /etc/apache2/ports.conf \
-    && sed -i 's/<VirtualHost \*:80>/<VirtualHost *:8080>/' /etc/apache2/sites-available/000-default.conf
+    && sed -i 's/<VirtualHost \*:80>/<VirtualHost *:8080>/' /etc/apache2/sites-available/000-default.conf \
+    && sed -i 's/AllowOverride None/AllowOverride All/g' /etc/apache2/apache2.conf \
+    && echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
-# Copy and set permissions for entrypoint script
+# Show PHP errors in browser and Apache log instead of blank 502
+RUN echo "display_errors=On" > /usr/local/etc/php/conf.d/errors.ini \
+    && echo "error_reporting=E_ALL" >> /usr/local/etc/php/conf.d/errors.ini \
+    && echo "log_errors=On" >> /usr/local/etc/php/conf.d/errors.ini
+
+# Copy entrypoint, fix Windows CRLF line endings, set executable
 COPY docker-entrypoint.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh \
+    && chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Expose port
 EXPOSE 8080
