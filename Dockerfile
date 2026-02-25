@@ -40,8 +40,12 @@ RUN chown -R www-data:www-data /var/www/html \
 RUN a2enmod rewrite
 
 # Configure Apache to use port 8080 (Render requirement)
+# Also ensure AllowOverride All is set for .htaccess support
+# and set ServerName to suppress AH00558 warning
 RUN sed -i 's/Listen 80/Listen 8080/' /etc/apache2/ports.conf \
-    && sed -i 's/<VirtualHost \*:80>/<VirtualHost *:8080>/' /etc/apache2/sites-available/000-default.conf
+    && sed -i 's/<VirtualHost \*:80>/<VirtualHost *:8080>/' /etc/apache2/sites-available/000-default.conf \
+    && echo "ServerName localhost" >> /etc/apache2/apache2.conf \
+    && sed -i '/<Directory \/var\/www\/>/,/<\/Directory>/ s/AllowOverride None/AllowOverride All/' /etc/apache2/apache2.conf
 
 # Copy and set permissions for entrypoint script
 COPY docker-entrypoint.sh /usr/local/bin/

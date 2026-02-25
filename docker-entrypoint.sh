@@ -8,6 +8,12 @@ if [ ! -f /var/www/html/config.php ] && [ -f /var/www/html/config.php.example ];
     chmod 644 /var/www/html/config.php
 fi
 
+# Enable PHP error display so errors show in browser instead of blank 502
+echo "display_errors = On"          >  /usr/local/etc/php/conf.d/zzz-errors.ini
+echo "error_reporting = E_ALL"      >> /usr/local/etc/php/conf.d/zzz-errors.ini
+echo "log_errors = On"              >> /usr/local/etc/php/conf.d/zzz-errors.ini
+echo "error_log = /dev/stderr"      >> /usr/local/etc/php/conf.d/zzz-errors.ini
+
 # Log database configuration (env vars)
 echo "=== Database Configuration ==="
 if [ -n "$DATABASE_HOST" ]; then
@@ -34,6 +40,24 @@ if [ -n "$DATABASE_HOST" ]; then
     fi
 fi
 echo "=============================="
+
+# Quick PHP + DB connectivity test before starting Apache
+echo "=== PHP Startup Check ==="
+php -r "echo 'PHP ' . phpversion() . ' OK' . PHP_EOL;" 2>&1 || echo "ERROR: PHP failed"
+echo "Checking config.php syntax..."
+php -l /var/www/html/config.php 2>&1 || echo "ERROR: config.php has syntax error"
+echo "Checking index.php syntax..."
+php -l /var/www/html/index.php 2>&1 || echo "ERROR: index.php has syntax error"
+echo "Testing DB connection..."
+php -r "
+    require '/var/www/html/config.php';
+    \$m = @mysqli_init();
+    mysqli_ssl_set(\$m, null, null, null, null, null);
+    \$ok = @mysqli_real_connect(\$m, DATABASE_HOST, DATABASE_USER, DATABASE_PASS, DATABASE_NAME, (int)DATABASE_PORT, null, MYSQLI_CLIENT_SSL_DONT_VERIFY_SERVER_CERT);
+    echo \$ok ? 'DB connection OK' : 'DB connection FAILED: ' . mysqli_connect_error();
+    echo PHP_EOL;
+" 2>&1
+echo "==========================="
 
 # Execute the command passed as arguments
 exec "$@"
