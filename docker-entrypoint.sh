@@ -24,21 +24,16 @@ echo "DATABASE_SSL:  ${DATABASE_SSL:-not set}"
 if [ -n "$DATABASE_HOST" ]; then
     echo "--- Testing DNS resolution for $DATABASE_HOST ---"
     if getent hosts "$DATABASE_HOST" > /dev/null 2>&1; then
-        echo "DNS OK: $(getent hosts "$DATABASE_HOST")"
+        echo "DNS OK: $(getent hosts $DATABASE_HOST)"
     else
         echo "ERROR: Cannot resolve hostname '$DATABASE_HOST'"
+        echo "Possible causes:"
+        echo "  1. Aiven free-tier service has hibernated — go to console.aiven.io and power it on"
+        echo "  2. Hostname is incorrect — double-check the value in Render Environment Variables"
+        echo "  3. DNS propagation delay — wait a few minutes and redeploy"
     fi
 fi
 echo "=============================="
-
-# PHP syntax check
-echo "=== PHP Startup Check ==="
-php -v 2>&1 | head -1
-echo "Checking config.php..."
-php -l /var/www/html/config.php 2>&1 || true
-echo "Checking index.php..."
-php -l /var/www/html/index.php 2>&1 || true
-echo "==========================="
 
 # Execute the command passed as arguments
 exec "$@"
