@@ -64,14 +64,57 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
             }
             
             function showEmailDetail(index) {
-                // Remove active class from all email items
                 var emailItems = document.querySelectorAll('.email-list-item');
                 for (var i = 0; i < emailItems.length; i++) {
                     emailItems[i].classList.remove('active');
                 }
-                // Add active class to selected item
                 emailItems[index].classList.add('active');
-                // TODO: Update email detail column with selected email
+            }
+
+            var candidateEmailTemplates = {
+                <?php if (!empty($this->emailTemplatesRS)): ?>
+                    <?php foreach ($this->emailTemplatesRS as $tpl): ?>
+                        <?php echo json_encode($tpl['emailTemplateID']); ?>: <?php echo json_encode($tpl['text'] ?? ''); ?>,
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            };
+
+            function loadCandidateTemplate(templateId) {
+                if (templateId == '-1' || templateId === '') {
+                    document.getElementById('candidateEmailBody').value = '';
+                    return;
+                }
+
+                var text = candidateEmailTemplates[templateId] || '';
+                var plainText = text.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '');
+                document.getElementById('candidateEmailBody').value = plainText;
+            }
+
+            function toggleResumeView() {
+                var textView = document.getElementById('resumeTextView');
+                var fileView = document.getElementById('resumeFileView');
+                var toggleBtn = document.getElementById('resumeViewToggle');
+                if (!textView || !fileView || !toggleBtn) return;
+
+                if (fileView.style.display === 'none') {
+                    textView.style.display = 'none';
+                    fileView.style.display = '';
+                    toggleBtn.textContent = 'Show Text';
+                } else {
+                    fileView.style.display = 'none';
+                    textView.style.display = '';
+                    toggleBtn.textContent = 'Show File';
+                }
+            }
+
+            function validateCandidateEmail() {
+                var subject = document.getElementById('candidateEmailSubject').value.trim();
+                var body = document.getElementById('candidateEmailBody').value.trim();
+                if (subject === '' || body === '') {
+                    alert('Please fill in both the subject and body before sending.');
+                    return false;
+                }
+                return true;
             }
         </script>
 
@@ -401,10 +444,8 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
 
             .resume-viewer {
                 background: #fff;
-                padding: 24px;
                 border: 1px solid var(--gray-200, #e5e7eb);
                 border-radius: 8px;
-                white-space: pre-wrap;
                 font-family: 'Inter', system-ui, sans-serif;
                 font-size: 13px;
                 line-height: 1.8;
@@ -414,6 +455,68 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                 width: 100%;
                 max-width: 100%;
                 box-sizing: border-box;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .resume-viewer-text {
+                padding: 24px;
+                white-space: pre-wrap;
+                overflow-y: auto;
+                max-height: 70vh;
+                min-height: 400px;
+            }
+
+            .resume-viewer iframe,
+            .resume-viewer embed {
+                width: 100%;
+                min-height: 500px;
+                height: 70vh;
+                border: none;
+                border-radius: 0 0 8px 8px;
+            }
+
+            .resume-toolbar {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 10px 16px;
+                background: #f9fafb;
+                border-bottom: 1px solid #e5e7eb;
+                border-radius: 8px 8px 0 0;
+                flex-shrink: 0;
+            }
+
+            .resume-toolbar .resume-file-name {
+                font-size: 13px;
+                font-weight: 600;
+                color: #374151;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .resume-toolbar .resume-actions {
+                display: flex;
+                gap: 8px;
+                flex-shrink: 0;
+            }
+
+            .resume-toolbar .resume-actions a {
+                padding: 5px 12px;
+                font-size: 12px;
+                font-weight: 500;
+                color: #2563eb;
+                border: 1px solid #2563eb;
+                border-radius: 5px;
+                text-decoration: none;
+                transition: background 0.15s, color 0.15s;
+            }
+
+            .resume-toolbar .resume-actions a:hover {
+                background: #2563eb;
+                color: #fff;
             }
 
             .resume-viewer h3,
@@ -730,9 +833,39 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                         <div id="resumeTabContent" style="display: flex; flex-direction: row; width: 100%;">
                             <div class="tab-left-panel">
                                 <h3 style="margin-top: 0; margin-bottom: 16px; font-size: 16px; color: #1f2937; font-weight: 700; font-family: 'Inter', system-ui, sans-serif; letter-spacing: -0.01em;">Resume / CV</h3>
-                                <?php if (!empty($this->resumeText)): ?>
+                                <?php
+                                    $hasResumeFile = !empty($this->resumeFileURL);
+                                    $hasResumeText = !empty($this->resumeText);
+                                    $resumeExt = $hasResumeFile ? strtolower(pathinfo($this->resumeFileName, PATHINFO_EXTENSION)) : '';
+                                    $isPDF = ($resumeExt === 'pdf');
+                                    $resumeDownloadURL = $hasResumeFile ? str_replace('&amp;', '&', $this->resumeFileURL) : '';
+                                ?>
+                                <?php if ($hasResumeFile || $hasResumeText): ?>
                                     <div class="resume-viewer">
-                                        <?php echo nl2br(htmlspecialchars($this->resumeText)); ?>
+                                        <?php if ($hasResumeFile): ?>
+                                            <div class="resume-toolbar">
+                                                <span class="resume-file-name"><?php echo htmlspecialchars($this->resumeFileName); ?></span>
+                                                <div class="resume-actions">
+                                                    <a href="<?php echo $resumeDownloadURL; ?>" target="_blank">Download</a>
+                                                    <?php if (!$isPDF && $hasResumeText): ?>
+                                                        <a href="#" onclick="toggleResumeView(); return false;" id="resumeViewToggle">Show File</a>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
+                                        <?php endif; ?>
+
+                                        <?php if ($isPDF): ?>
+                                            <iframe src="<?php echo $resumeDownloadURL; ?>" title="Resume"></iframe>
+                                        <?php elseif ($hasResumeText): ?>
+                                            <div class="resume-viewer-text" id="resumeTextView">
+                                                <?php echo nl2br(htmlspecialchars($this->resumeText)); ?>
+                                            </div>
+                                            <?php if ($hasResumeFile): ?>
+                                                <iframe src="<?php echo $resumeDownloadURL; ?>" title="Resume" id="resumeFileView" style="display: none;"></iframe>
+                                            <?php endif; ?>
+                                        <?php elseif ($hasResumeFile): ?>
+                                            <iframe src="<?php echo $resumeDownloadURL; ?>" title="Resume"></iframe>
+                                        <?php endif; ?>
                                     </div>
                                 <?php else: ?>
                                     <div class="resume-viewer">
@@ -955,46 +1088,80 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                         <div id="emailTabContent" style="display: none; flex-direction: row; width: 100%;">
                             <div class="tab-left-panel">
                         <h3 style="margin-top: 0; margin-bottom: 16px; font-size: 16px; color: #1f2937; font-weight: 700; font-family: 'Inter', system-ui, sans-serif; letter-spacing: -0.01em;">Email</h3>
+
+                        <?php if (isset($_GET['emailSent'])): ?>
+                            <?php if ($_GET['emailSent'] === '1'): ?>
+                                <div id="emailSuccessMsg" style="background: #ecfdf5; border: 1px solid #6ee7b7; color: #065f46; padding: 10px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px;">
+                                    Email sent successfully to <?php $this->_($this->data['firstName']); ?> <?php $this->_($this->data['lastName']); ?>.
+                                </div>
+                            <?php else: ?>
+                                <div id="emailErrorMsg" style="background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b; padding: 10px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px;">
+                                    Failed to send email. Please check your SMTP settings.
+                                </div>
+                            <?php endif; ?>
+                            <script>
+                                document.addEventListener('DOMContentLoaded', function() {
+                                    showTab('email');
+                                });
+                            </script>
+                        <?php endif; ?>
+
                         <div class="email-two-column">
-                            <!-- Left Column: Email List -->
+                            <!-- Left Column: Compose Email -->
                             <div class="email-list-column">
-                                <h4 style="margin-top: 0; margin-bottom: 15px;">Email List</h4>
+                                <h4 style="margin-top: 0; margin-bottom: 15px;">Compose Email</h4>
+                                <form id="candidateEmailForm" action="<?php echo(CATSUtility::getIndexName()); ?>?m=candidates&amp;a=sendCandidateEmail" method="post">
+                                    <input type="hidden" name="candidateID" value="<?php $this->_($this->candidateID); ?>" />
+
+                                    <div style="margin-bottom: 12px;">
+                                        <label style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 4px;">To</label>
+                                        <input type="text" readonly value="<?php echo htmlspecialchars($this->data['email1']); ?>" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; background: #f9fafb; color: #6b7280; box-sizing: border-box;" />
+                                    </div>
+
+                                    <div style="margin-bottom: 12px;">
+                                        <label for="candidateEmailTemplate" style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 4px;">Template</label>
+                                        <select id="candidateEmailTemplate" name="emailTemplate" onchange="loadCandidateTemplate(this.value);" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; background: #fff; box-sizing: border-box; cursor: pointer;">
+                                            <option value="-1">-- Select a template --</option>
+                                            <?php if (!empty($this->emailTemplatesRS)): ?>
+                                                <?php foreach ($this->emailTemplatesRS as $tpl): ?>
+                                                    <option value="<?php echo $tpl['emailTemplateID']; ?>"><?php echo htmlspecialchars($tpl['emailTemplateTitle']); ?></option>
+                                                <?php endforeach; ?>
+                                            <?php endif; ?>
+                                        </select>
+                                    </div>
+
+                                    <div style="margin-bottom: 12px;">
+                                        <label for="candidateEmailSubject" style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 4px;">Subject</label>
+                                        <input type="text" id="candidateEmailSubject" name="emailSubject" placeholder="Enter email subject" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; box-sizing: border-box;" required />
+                                    </div>
+
+                                    <div style="margin-bottom: 12px;">
+                                        <label for="candidateEmailBody" style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 4px;">Body</label>
+                                        <textarea id="candidateEmailBody" name="emailBody" rows="8" placeholder="Compose your email or select a template above..." style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; resize: vertical; box-sizing: border-box; font-family: inherit;" required></textarea>
+                                    </div>
+
+                                    <button type="submit" onclick="return validateCandidateEmail();" style="width: 100%; padding: 10px 16px; background: #2563eb; color: #fff; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s;">
+                                        Send Email
+                                    </button>
+                                </form>
+                            </div>
+
+                            <!-- Right Column: Email History -->
+                            <div class="email-detail-column">
+                                <h4 style="margin-top: 0; margin-bottom: 15px;">Email History</h4>
                                 <?php if (!empty($this->emailRS)): ?>
                                     <?php foreach ($this->emailRS as $index => $email): ?>
-                                        <div class="email-list-item <?php echo $index == 0 ? 'active' : ''; ?>" onclick="showEmailDetail(<?php echo $index; ?>);">
-                                            <div class="email-sender"><?php echo htmlspecialchars($email['enteredByAbbrName']); ?>@company.com</div>
-                                            <div class="email-recipient">To: <?php $this->_($this->data['firstName']); ?> <?php $this->_($this->data['lastName']); ?></div>
-                                            <div class="email-date"><?php $this->_($email['dateCreated']); ?></div>
-                                            <div class="email-subject"><?php echo !empty($email['regarding']) ? htmlspecialchars($email['regarding']) : 'Job Application Received'; ?></div>
-                                            <div class="email-preview">
-                                                <?php echo htmlspecialchars(substr($email['notes'], 0, 100)); ?>...
+                                        <div class="email-list-item" style="margin-bottom: 10px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff;">
+                                            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                                <span style="font-weight: 600; font-size: 12px; color: #1f2937;"><?php echo htmlspecialchars($email['enteredByAbbrName']); ?></span>
+                                                <span style="font-size: 11px; color: #9ca3af;"><?php $this->_($email['dateCreated']); ?></span>
                                             </div>
+                                            <div style="font-size: 13px; font-weight: 500; color: #374151; margin-bottom: 2px;"><?php echo !empty($email['regarding']) ? htmlspecialchars($email['regarding']) : 'Email'; ?></div>
+                                            <div style="font-size: 12px; color: #6b7280;"><?php echo htmlspecialchars(substr($email['notes'], 0, 120)); ?></div>
                                         </div>
                                     <?php endforeach; ?>
                                 <?php else: ?>
-                                    <div class="email-list-item">
-                                        <p style="color: #999; text-align: center; padding: 20px;">No emails available.</p>
-                                    </div>
-                                <?php endif; ?>
-                            </div>
-                            
-                            <!-- Right Column: Email Detail -->
-                            <div class="email-detail-column">
-                                <h4 style="margin-top: 0; margin-bottom: 15px;">Email Content</h4>
-                                <?php if (!empty($this->emailRS)): ?>
-                                    <?php $firstEmail = $this->emailRS[0]; ?>
-                                    <div class="email-detail-title"><?php echo !empty($firstEmail['regarding']) ? htmlspecialchars($firstEmail['regarding']) : 'Job Application Received'; ?></div>
-                                    <div class="email-detail-content">
-                                        <?php echo nl2br(htmlspecialchars($firstEmail['notes'])); ?>
-                                    </div>
-                                    <div style="margin-top: 20px;">
-                                        <button class="btn-success" style="width: 100%;">Interview and Offer</button>
-                                    </div>
-                                    <div style="margin-top: 10px; text-align: center;">
-                                        <a href="#" style="color: #0066cc; text-decoration: underline;">Send new email</a>
-                                    </div>
-                                <?php else: ?>
-                                    <p style="color: #999; text-align: center; padding: 40px;">Select an email to view details.</p>
+                                    <p style="color: #9ca3af; text-align: center; padding: 40px 20px; font-size: 13px;">No emails sent yet.</p>
                                 <?php endif; ?>
                             </div>
                         </div>

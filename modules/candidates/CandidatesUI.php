@@ -307,6 +307,14 @@ class CandidatesUI extends UserInterface
                 $this->onEmailCandidates();
                 break;
 
+            case 'sendCandidateEmail':
+                if ($this->getUserAccessLevel('candidates.emailCandidates') < ACCESS_LEVEL_READ)
+                {
+                    CommonErrors::fatal(COMMONERROR_PERMISSION, $this, 'Invalid user level for action.');
+                }
+                $this->onSendCandidateEmail();
+                break;
+
             case 'show_questionnaire':
                 if ($this->getUserAccessLevel('candidates.show_questionnaire') < ACCESS_LEVEL_READ)
                 {
@@ -745,13 +753,16 @@ class CandidatesUI extends UserInterface
             }
         }
 
-        // Get resume text for Resume tab
+        // Get resume text and file URL for Resume tab
         $resumeText = '';
         $resumeTitle = '';
         $resumeAttachmentID = 0;
+        $resumeFileURL = '';
+        $resumeFileName = '';
+        $resumeLocalPath = '';
+
         foreach ($attachmentsRS as $attachment)
         {
-            // Check if attachment has text (resume content)
             if (isset($attachment['hasText']) && $attachment['hasText'] == 1)
             {
                 $resumeData = $candidates->getResume($attachment['attachmentID']);
@@ -760,11 +771,14 @@ class CandidatesUI extends UserInterface
                     $resumeText = $resumeData['text'];
                     $resumeTitle = !empty($resumeData['title']) ? $resumeData['title'] : $attachment['originalFilename'];
                     $resumeAttachmentID = $attachment['attachmentID'];
+                    $resumeFileURL = isset($attachment['retrievalURL']) ? $attachment['retrievalURL'] : '';
+                    $resumeFileName = $attachment['originalFilename'];
+                    $resumeLocalPath = isset($attachment['retrievalURLLocal']) ? $attachment['retrievalURLLocal'] : '';
                     break;
                 }
             }
         }
-        // If no resume found, try first attachment with text
+
         if (empty($resumeText) && !empty($attachmentsRS))
         {
             foreach ($attachmentsRS as $attachment)
@@ -777,6 +791,32 @@ class CandidatesUI extends UserInterface
                         $resumeText = $resumeData['text'];
                         $resumeTitle = !empty($resumeData['title']) ? $resumeData['title'] : $attachment['originalFilename'];
                         $resumeAttachmentID = $attachment['attachmentID'];
+                        $resumeFileURL = isset($attachment['retrievalURL']) ? $attachment['retrievalURL'] : '';
+                        $resumeFileName = $attachment['originalFilename'];
+                        $resumeLocalPath = isset($attachment['retrievalURLLocal']) ? $attachment['retrievalURLLocal'] : '';
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (empty($resumeFileURL) && !empty($attachmentsRS))
+        {
+            foreach ($attachmentsRS as $attachment)
+            {
+                if (!empty($attachment['originalFilename']) && !$attachment['isProfileImage'])
+                {
+                    $ext = strtolower(pathinfo($attachment['originalFilename'], PATHINFO_EXTENSION));
+                    if (in_array($ext, array('pdf', 'doc', 'docx', 'txt', 'rtf', 'html', 'htm')))
+                    {
+                        $resumeFileURL = isset($attachment['retrievalURL']) ? $attachment['retrievalURL'] : '';
+                        $resumeFileName = $attachment['originalFilename'];
+                        $resumeLocalPath = isset($attachment['retrievalURLLocal']) ? $attachment['retrievalURLLocal'] : '';
+                        $resumeAttachmentID = $attachment['attachmentID'];
+                        if (empty($resumeTitle))
+                        {
+                            $resumeTitle = $attachment['originalFilename'];
+                        }
                         break;
                     }
                 }
@@ -820,8 +860,16 @@ class CandidatesUI extends UserInterface
         $this->_template->assign('resumeText', $resumeText);
         $this->_template->assign('resumeTitle', $resumeTitle);
         $this->_template->assign('resumeAttachmentID', $resumeAttachmentID);
+        $this->_template->assign('resumeFileURL', $resumeFileURL);
+        $this->_template->assign('resumeFileName', $resumeFileName);
+        $this->_template->assign('resumeLocalPath', $resumeLocalPath);
         $this->_template->assign('feedbackRS', $feedbackRS);
         $this->_template->assign('emailRS', $emailRS);
+
+        $emailTemplates = new EmailTemplates($this->_siteID);
+        $emailTemplatesRS = $emailTemplates->getAll();
+        $this->_template->assign('emailTemplatesRS', $emailTemplatesRS);
+
         $this->_template->assign('primaryJobOrder', $primaryJobOrder);
         $this->_template->assign('primaryJobOrderID', $primaryJobOrderID);
         $this->_template->assign('isPopup', $isPopup);
@@ -3521,6 +3569,63 @@ class CandidatesUI extends UserInterface
             $this->_template->assign('sessionCookie', $_SESSION['CATS']->getCookie());
             $this->_template->display('./modules/candidates/SendEmail.tpl');
         }
+    }
+
+    private function onSendCandidateEmail()
+    {
+        if (!isset($_POST['candidateID']) || !isset($_POST['emailSubject']) || !isset($_POST['emailBody']))
+        {
+            CommonErrors::fatal(COMMONERROR_BADFIELDS, $this, 'Required fields are missing.');
+            return;
+        }
+
+        $candidateID = intval($_POST['candidateID']);
+        $emailSubject = trim($_POST['emailSubject']);
+        $emailBody = trim($_POST['emailBody']);
+
+        if (empty($emailSubject) || empty($emailBody))
+        {
+            CommonErrors::fatal(COMMONERROR_BADFIELDS, $this, 'Subject and body cannot be empty.');
+            return;
+        }
+
+        $candidates = new Candidates($this->_siteID);
+        $candidateData = $candidates->get($candidateID);
+
+        if (empty($candidateData) || empty($candidateData['email1']))
+        {
+            CommonErrors::fatal(COMMONERROR_BADFIELDS, $this, 'Candidate has no email address.');
+            return;
+        }
+
+        $emailTemplates = new EmailTemplates($this->_siteID);
+        $emailBody = $emailTemplates->replaceVariables($emailBody);
+
+        $stringsToFind = array(
+            '%CANDOWNER%',
+            '%CANDFIRSTNAME%',
+            '%CANDFULLNAME%'
+        );
+        $replacementStrings = array(
+            $candidateData['ownerFullName'],
+            $candidateData['firstName'],
+            $candidateData['candidateFullName']
+        );
+        $emailBody = str_replace($stringsToFind, $replacementStrings, $emailBody);
+
+        $mailer = new Mailer($this->_siteID);
+        $mailerStatus = $mailer->sendToOne(
+            array($candidateData['email1'], $candidateData['candidateFullName']),
+            $emailSubject,
+            $emailBody,
+            true,
+            true
+        );
+
+        CATSUtility::transferRelativeURI(
+            'm=candidates&a=show&candidateID=' . $candidateID
+            . '&emailSent=' . ($mailerStatus ? '1' : '0')
+        );
     }
 
     private function onShowQuestionnaire()
