@@ -3,9 +3,9 @@ config.php
 CREDENTIALS.txt
 composer.phar
 
-# Ignore runtime directories
+# Ignore runtime directories (leading / = root-level only)
 upload/
-attachments/
+/attachments/
 temp/
 uploads/
 
