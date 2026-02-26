@@ -96,14 +96,15 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                 var toggleBtn = document.getElementById('resumeViewToggle');
                 if (!textView || !fileView || !toggleBtn) return;
 
-                if (fileView.style.display === 'none') {
-                    textView.style.display = 'none';
-                    fileView.style.display = '';
-                    toggleBtn.textContent = 'Show Text';
-                } else {
+                var textHidden = (textView.style.display === 'none');
+                if (textHidden) {
                     fileView.style.display = 'none';
                     textView.style.display = '';
                     toggleBtn.textContent = 'Show File';
+                } else {
+                    textView.style.display = 'none';
+                    fileView.style.display = '';
+                    toggleBtn.textContent = 'Show Text';
                 }
             }
 
@@ -847,14 +848,19 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                                                 <span class="resume-file-name"><?php echo htmlspecialchars($this->resumeFileName); ?></span>
                                                 <div class="resume-actions">
                                                     <a href="<?php echo $resumeDownloadURL; ?>" target="_blank">Download</a>
-                                                    <?php if (!$isPDF && $hasResumeText): ?>
-                                                        <a href="#" onclick="toggleResumeView(); return false;" id="resumeViewToggle">Show File</a>
+                                                    <?php if ($hasResumeText): ?>
+                                                        <a href="#" onclick="toggleResumeView(); return false;" id="resumeViewToggle"><?php echo $isPDF ? 'Show Text' : 'Show File'; ?></a>
                                                     <?php endif; ?>
                                                 </div>
                                             </div>
                                         <?php endif; ?>
 
-                                        <?php if ($isPDF): ?>
+                                        <?php if ($isPDF && $hasResumeText): ?>
+                                            <iframe src="<?php echo $resumeDownloadURL; ?>" title="Resume" id="resumeFileView"></iframe>
+                                            <div class="resume-viewer-text" id="resumeTextView" style="display: none;">
+                                                <?php echo nl2br(htmlspecialchars($this->resumeText)); ?>
+                                            </div>
+                                        <?php elseif ($isPDF): ?>
                                             <iframe src="<?php echo $resumeDownloadURL; ?>" title="Resume"></iframe>
                                         <?php elseif ($hasResumeText): ?>
                                             <div class="resume-viewer-text" id="resumeTextView">
