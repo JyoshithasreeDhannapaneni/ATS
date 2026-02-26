@@ -170,10 +170,10 @@ class License
         $seg = $segments[0];
 
         $md5 = substr($seg, 0, 3);
-        $md5i = base_convert(substr($seg, 3, 1), 35, 10);
+        $md5i = @base_convert(substr($seg, 3, 1), 35, 10);
         $scramble = substr($seg, 4);
 
-        $e = base_convert($scramble, 35, 5);
+        $e = @base_convert($scramble, 35, 5);
         if (strlen($e) < 5)
         {
             $e = '0' . $e;
@@ -200,7 +200,7 @@ class License
                 return true;
             }
 
-            $int32 = base_convert($sKey[$i], 35, 10);
+            $int32 = @base_convert($sKey[$i], 35, 10);
             $unencodedKey .= $sKey[$i];
             $byteString .= pack('N1', $int32);
         }
@@ -543,7 +543,7 @@ class License
         $length = ($end - $start + 1);
 
         /* Convert to base-4 so it can be stored in 2-bits. */
-        $number = base_convert($number, 10, 4);
+        $number = @base_convert($number, 10, 4);
 
         $value = preg_replace('/[^0-3]/', '', (string) $number);
         $value = substr($value, 0, $length);
@@ -568,7 +568,7 @@ class License
             $ret .= $this->getLowBitByte($byteString[$i]);
         }
 
-        return base_convert($ret, 4, 10);
+        return @base_convert($ret, 4, 10);
     }
 
     /**

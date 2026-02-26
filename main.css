@@ -378,7 +378,7 @@ a:hover {
 #headerBlock {
     margin: 0;
     padding: 0 20px;
-    height: 64px;
+    min-height: 190px;
     background: #fff;
     display: flex;
     align-items: center;
@@ -388,8 +388,8 @@ a:hover {
 }
 
 #headerBlock table img {
-    max-height: 42px;
-    max-width: 180px;
+    max-height: 120px;
+    max-width: 400px;
     height: auto;
     width: auto;
     object-fit: contain;

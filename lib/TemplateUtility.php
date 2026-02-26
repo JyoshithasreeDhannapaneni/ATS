@@ -104,7 +104,7 @@ class TemplateUtility
 
         /* Neutara ATS Tool Logo */
         echo '<div style="display: flex; align-items: center; gap: 12px;">', "\n";
-        echo '<img src="images/Neutaralogo.jpg" border="0" alt="Neutara ATS Tool" style="max-height: 42px; max-width: 180px; height: auto; width: auto; display: block;" />', "\n";
+        echo '<img src="images/Neutaralogo.jpg" border="0" alt="Neutara ATS Tool" style="max-height: 120px; max-width: 400px; height: auto; width: auto; display: block;" />', "\n";
         echo '</div>', "\n";
 
         if (!eval(Hooks::get('TEMPLATE_LIVE_CHAT'))) return;
