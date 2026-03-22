@@ -135,7 +135,39 @@ class HomeUI extends UserInterface
         $this->_template->assign('upcomingEventsHTML', $upcomingEventsHTML);
         $this->_template->assign('upcomingEventsFupHTML', $upcomingEventsFupHTML);
         $this->_template->assign('wildCardQuickSearch', '');
+
+        /* Determine user role for role-based dashboard */
+        $accessLevel = $_SESSION['CATS']->getAccessLevel(ACL::SECOBJ_ROOT);
+        $userFullName = $_SESSION['CATS']->getFirstName() . ' ' . $_SESSION['CATS']->getLastName();
+        $this->_template->assign('accessLevel', $accessLevel);
+        $this->_template->assign('userFullName', $userFullName);
+        $this->_template->assign('userRole', $this->_getUserRole($accessLevel));
+
+        /* Load pipeline stats for admin/recruiter dashboards */
+        include_once(LEGACY_ROOT . '/lib/Pipelines.php');
+        include_once(LEGACY_ROOT . '/lib/JobOrders.php');
+        include_once(LEGACY_ROOT . '/lib/Candidates.php');
+        include_once(LEGACY_ROOT . '/lib/Statistics.php');
+
+        $candidates = new Candidates($this->_siteID);
+        $jobOrders = new JobOrders($this->_siteID);
+        $pipelines = new Pipelines($this->_siteID);
+        $statistics = new Statistics($this->_siteID);
+
+        $candidateCountResult = $candidates->getCount();
+        $jobOrderCountResult = $jobOrders->getCount();
+        $this->_template->assign('candidateCount', is_array($candidateCountResult) ? $candidateCountResult[0] : $candidateCountResult);
+        $this->_template->assign('jobOrderCount', is_array($jobOrderCountResult) ? $jobOrderCountResult[0] : $jobOrderCountResult);
+
         $this->_template->display('./modules/home/Home.tpl');
+    }
+
+    private function _getUserRole($accessLevel)
+    {
+        if ($accessLevel >= ACCESS_LEVEL_SA) return 'admin';
+        if ($accessLevel >= ACCESS_LEVEL_DELETE) return 'recruiter';
+        if ($accessLevel >= ACCESS_LEVEL_EDIT) return 'recruiter';
+        return 'interviewer';
     }
 
     private function deleteSavedSearch()

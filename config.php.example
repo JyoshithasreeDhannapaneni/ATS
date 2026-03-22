@@ -38,7 +38,7 @@ if ($dbHost === 'localhost') {
 }
 define('DATABASE_HOST', $dbHost);
 
-/* Default MySQL port */
+/* MySQL port (default 3306). Use 3307 only if your server or Docker maps MySQL to that host port. */
 define('DATABASE_PORT', getenv('DATABASE_PORT') ?: 3306);
 
 /* Safety check — stop the app early if DB is not configured */

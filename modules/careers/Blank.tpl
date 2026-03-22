@@ -30,16 +30,7 @@
 
     <!-- FOOTER -->
     <?php echo($this->template['Footer']); ?>
-    <div style="font-size:9px;">
-        <br /><br /><br /><br />
-    </div>
-    <div style="text-align:center;">
-
-        <?php /* WARNING: It is against the terms of the CPL to remove or alter the following line.  The 'Powered by OpenCATS' line must stay visible on every page. */ ?>
-        <div id="poweredCATS">
-		<a href="http://www.opencats.org" target="_blank"><img src="../images/CATS-powered.gif" alt="Powered by: Neutara ATS Tool" title="Powered by: Neutara ATS Tool" /></a>
-		</div>
-    </div>
+    <!-- Powered by Neutara ATS Tool -->
     <script type="text/javascript">st_init();</script>
     </body>
 </html>

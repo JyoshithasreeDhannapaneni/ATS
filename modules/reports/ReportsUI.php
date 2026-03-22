@@ -43,6 +43,7 @@ class ReportsUI extends UserInterface
         $this->_moduleName = 'reports';
         $this->_moduleTabText = 'Reports';
         $this->_subTabs = array(
+                'Analytics Dashboard' => CATSUtility::getIndexName() . '?m=reports&amp;a=analyticsDashboard',
                 'EEO Reports' => CATSUtility::getIndexName() . '?m=reports&amp;a=customizeEEOReport'
             );
     }
@@ -83,11 +84,24 @@ class ReportsUI extends UserInterface
                 $this->generateEEOReportPreview();
                 break;
 
+            case 'analyticsDashboard':
+                $this->analyticsDashboard();
+                break;
+
             case 'reports':
             default:
                 $this->reports();
                 break;
         }
+    }
+
+    private function analyticsDashboard()
+    {
+        if (!eval(Hooks::get('REPORTS_ANALYTICS_DASHBOARD'))) return;
+
+        $this->_template->assign('active', $this);
+        $this->_template->assign('subActive', 'Analytics Dashboard');
+        $this->_template->display('./modules/reports/AnalyticsDashboard.tpl');
     }
 
     private function reports()

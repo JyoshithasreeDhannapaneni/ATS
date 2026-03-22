@@ -31,8 +31,7 @@
     </div>
     <div style="text-align:center;">
 
-        <?php /* WARNING: It is against the terms of the CPL to remove or alter the following line.  The 'Powered by OpenCATS' line must stay visible on every page. */ ?>
-        <span style="font-size: 9px;">Powered by</span> <a style="color: #888; position: relative; font-size: 9px; font-weight: normal; text-align: center; left: 0px; top: 0px;" href="http://www.opencats.org" target="_blank">Neutara ATS Tool</a>.
+        <a style="color: #2563eb; position: relative; font-size: 10px; font-weight: 500; text-align: center; left: 0px; top: 0px;" href="https://neutara.com/careers" target="_blank">Careers - Neutara</a>
 
     </div>
     <script type="text/javascript">st_init();</script>

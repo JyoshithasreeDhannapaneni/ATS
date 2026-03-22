@@ -3,9 +3,9 @@ config.php
 CREDENTIALS.txt
 composer.phar
 
-# Ignore runtime directories (leading / = root-level only)
+# Ignore runtime directories
 upload/
-/attachments/
+attachments/
 temp/
 uploads/
 
@@ -24,3 +24,8 @@ vendor/
 # OS files
 .DS_Store
 
+# Development artifacts
+.claude/
+tools/
+dbcheck.php
+docs/DATABASE-LOCAL.md

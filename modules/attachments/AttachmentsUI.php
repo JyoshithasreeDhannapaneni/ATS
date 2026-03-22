@@ -68,6 +68,7 @@ class AttachmentsUI extends UserInterface
 
     private function getAttachment()
     {
+        // FIXME: Do we really need to mess with memory limits here? We're only reading ~80KB at a time...
         @ini_set('memory_limit', '128M'); 
         
         if (!$this->isRequiredIDValid('id', $_GET))
@@ -95,6 +96,7 @@ class AttachmentsUI extends UserInterface
         $fileName      = $rs['storedFilename'];
         $filePath      = sprintf('attachments/%s/%s', $directoryName, $fileName);
 
+        /* Check for the existence of the backup.  If it is gone, send the user to a page informing them to press back and generate the backup again. */
         if ($rs['contentType'] == 'catsbackup' && !file_exists($filePath))
         {
             CommonErrors::fatal(
@@ -104,65 +106,42 @@ class AttachmentsUI extends UserInterface
             );
         }
         
+        // FIXME: Stream file rather than redirect? (depends on download preparer working).
         if (!eval(Hooks::get('ATTACHMENT_RETRIEVAL'))) return;
 
+        /* Determine MIME content type of the file. */
         $contentType = Attachments::fileMimeType($fileName);
 
+        /* Open the file and verify that it is readable. */
         $fp = @fopen($filePath, 'r');
         if ($fp === false)
         {
-            $this->_serveTextFallback($attachmentID, $fileName);
-            return;
+            CommonErrors::fatal(
+                COMMONERROR_BADFIELDS,
+                $this,
+                'This attachment is momentarily offline, please try again later. The support staff has been notified.'
+            );
         }
 
-        header('Content-Disposition: inline; filename="' . $fileName . '"');
+        /* Set headers for sending the file. */
+        header('Content-Disposition: inline; filename="' . $fileName . '"');  //Disposition attachment was default, but forces download.
         header('Content-Type: ' . $contentType);
         header('Content-Length: ' . filesize($filePath));
         header('Pragma: no-cache');
         header('Expires: 0');
         
+        /* Read the file in ATTACHMENT_BLOCK_SIZE-sized chunks from disk and
+         * output to the browser.
+         */
         while (!feof($fp))
         {
             print fread($fp, self::ATTACHMENT_BLOCK_SIZE);
         }
         
         fclose($fp);
+        
+        /* Exit to prevent output after the attachment. */
         exit();
-    }
-
-    /**
-     * When the physical file is missing (e.g. Render ephemeral filesystem),
-     * serve the extracted text stored in the database instead.
-     */
-    private function _serveTextFallback($attachmentID, $originalFileName)
-    {
-        $db = DatabaseConnection::getInstance();
-
-        $sql = sprintf(
-            "SELECT text FROM attachment WHERE attachment_id = %s",
-            $db->makeQueryInteger($attachmentID)
-        );
-        $row = $db->getAssoc($sql);
-
-        if (!empty($row) && !empty($row['text']))
-        {
-            $textFileName = pathinfo($originalFileName, PATHINFO_FILENAME) . '.txt';
-
-            header('Content-Disposition: inline; filename="' . $textFileName . '"');
-            header('Content-Type: text/plain; charset=utf-8');
-            header('Pragma: no-cache');
-            header('Expires: 0');
-            echo $row['text'];
-            exit();
-        }
-
-        CommonErrors::fatal(
-            COMMONERROR_BADFIELDS,
-            $this,
-            'The attachment file is not available on this server. '
-            . 'Files uploaded locally are not available on cloud deployments. '
-            . 'Please re-upload the attachment.'
-        );
     }
 
 }

@@ -84,7 +84,36 @@ class ParseUtility
      */
     public function documentParse($name, $size, $mimeType, $contents)
     {
-        if (!$this->_client) $this->startClient();
+        /* Try the external SOAP service first */
+        $soapResult = $this->_documentParseSoap($name, $size, $mimeType, $contents);
+        if ($soapResult !== false)
+        {
+            return $soapResult;
+        }
+
+        /* Fall back to local parsing engine */
+        return $this->_documentParseLocal($contents);
+    }
+
+    /**
+     * External SOAP-based parsing (original implementation).
+     */
+    private function _documentParseSoap($name, $size, $mimeType, $contents)
+    {
+        if (!CATSUtility::isSOAPEnabled())
+        {
+            return false;
+        }
+
+        try
+        {
+            if (!$this->_client) $this->startClient();
+        }
+        catch (\Exception $e)
+        {
+            return false;
+        }
+
         if (!defined('CATS_TEST_MODE') || !CATS_TEST_MODE)
         {
             try
@@ -127,6 +156,24 @@ class ParseUtility
         );
 
         return $ret;
+    }
+
+    /**
+     * Local regex-based resume parsing (no external service required).
+     */
+    private function _documentParseLocal($contents)
+    {
+        include_once(LEGACY_ROOT . '/lib/LocalParseUtility.php');
+
+        $localParser = new LocalParseUtility();
+        $result = $localParser->parse($contents);
+
+        if (empty($result['first_name']) && empty($result['email_address']) && empty($result['skills']))
+        {
+            return false;
+        }
+
+        return $result;
     }
 
     public function status($key)

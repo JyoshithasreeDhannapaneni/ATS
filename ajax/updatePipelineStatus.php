@@ -128,6 +128,14 @@ if ($oldStatusID != $statusID && $oldStatusID != 0)
     );
 }
 
+// Trigger email automation for status change
+if ($oldStatusID != $statusID)
+{
+    include_once(LEGACY_ROOT . '/lib/PipelineEmailAutomation.php');
+    $emailAutomation = new PipelineEmailAutomation($siteID);
+    $emailAutomation->onStatusChange($candidateID, $jobOrderID, $statusID, $_SESSION['CATS']->getUserID());
+}
+
 // Get the updated status for response
 $pipelineData = $pipelines->getCandidatePipeline($candidateID);
 $newStatus = '';

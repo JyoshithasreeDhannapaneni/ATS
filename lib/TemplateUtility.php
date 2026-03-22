@@ -102,9 +102,11 @@ class TemplateUtility
 
         echo '<div id="headerBlock">', "\n";
 
-        /* Neutara ATS Tool Logo */
-        echo '<div style="display: flex; align-items: center; gap: 12px;">', "\n";
-        echo '<img src="images/Neutaralogo.jpg" border="0" alt="Neutara ATS Tool" style="max-height: 120px; max-width: 400px; height: auto; width: auto; display: block;" />', "\n";
+        /* Neutara ATS Tool Logo — BambooHR style compact top bar */
+        echo '<div style="display: flex; align-items: center; gap: 14px;">', "\n";
+        echo '<img src="images/Neutaralogo.jpg" border="0" alt="Neutara ATS Tool" style="max-height: 38px; max-width: 140px; height: auto; width: auto; display: block; border-radius: 4px;" />', "\n";
+        echo '<span style="color: #e5e7eb; font-weight: 300;">|</span>', "\n";
+        echo '<span style="font-size: 13px; color: #6b7280; font-weight: 500;">Welcome to <span style="color: #1f2937; font-weight: 600;">Neutara ATS</span></span>', "\n";
         echo '</div>', "\n";
 
         if (!eval(Hooks::get('TEMPLATE_LIVE_CHAT'))) return;
@@ -124,11 +126,11 @@ class TemplateUtility
 
             if (!eval(Hooks::get('TEMPLATE_LOGIN_INFO_TOP_RIGHT_1'))) return;
 
-            /* Top Right Corner */
+            /* Top Right Corner — Single row: links | admin badge | logout */
             echo '<div id="topRight">', "\n";
 
-            echo '<div style="display: flex; align-items: center; gap: 12px; justify-content: flex-end; flex-wrap: wrap;">';
-            // Begin top-right action block
+            echo '<div style="display: flex; align-items: center; gap: 14px;">';
+
             if (!eval(Hooks::get('TEMPLATE_LOGIN_INFO_TOP_RIGHT_UPGRADE'))) return;
 
             if (LicenseUtility::isProfessional() &&
@@ -137,31 +139,15 @@ class TemplateUtility
                 if (abs(LicenseUtility::getExpirationDate() - time()) < 60*60*24*30)
                 {
                     $daysLeft = abs(LicenseUtility::getExpirationDate() - time())/60/60/24;
-                    echo '<a href="http://www.catsone.com/professional" target="_blank" style="font-size:12px;">';
-                    echo 'License expires in ' . number_format($daysLeft, 0) . ' days, Renew?</a>', "\n";
+                    echo '<a href="http://www.catsone.com/professional" target="_blank" style="font-size: 12px; color: #6b7280;">License expires in ' . number_format($daysLeft, 0) . ' days</a>', "\n";
                 }
                 else
                 {
-                    echo '<a href="https://www.neutara.com/" target="_blank" style="font-size:12px;">';
-                    echo 'OpenCATS.org</a>', "\n";
+                    echo '<a href="https://www.neutara.com/" target="_blank" style="font-size: 12px; color: #6b7280;">OpenCATS.org</a>', "\n";
                 }
             }
 
-            echo '<a href="', $indexName, '?m=logout" style="font-size:12px; padding: 5px 14px; background: #fee2e2; color: #dc2626; border-radius: 6px; text-decoration: none;">';
-            echo 'Logout</a>', "\n";
-            echo '</div>', "\n";
-            // End top-right action block
-
             if (!eval(Hooks::get('TEMPLATE_LOGIN_INFO_EXTENDED_SITE_NAME'))) return;
-
-            echo '<div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; color: #4b5563;">', "\n";
-            echo '<span>Neutara ATS</span>', "\n";
-
-            if ($_SESSION['CATS']->getAccessLevel(ACL::SECOBJ_ROOT) >= ACCESS_LEVEL_SA)
-            {
-                echo '<span style="font-weight:600; color: #2563eb; padding: 2px 8px; background: #dbeafe; border-radius: 4px;">Administrator</span>', "\n";
-            }
-            echo '</div>', "\n";
 
             $systemInfo = new SystemInfo();
             $systemInfoData = $systemInfo->getSystemInfo();
@@ -172,22 +158,31 @@ class TemplateUtility
                 !$systemInfoData['disable_version_check'] &&
                 $_SESSION['CATS']->getAccessLevel(ACL::SECOBJ_ROOT) >= ACCESS_LEVEL_SA)
             {
-                echo '<div style="margin-top: 4px;"><a href="http://www.catsone.com/download.php" target="catsdl" style="font-size: 11px; color: #f59e0b; font-weight: 500;">A new CATS version is available!</a></div>', "\n";
+                echo '<a href="http://www.catsone.com/download.php" target="catsdl" style="font-size: 11px; color: #f59e0b; font-weight: 500;">Update available</a>', "\n";
             }
 
             /* Disabled notice */
             if (!$_SESSION['CATS']->accountActive())
             {
-                echo '<div style="margin-top: 4px;"><span style="font-weight:600; color: #dc2626; font-size: 11px;">Account Inactive</span></div>', "\n";
+                echo '<span style="font-weight: 600; color: #dc2626; font-size: 11px;">Account Inactive</span>', "\n";
             }
             else if ($_SESSION['CATS']->getAccessLevel(ACL::SECOBJ_ROOT) == ACCESS_LEVEL_READ)
             {
-                echo '<div style="margin-top: 4px;"><span style="font-size: 11px; color: #6b7280;">Read Only Access</span></div>', "\n";
+                echo '<span style="font-size: 11px; color: #6b7280;">Read Only</span>', "\n";
             }
             else
             {
                 if (!eval(Hooks::get('TEMPLATE_LOGIN_INFO_TOP_RIGHT_2_ELSE'))) return;
             }
+
+            if ($_SESSION['CATS']->getAccessLevel(ACL::SECOBJ_ROOT) >= ACCESS_LEVEL_SA)
+            {
+                echo '<span style="font-weight: 500; color: #2563eb; padding: 3px 10px; background: #eff6ff; border-radius: 20px; font-size: 11px; border: 1px solid #dbeafe;">Admin</span>', "\n";
+            }
+
+            echo '<a href="', $indexName, '?m=logout" style="font-size: 13px; padding: 5px 14px; background: #fef2f2; color: #dc2626; border-radius: 6px; text-decoration: none; border: 1px solid #fecaca; font-weight: 500;">Logout</a>', "\n";
+
+            echo '</div>', "\n";
 
             echo '</div>', "\n";
         }
@@ -288,8 +283,8 @@ class TemplateUtility
         }
 
         echo '<input name="quickSearchFor" id="quickSearchFor" class="quickSearchBox" value="',
-             $wildCardString, '" />&nbsp;', "\n";
-        echo '<input type="submit" name="quickSearch" class="button" value="Go" />&nbsp;', "\n";
+             $wildCardString, '" placeholder="Search..." />&nbsp;', "\n";
+        echo '<input type="submit" name="quickSearch" class="button" value="Search" style="padding: 6px 16px; border-radius: 20px; font-size: 12px;" />&nbsp;', "\n";
         echo '</div>', "\n";
         echo '</form>', "\n";
         echo '</div>', "\n";

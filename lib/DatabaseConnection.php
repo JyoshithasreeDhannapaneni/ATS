@@ -124,8 +124,72 @@ class DatabaseConnection
             $host = '127.0.0.1';
         }
 
+        /* php -S logs to the terminal; set ATS_DB_LOG=1 in env for Apache/nginx stderr too */
+        $logDb = PHP_SAPI === 'cli-server' || getenv('ATS_DB_LOG') === '1';
+        if ($logDb) {
+            error_log(sprintf(
+                '[ATS DB] Connecting to %s:%d (user=%s, database=%s)',
+                $host,
+                $port,
+                $user,
+                $dbName !== '' ? $dbName : '(none)'
+            ));
+        }
+
         // Attempt connection with host, user, pass, db name AND port
         $this->_connection = $this->_tryConnect($host, $user, $pass, $dbName, $port);
+
+        if (!$this->_connection) {
+            $errno = mysqli_connect_errno();
+            $errMsg = mysqli_connect_error();
+            error_log(sprintf(
+                '[ATS DB] Connection failed %s:%d — errno=%d %s',
+                $host,
+                $port,
+                $errno,
+                $errMsg
+            ));
+
+            // Localhost: try other common ports (3306 / 3307) if TCP refused
+            if ($errno === 2002 && ($host === '127.0.0.1' || $host === '::1')) {
+                $tried = [(int) $port];
+                foreach ([3306, 3307] as $altPort) {
+                    if (in_array($altPort, $tried, true)) {
+                        continue;
+                    }
+                    error_log(sprintf(
+                        '[ATS DB] Retrying 127.0.0.1:%d (alternate local MySQL port)...',
+                        $altPort
+                    ));
+                    $tried[] = $altPort;
+                    $port = $altPort;
+                    $this->_connection = $this->_tryConnect($host, $user, $pass, $dbName, $port);
+                    if ($this->_connection) {
+                        error_log(sprintf('[ATS DB] Connected successfully on port %d.', $altPort));
+                        break;
+                    }
+                    error_log(sprintf(
+                        '[ATS DB] Port %d failed — errno=%d %s',
+                        $altPort,
+                        mysqli_connect_errno(),
+                        mysqli_connect_error()
+                    ));
+                }
+            }
+
+            // Windows: named pipe / socket via "localhost" when 127.0.0.1 TCP refused
+            if (!$this->_connection && $host === '127.0.0.1' && mysqli_connect_errno() === 2002) {
+                error_log(sprintf(
+                    '[ATS DB] Retrying host "localhost" port %d (socket/pipe on some Windows setups)...',
+                    $port
+                ));
+                $this->_connection = $this->_tryConnect('localhost', $user, $pass, $dbName, $port);
+                if ($this->_connection) {
+                    $host = 'localhost';
+                    error_log('[ATS DB] Connected using host "localhost".');
+                }
+            }
+        }
 
         // handle connection failures
         if (!$this->_connection)
@@ -145,7 +209,16 @@ class DatabaseConnection
                     . "\n     → Copy the exact hostname from your Aiven dashboard."
                     . "\n  3. Wait a few minutes after powering on for DNS to propagate.";
             } else if ($errno == 2002) {
-                $hint = "\n\n<b>HINT:</b> Connection refused. Check DATABASE_HOST and DATABASE_PORT.";
+                $hint = "\n\n<b>HINT:</b> <b>Connection refused</b> — MySQL is not accepting connections (usually it is <b>not running</b> or the port is wrong)."
+                    . "\n\n<b>Do this on Windows:</b>"
+                    . "\n  1. Open <b>XAMPP / WAMP</b> Control Panel → click <b>Start</b> next to MySQL."
+                    . "\n     Or run <code>services.msc</code> → start the <b>MySQL</b> or <b>MariaDB</b> service."
+                    . "\n  2. In <code>config.php</code>, under <code>DATABASE_USE_ENV_VARS = false</code>, set user/password/database/port to match MySQL."
+                    . "\n  3. If the error showed a <b>different</b> user/port than your file, set <code>define('DATABASE_USE_ENV_VARS', false);</code> (already recommended for local)."
+                    . "\n\nThe app tries ports <b>3306</b> and <b>3307</b> and host <b>localhost</b> automatically for local installs.";
+                if (defined('DATABASE_USE_ENV_VARS') && !DATABASE_USE_ENV_VARS) {
+                    $hint .= "\n\n<b>Active:</b> <code>DATABASE_USE_ENV_VARS</code> is <b>false</b> — Windows <code>DATABASE_*</code> env vars are ignored; only <code>config.php</code> applies.";
+                }
             } else if ($errno == 1045) {
                 $hint = "\n\n<b>HINT:</b> Access denied. Check DATABASE_USER and DATABASE_PASS.";
             }
@@ -193,12 +266,17 @@ class DatabaseConnection
     {
         try
         {
-            $sslMode = getenv('DATABASE_SSL') ?: '';
+            /* When config uses file-only DB (local), do not pick up cloud SSL from Windows env */
+            $useEnvSsl = !defined('DATABASE_USE_ENV_VARS') || DATABASE_USE_ENV_VARS;
+            $sslMode = $useEnvSsl ? (getenv('DATABASE_SSL') ?: '') : '';
 
             if (strtolower($sslMode) === 'required')
             {
                 // Aiven and other cloud MySQL providers require SSL
                 $mysqli = mysqli_init();
+                if (defined('MYSQLI_OPT_CONNECT_TIMEOUT')) {
+                    @mysqli_options($mysqli, MYSQLI_OPT_CONNECT_TIMEOUT, 10);
+                }
                 mysqli_ssl_set($mysqli, null, null, null, null, null);
                 $flags = MYSQLI_CLIENT_SSL;
 
@@ -221,7 +299,15 @@ class DatabaseConnection
             }
             else
             {
-                return @mysqli_connect($host, $user, $pass, $dbName ?: null, $port);
+                $mysqli = mysqli_init();
+                if (defined('MYSQLI_OPT_CONNECT_TIMEOUT')) {
+                    @mysqli_options($mysqli, MYSQLI_OPT_CONNECT_TIMEOUT, 10);
+                }
+                @mysqli_real_connect($mysqli, $host, $user, $pass, $dbName ?: null, $port);
+                if (mysqli_connect_errno()) {
+                    return false;
+                }
+                return $mysqli;
             }
         }
         catch (\Exception $e)

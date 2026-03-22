@@ -1,0 +1,30 @@
+/* Neutara ATS - Interview Feedback & Stage Tracking */
+
+CREATE TABLE IF NOT EXISTS `interview_feedback` (
+  `feedback_id` int(11) NOT NULL AUTO_INCREMENT,
+  `calendar_event_id` int(11) NOT NULL,
+  `candidate_id` int(11) NOT NULL,
+  `joborder_id` int(11) NOT NULL DEFAULT '0',
+  `interviewer_user_id` int(11) NOT NULL,
+  `interview_stage` varchar(32) NOT NULL DEFAULT 'L1',
+  `overall_rating` int(2) DEFAULT NULL,
+  `technical_rating` int(2) DEFAULT NULL,
+  `communication_rating` int(2) DEFAULT NULL,
+  `cultural_fit_rating` int(2) DEFAULT NULL,
+  `problem_solving_rating` int(2) DEFAULT NULL,
+  `strengths` text,
+  `weaknesses` text,
+  `notes` text,
+  `recommendation` enum('strong_hire','hire','maybe','no_hire','strong_no_hire') DEFAULT NULL,
+  `status` enum('pending','submitted') NOT NULL DEFAULT 'pending',
+  `site_id` int(11) NOT NULL,
+  `date_created` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `date_modified` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`feedback_id`),
+  KEY `IDX_candidate_id` (`candidate_id`),
+  KEY `IDX_joborder_id` (`joborder_id`),
+  KEY `IDX_event_id` (`calendar_event_id`),
+  KEY `IDX_interviewer` (`interviewer_user_id`),
+  KEY `IDX_site_id` (`site_id`),
+  KEY `IDX_stage` (`interview_stage`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;

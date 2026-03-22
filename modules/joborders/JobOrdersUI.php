@@ -84,7 +84,8 @@ class JobOrdersUI extends UserInterface
         $this->_subTabs = array(
             //'Add Job Order'     => CATSUtility::getIndexName() . '?m=joborders&amp;a=add*al=' . ACCESS_LEVEL_EDIT . '@joborders.add',
             'Add Job Order' => 'javascript:void(0);*js=showPopWin(\''.CATSUtility::getIndexName().'?m=joborders&amp;a=addJobOrderPopup\', 400, 250, null);*al=' . ACCESS_LEVEL_EDIT . '@joborders.add',
-            'Search Job Orders' => CATSUtility::getIndexName() . '?m=joborders&amp;a=search'
+            'Search Job Orders' => CATSUtility::getIndexName() . '?m=joborders&amp;a=search',
+            'Pipeline Board' => CATSUtility::getIndexName() . '?m=joborders&amp;a=pipelineBoard'
         );
     }
 
@@ -151,6 +152,14 @@ class JobOrdersUI extends UserInterface
                     CommonErrors::fatal(COMMONERROR_PERMISSION, $this, 'Invalid user level for action.');
                 }
                 $this->onDelete();
+                break;
+
+            case 'pipelineBoard':
+                if ($this->getUserAccessLevel('joborders.show') < ACCESS_LEVEL_READ)
+                {
+                    CommonErrors::fatal(COMMONERROR_PERMISSION, $this, 'Invalid user level for action.');
+                }
+                $this->pipelineBoard();
                 break;
 
             case 'search':
@@ -1963,6 +1972,24 @@ class JobOrdersUI extends UserInterface
         if (!eval(Hooks::get('JO_FORMAT_LIST_BY_VIEW_RESULTS'))) return;
 
         return $resultSet;
+    }
+
+    private function pipelineBoard()
+    {
+        $jobOrders = new JobOrders($this->_siteID);
+        $rs = $jobOrders->getAll(JOBORDERS_STATUS_ALL);
+
+        $pipelines = new Pipelines($this->_siteID);
+        $statuses = $pipelines->getStatusesForPicking();
+
+        $this->_template->assign('active', $this);
+        $this->_template->assign('jobOrdersRS', $rs);
+        $this->_template->assign('statusesRS', $statuses);
+        $this->_template->assign('sessionCookie', $_SESSION['CATS']->getCookie());
+
+        if (!eval(Hooks::get('JO_PIPELINE_BOARD'))) return;
+
+        $this->_template->display('./modules/joborders/PipelineBoard.tpl');
     }
 }
 
