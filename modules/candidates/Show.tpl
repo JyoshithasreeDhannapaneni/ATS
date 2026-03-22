@@ -84,6 +84,38 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                 emailItems[index].classList.add('active');
             }
 
+            function updateCandidateStatus(newStatusID) {
+                var candidateJobOrderID = <?php echo isset($this->candidateJobOrderID) ? (int)$this->candidateJobOrderID : 0; ?>;
+                var candidateID = <?php echo (int)$this->candidateID; ?>;
+                var jobOrderID = <?php echo isset($this->candidateJobOrderJobID) ? (int)$this->candidateJobOrderJobID : 0; ?>;
+
+                if (!candidateJobOrderID || !jobOrderID) {
+                    alert('No pipeline found for this candidate.');
+                    return;
+                }
+
+                var url = 'ajax.php?f=updatePipelineStatus'
+                    + '&candidateJobOrderID=' + candidateJobOrderID
+                    + '&candidateID=' + candidateID
+                    + '&jobOrderID=' + jobOrderID
+                    + '&statusID=' + newStatusID;
+
+                var xhr = new XMLHttpRequest();
+                xhr.open('GET', url, true);
+                xhr.onreadystatechange = function() {
+                    if (xhr.readyState === 4) {
+                        if (xhr.status === 200 && xhr.responseText.indexOf('<errorcode>0</errorcode>') !== -1) {
+                            var dropdown = document.getElementById('profileStatusDropdown');
+                            var selectedText = dropdown.options[dropdown.selectedIndex].text.trim();
+                            dropdown.title = 'Current: ' + selectedText;
+                        } else {
+                            alert('Failed to update status. Please try again.');
+                        }
+                    }
+                };
+                xhr.send();
+            }
+
             var candidateEmailTemplates = {
                 <?php if (!empty($this->emailTemplatesRS)): ?>
                     <?php foreach ($this->emailTemplatesRS as $tpl): ?>
@@ -280,9 +312,44 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                 font-weight: 600;
                 letter-spacing: 0.02em;
             }
-            .profile-status-badge.selected { background: rgba(22, 163, 74, 0.2); color: #bbf7d0; }
-            .profile-status-badge.rejected { background: rgba(220, 38, 38, 0.2); color: #fecaca; }
-            .profile-status-badge.none     { background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); }
+            .profile-status-badge.selected, .profile-status-badge.placed { background: rgba(22, 163, 74, 0.2); color: #bbf7d0; }
+            .profile-status-badge.rejected, .profile-status-badge.client-declined { background: rgba(220, 38, 38, 0.2); color: #fecaca; }
+            .profile-status-badge.interviewing, .profile-status-badge.offered { background: rgba(37, 99, 235, 0.2); color: #bfdbfe; }
+            .profile-status-badge.qualifying, .profile-status-badge.submitted { background: rgba(124, 58, 237, 0.2); color: #ddd6fe; }
+            .profile-status-badge.contacted, .profile-status-badge.candidate-responded { background: rgba(217, 119, 6, 0.2); color: #fde68a; }
+            .profile-status-badge.none, .profile-status-badge.no-contact { background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); }
+
+            .profile-status-dropdown {
+                appearance: none;
+                -webkit-appearance: none;
+                background: rgba(255,255,255,0.12);
+                color: #fff;
+                border: 1px solid rgba(255,255,255,0.25);
+                border-radius: 20px;
+                padding: 5px 30px 5px 14px;
+                font-size: 12px;
+                font-weight: 600;
+                letter-spacing: 0.02em;
+                cursor: pointer;
+                outline: none;
+                transition: all 0.2s ease;
+                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='white' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+                background-repeat: no-repeat;
+                background-position: right 10px center;
+            }
+            .profile-status-dropdown:hover {
+                background-color: rgba(255,255,255,0.2);
+                border-color: rgba(255,255,255,0.4);
+            }
+            .profile-status-dropdown:focus {
+                border-color: #60a5fa;
+                box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.3);
+            }
+            .profile-status-dropdown option {
+                background: #1f2937;
+                color: #fff;
+                padding: 8px;
+            }
 
             .profile-contact-row {
                 display: flex;
@@ -555,10 +622,10 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
             }
 
             .tab-left-panel {
-                flex: 0 0 65% !important;
-                width: 65% !important;
-                max-width: 65% !important;
-                min-width: 65% !important;
+                flex: 0 0 100% !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 100% !important;
                 padding: 28px 32px;
                 border-right: 1px solid var(--gray-200, #e5e7eb);
                 background: var(--gray-50, #f8fafc);
@@ -1143,15 +1210,33 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                             <div class="profile-info">
                                 <h1 class="profile-name"><?php $this->_($this->data['firstName']); ?> <?php $this->_($this->data['middleName']); ?> <?php $this->_($this->data['lastName']); ?></h1>
                                 <div class="profile-meta">
-                                    <?php if (!empty($this->candidateStatus)): ?>
-                                        <span class="profile-status-badge <?php echo strtolower($this->candidateStatus); ?>">
-                                            <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><circle cx="4" cy="4" r="4"/></svg>
-                                            <?php $this->_($this->candidateStatus); ?>
-                                        </span>
+                                    <?php if (!empty($this->pipelinesRS)): ?>
+                                        <select class="profile-status-dropdown" id="profileStatusDropdown" onchange="updateCandidateStatus(this.value)">
+                                            <?php
+                                                $statusOptions = array(
+                                                    100 => 'No Contact',
+                                                    200 => 'Contacted',
+                                                    250 => 'Candidate Responded',
+                                                    300 => 'Qualifying',
+                                                    400 => 'Submitted',
+                                                    500 => 'Interviewing',
+                                                    600 => 'Offered',
+                                                    700 => 'Client Declined',
+                                                    800 => 'Placed',
+                                                    900 => 'Selected',
+                                                    950 => 'Rejected'
+                                                );
+                                                foreach ($statusOptions as $statusVal => $statusLabel):
+                                            ?>
+                                                <option value="<?php echo $statusVal; ?>" <?php echo ($this->candidateStatusID == $statusVal) ? 'selected' : ''; ?>>
+                                                    <?php echo $statusLabel; ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
                                     <?php else: ?>
                                         <span class="profile-status-badge none">
                                             <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><circle cx="4" cy="4" r="4"/></svg>
-                                            Not Set
+                                            No Pipeline
                                         </span>
                                     <?php endif; ?>
                                     <?php if (!empty($this->data['currentEmployer'])): ?>
@@ -1409,78 +1494,6 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                                     </div>
                                 <?php endif; ?>
                             </div>
-                            <div class="tab-right-panel">
-                                <?php if (!empty($this->candidateStatus)): ?>
-                                    <div class="status-badge-panel <?php echo strtolower($this->candidateStatus); ?>" style="margin-bottom: 20px; margin-top: 0;">
-                                        Status: <?php $this->_($this->candidateStatus); ?>
-                                    </div>
-                                <?php else: ?>
-                                    <div class="status-badge-panel status-none" style="margin-bottom: 20px; margin-top: 0;">
-                                        Status: Not Set
-                                    </div>
-                                <?php endif; ?>
-                                <h3>Candidate Details</h3>
-                                <table class="candidate-details-table">
-                                    <tr>
-                                        <td class="label">Name:</td>
-                                        <td class="value">
-                                            <span class="<?php echo($this->data['titleClass']); ?>">
-                                                <?php $this->_($this->data['firstName']); ?> <?php $this->_($this->data['lastName']); ?>
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    <?php if (!empty($this->primaryJobOrder)): ?>
-                                    <tr>
-                                        <td class="label">Job:</td>
-                                        <td class="value"><?php $this->_($this->primaryJobOrder['title']); ?> (Job ID: <?php echo($this->primaryJobOrder['clientJobID'] ? $this->primaryJobOrder['clientJobID'] : $this->primaryJobOrder['jobOrderID']); ?>)</td>
-                                    </tr>
-                                    <?php endif; ?>
-                                    <tr>
-                                        <td class="label">Email:</td>
-                                        <td class="value">
-                                            <a href="mailto:<?php $this->_($this->data['email1']); ?>">
-                                                <?php $this->_($this->data['email1']); ?>
-                                            </a>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="label">Phone:</td>
-                                        <td class="value">
-                                            <?php
-                                            $phone = !empty($this->data['phoneCell']) ? $this->data['phoneCell'] :
-                                                    (!empty($this->data['phoneHome']) ? $this->data['phoneHome'] : $this->data['phoneWork']);
-                                            $this->_($phone);
-                                            ?>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="label">Location:</td>
-                                        <td class="value"><?php $this->_($this->data['cityAndState']); ?></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="label">Employer:</td>
-                                        <td class="value"><?php $this->_($this->data['currentEmployer']); ?></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="label">Notice Period:</td>
-                                        <td class="value"><?php echo !empty($this->data['dateAvailable']) ? '30 Days' : 'Not Specified'; ?></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="label">Expected CTC:</td>
-                                        <td class="value"><?php echo !empty($this->data['desiredPay']) ? $this->data['desiredPay'] : (!empty($this->data['currentPay']) ? $this->data['currentPay'] : 'Not Specified'); ?></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="label">Key Skills:</td>
-                                        <td class="value"><?php $this->_($this->data['keySkills']); ?></td>
-                                    </tr>
-                                </table>
-                                <?php if ($this->getUserAccessLevel('pipelines.addActivityChangeStatus') >= ACCESS_LEVEL_EDIT): ?>
-                                <div class="action-buttons">
-                                    <button class="btn btn-success" onclick="showPopWin('<?php echo(CATSUtility::getIndexName()); ?>?m=candidates&amp;a=considerForJobSearch&amp;candidateID=<?php echo($this->candidateID); ?>', 750, 390, null); return false;">Move Candidate</button>
-                                    <button class="btn btn-success" onclick="showPopWin('<?php echo(CATSUtility::getIndexName()); ?>?m=candidates&amp;a=addActivityChangeStatus&amp;candidateID=<?php echo($this->candidateID); ?>&amp;jobOrderID=-1&amp;onlyScheduleEvent=true', 600, 350, null); return false;">Schedule Interview</button>
-                                </div>
-                                <?php endif; ?>
-                            </div>
                         </div>
 
                         <!-- ===== FEEDBACK TAB ===== -->
@@ -1511,14 +1524,6 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                                                 <textarea name="interviewNotes" placeholder="Enter interview notes..."></textarea>
                                             </div>
                                             <div class="form-group">
-                                                <label>Strengths</label>
-                                                <textarea name="strengths" placeholder="Enter strengths..."></textarea>
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Weaknesses</label>
-                                                <textarea name="weaknesses" placeholder="Enter weaknesses..."></textarea>
-                                            </div>
-                                            <div class="form-group">
                                                 <label>
                                                     <input type="checkbox" name="recommendHire" value="1" /> Recommend: Hire
                                                 </label>
@@ -1547,79 +1552,11 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                                                     <?php echo htmlspecialchars(substr($latestFeedback['notes'], 0, 200)); ?>...
                                                 </div>
                                             </div>
-                                            <div class="form-group">
-                                                <label>Weaknesses</label>
-                                                <div style="padding: 10px; background: #f8fafc; border-radius: 8px; min-height: 60px; line-height: 1.6; font-size: 13px;">
-                                                    Limited experience with backend technologies.
-                                                </div>
-                                            </div>
                                         <?php else: ?>
                                             <p style="color: #9ca3af; text-align: center; padding: 40px; font-size: 13px;">No previous feedback available.</p>
                                         <?php endif; ?>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="tab-right-panel">
-                                <?php if (!empty($this->candidateStatus)): ?>
-                                    <div class="status-badge-panel <?php echo strtolower($this->candidateStatus); ?>" style="margin-bottom: 20px;">
-                                        Status: <?php $this->_($this->candidateStatus); ?>
-                                    </div>
-                                <?php endif; ?>
-                                <h3>Candidate Details</h3>
-                                <table class="candidate-details-table">
-                                    <tr>
-                                        <td class="label">Name:</td>
-                                        <td class="value">
-                                            <span class="<?php echo($this->data['titleClass']); ?>">
-                                                <?php $this->_($this->data['firstName']); ?> <?php $this->_($this->data['lastName']); ?>
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    <?php if (!empty($this->primaryJobOrder)): ?>
-                                    <tr>
-                                        <td class="label">Job:</td>
-                                        <td class="value"><?php $this->_($this->primaryJobOrder['title']); ?> (Job ID: <?php echo($this->primaryJobOrder['clientJobID'] ? $this->primaryJobOrder['clientJobID'] : $this->primaryJobOrder['jobOrderID']); ?>)</td>
-                                    </tr>
-                                    <?php endif; ?>
-                                    <tr>
-                                        <td class="label">Email:</td>
-                                        <td class="value">
-                                            <a href="mailto:<?php $this->_($this->data['email1']); ?>">
-                                                <?php $this->_($this->data['email1']); ?>
-                                            </a>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="label">Phone:</td>
-                                        <td class="value">
-                                            <?php
-                                            $phone = !empty($this->data['phoneCell']) ? $this->data['phoneCell'] :
-                                                    (!empty($this->data['phoneHome']) ? $this->data['phoneHome'] : $this->data['phoneWork']);
-                                            $this->_($phone);
-                                            ?>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="label">Location:</td>
-                                        <td class="value"><?php $this->_($this->data['cityAndState']); ?></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="label">Employer:</td>
-                                        <td class="value"><?php $this->_($this->data['currentEmployer']); ?></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="label">Notice Period:</td>
-                                        <td class="value"><?php echo !empty($this->data['dateAvailable']) ? '30 Days' : 'Not Specified'; ?></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="label">Expected CTC:</td>
-                                        <td class="value"><?php echo !empty($this->data['desiredPay']) ? $this->data['desiredPay'] : (!empty($this->data['currentPay']) ? $this->data['currentPay'] : 'Not Specified'); ?></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="label">Key Skills:</td>
-                                        <td class="value"><?php $this->_($this->data['keySkills']); ?></td>
-                                    </tr>
-                                </table>
                             </div>
                         </div>
 
@@ -1716,68 +1653,6 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                             </div>
                         </div>
                     </div>
-                    <div class="tab-right-panel">
-                        <?php if (!empty($this->candidateStatus)): ?>
-                            <div class="status-badge-panel <?php echo strtolower($this->candidateStatus); ?>" style="margin-bottom: 20px;">
-                                Status: <?php $this->_($this->candidateStatus); ?>
-                            </div>
-                        <?php endif; ?>
-                                <h3>Candidate Details</h3>
-                                <table class="candidate-details-table">
-                                    <tr>
-                                        <td class="label">Name:</td>
-                                        <td class="value">
-                                            <span class="<?php echo($this->data['titleClass']); ?>">
-                                                <?php $this->_($this->data['firstName']); ?> <?php $this->_($this->data['lastName']); ?>
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    <?php if (!empty($this->primaryJobOrder)): ?>
-                                    <tr>
-                                        <td class="label">Job:</td>
-                                        <td class="value"><?php $this->_($this->primaryJobOrder['title']); ?> (Job ID: <?php echo($this->primaryJobOrder['clientJobID'] ? $this->primaryJobOrder['clientJobID'] : $this->primaryJobOrder['jobOrderID']); ?>)</td>
-                                    </tr>
-                                    <?php endif; ?>
-                                    <tr>
-                                        <td class="label">Email:</td>
-                                        <td class="value">
-                                            <a href="mailto:<?php $this->_($this->data['email1']); ?>">
-                                                <?php $this->_($this->data['email1']); ?>
-                                            </a>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="label">Phone:</td>
-                                        <td class="value">
-                                            <?php
-                                            $phone = !empty($this->data['phoneCell']) ? $this->data['phoneCell'] :
-                                                    (!empty($this->data['phoneHome']) ? $this->data['phoneHome'] : $this->data['phoneWork']);
-                                            $this->_($phone);
-                                            ?>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="label">Location:</td>
-                                        <td class="value"><?php $this->_($this->data['cityAndState']); ?></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="label">Employer:</td>
-                                        <td class="value"><?php $this->_($this->data['currentEmployer']); ?></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="label">Notice Period:</td>
-                                        <td class="value"><?php echo !empty($this->data['dateAvailable']) ? '30 Days' : 'Not Specified'; ?></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="label">Expected CTC:</td>
-                                        <td class="value"><?php echo !empty($this->data['desiredPay']) ? $this->data['desiredPay'] : (!empty($this->data['currentPay']) ? $this->data['currentPay'] : 'Not Specified'); ?></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="label">Key Skills:</td>
-                                        <td class="value"><?php $this->_($this->data['keySkills']); ?></td>
-                                    </tr>
-                                </table>
-                            </div>
                         </div>
                     </div>
                 </div>

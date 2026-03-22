@@ -737,20 +737,17 @@ class CandidatesUI extends UserInterface
             $primaryJobOrderID = $primaryJobOrder['jobOrderID'];
         }
 
-        // Get candidate status (Selected/Rejected) from pipeline
+        // Get candidate status from pipeline (first/primary job order)
         $candidateStatus = '';
         $candidateStatusID = 0;
+        $candidateJobOrderID = 0;
+        $candidateJobOrderJobID = 0;
         if (!empty($pipelinesRS))
         {
-            foreach ($pipelinesRS as $pipeline)
-            {
-                if (strtolower($pipeline['status']) == 'selected' || strtolower($pipeline['status']) == 'rejected')
-                {
-                    $candidateStatus = $pipeline['status'];
-                    $candidateStatusID = $pipeline['statusID'];
-                    break;
-                }
-            }
+            $candidateStatus = $pipelinesRS[0]['status'];
+            $candidateStatusID = $pipelinesRS[0]['statusID'];
+            $candidateJobOrderID = $pipelinesRS[0]['candidateJobOrderID'];
+            $candidateJobOrderJobID = $pipelinesRS[0]['jobOrderID'];
         }
 
         // Get resume text and file URL for Resume tab
@@ -857,6 +854,8 @@ class CandidatesUI extends UserInterface
         $this->_template->assign('candidateID', $candidateID);
         $this->_template->assign('candidateStatus', $candidateStatus);
         $this->_template->assign('candidateStatusID', $candidateStatusID);
+        $this->_template->assign('candidateJobOrderID', $candidateJobOrderID);
+        $this->_template->assign('candidateJobOrderJobID', $candidateJobOrderJobID);
         $this->_template->assign('resumeText', $resumeText);
         $this->_template->assign('resumeTitle', $resumeTitle);
         $this->_template->assign('resumeAttachmentID', $resumeAttachmentID);

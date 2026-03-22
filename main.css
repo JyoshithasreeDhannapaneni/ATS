@@ -581,18 +581,19 @@ input[type="checkbox"] { accent-color: var(--primary); }
    ============================================================ */
 .button {
     height: auto;
-    color: #fff;
+    color: #fff !important;
     font-size: 13px;
     font-weight: 500;
     font-family: var(--font-family);
     padding: 7px 18px;
-    background: var(--primary);
+    background: var(--primary) !important;
     border: none;
     border-radius: var(--radius);
     cursor: pointer;
     transition: var(--transition-fast);
     line-height: 1.4;
     box-shadow: none;
+    text-decoration: none !important;
 }
 
 .button:hover {

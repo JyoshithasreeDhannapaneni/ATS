@@ -139,11 +139,7 @@ class TemplateUtility
                 if (abs(LicenseUtility::getExpirationDate() - time()) < 60*60*24*30)
                 {
                     $daysLeft = abs(LicenseUtility::getExpirationDate() - time())/60/60/24;
-                    echo '<a href="http://www.catsone.com/professional" target="_blank" style="font-size: 12px; color: #6b7280;">License expires in ' . number_format($daysLeft, 0) . ' days</a>', "\n";
-                }
-                else
-                {
-                    echo '<a href="https://www.neutara.com/" target="_blank" style="font-size: 12px; color: #6b7280;">OpenCATS.org</a>', "\n";
+                    echo '<span style="font-size: 12px; color: #6b7280;">License expires in ' . number_format($daysLeft, 0) . ' days</span>', "\n";
                 }
             }
 
