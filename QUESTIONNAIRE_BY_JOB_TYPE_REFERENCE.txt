@@ -1,0 +1,439 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                                                                            ║
+║        QUESTIONNAIRE AUTO-SELECTION BY JOB TYPE - QUICK REFERENCE         ║
+║              Which Questionnaire Gets Selected for Each Job Type           ║
+║                                                                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+THE COMPLETE MAPPING:
+════════════════════════════════════════════════════════════════════════════
+
+When you create a job order and select a Type, this questionnaire AUTO-SELECTS:
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│ JOB TYPE CODE    │ JOB TYPE NAME      │ QUESTIONNAIRE ID │ QUESTIONNAIRE TITLE
+├──────────────────────────────────────────────────────────────────────────┤
+│ C                │ Contract           │ 2                │ Contract Position Questions
+│ C2H              │ Contract to Hire   │ 3                │ Contract to Hire Questions
+│ FL               │ Freelance          │ 4                │ Freelance Position Questions
+│ FT               │ Full Time          │ 5                │ Full Time Position Questions
+│ H                │ Hire               │ 6                │ Direct Hire Questions
+└──────────────────────────────────────────────────────────────────────────┘
+
+
+VISUAL BREAKDOWN:
+════════════════════════════════════════════════════════════════════════════
+
+WHEN YOU SELECT → THIS AUTO-SELECTS
+
+[C] Contract
+  ↓
+  Questionnaire ID: 2
+  Title: "Contract Position Questions"
+  Questions For: Temporary contract positions
+  Example Questions:
+    - "Contract duration preferences?"
+    - "Experience with contract work?"
+    - "Availability to start?"
+
+[C2H] Contract to Hire
+  ↓
+  Questionnaire ID: 3
+  Title: "Contract to Hire Questions"
+  Questions For: Positions that might convert to permanent
+  Example Questions:
+    - "Open to permanent position later?"
+    - "Contract first preference?"
+    - "Full-time future expectations?"
+
+[FL] Freelance
+  ↓
+  Questionnaire ID: 4
+  Title: "Freelance Position Questions"
+  Questions For: Freelance/independent contractor roles
+  Example Questions:
+    - "Freelance experience?"
+    - "Own equipment/tools?"
+    - "Available for part-time work?"
+
+[FT] Full Time
+  ↓
+  Questionnaire ID: 5
+  Title: "Full Time Position Questions"
+  Questions For: Permanent full-time positions
+  Example Questions:
+    - "Seeking permanent position?"
+    - "Salary expectations?"
+    - "Willing to relocate?"
+
+[H] Hire (Direct Hire)
+  ↓
+  Questionnaire ID: 6
+  Title: "Direct Hire Questions"
+  Questions For: Direct permanent hire positions
+  Example Questions:
+    - "Available to start immediately?"
+    - "Benefits expectations?"
+    - "Long-term career goals?"
+
+
+HOW IT WORKS IN THE FORM:
+════════════════════════════════════════════════════════════════════════════
+
+Step 1: Open Add Job Order Form
+  ┌─────────────────────────────┐
+  │ Add Job Order               │
+  ├─────────────────────────────┤
+  │ Title: ________________      │
+  │ Company: [ABC Corp    ▼]    │
+  │ Type: [Select ▼]            │  ← Step 2: Click Here
+  │ Questionnaire: [_______ ] □  │
+  └─────────────────────────────┘
+
+Step 2: Click on Type Dropdown
+  ┌─────────────────────────────┐
+  │ Type: ▼                     │
+  │ • C (Contract)              │
+  │ • C2H (Contract to Hire)    │
+  │ • FL (Freelance)            │
+  │ • FT (Full Time)            │  ← Example: Click This
+  │ • H (Hire)                  │
+  └─────────────────────────────┘
+
+Step 3: Select a Type (Example: FT)
+  Click "FT (Full Time)"
+
+Step 4: AUTOMATIC ✓
+  ┌─────────────────────────────┐
+  │ Add Job Order               │
+  ├─────────────────────────────┤
+  │ Title: ________________      │
+  │ Company: [ABC Corp    ▼]    │
+  │ Type: [FT            ▼]     │
+  │ Questionnaire:              │
+  │ [Full Time Position....▼]   │  ← AUTO-SELECTED! ✓
+  └─────────────────────────────┘
+
+Result: "Full Time Position Questions" automatically selected!
+
+Step 5: Save
+  You're done! No manual questionnaire selection needed!
+
+
+DETAILED BREAKDOWN BY TYPE:
+════════════════════════════════════════════════════════════════════════════
+
+TYPE 1: C (Contract)
+────────────────────────────────────────────────────────────────────────────
+When to Use: For temporary contract positions
+Auto-Selects: Questionnaire ID 2
+Title: "Contract Position Questions"
+Purpose: Screen candidates for short-term contract work
+Typical Questions:
+  ✓ How long have you worked on contracts?
+  ✓ What is your preferred contract length?
+  ✓ Can you start within 2 weeks?
+  ✓ Are you open to extensions?
+  ✓ Contract negotiation experience?
+
+
+TYPE 2: C2H (Contract to Hire)
+────────────────────────────────────────────────────────────────────────────
+When to Use: For positions that START as contract but may convert to permanent
+Auto-Selects: Questionnaire ID 3
+Title: "Contract to Hire Questions"
+Purpose: Screen candidates willing to try contract first
+Typical Questions:
+  ✓ Would you accept contract initially?
+  ✓ What's your expectation to convert to permanent?
+  ✓ Open to extended contract period?
+  ✓ Timeline expectations?
+  ✓ Concerns about contract-to-hire?
+
+
+TYPE 3: FL (Freelance)
+────────────────────────────────────────────────────────────────────────────
+When to Use: For freelance/independent contractor positions
+Auto-Selects: Questionnaire ID 4
+Title: "Freelance Position Questions"
+Purpose: Screen candidates for independent work
+Typical Questions:
+  ✓ Freelance experience?
+  ✓ Do you have your own equipment?
+  ✓ Comfortable with project-based work?
+  ✓ How do you handle taxes/invoicing?
+  ✓ Availability for part-time engagement?
+
+
+TYPE 4: FT (Full Time)
+────────────────────────────────────────────────────────────────────────────
+When to Use: For permanent, full-time positions
+Auto-Selects: Questionnaire ID 5
+Title: "Full Time Position Questions"
+Purpose: Screen candidates for permanent employment
+Typical Questions:
+  ✓ Seeking permanent full-time position?
+  ✓ Salary expectations?
+  ✓ Benefits preferences?
+  ✓ Willing to relocate?
+  ✓ Availability to start?
+
+
+TYPE 5: H (Hire / Direct Hire)
+────────────────────────────────────────────────────────────────────────────
+When to Use: For direct permanent hire positions
+Auto-Selects: Questionnaire ID 6
+Title: "Direct Hire Questions"
+Purpose: Screen candidates for direct permanent hire
+Typical Questions:
+  ✓ Available to start immediately?
+  ✓ Long-term career goals?
+  ✓ Relocation flexibility?
+  ✓ Compensation expectations?
+  ✓ Previous employer notice period?
+
+
+SUMMARY TABLE WITH ALL INFO:
+════════════════════════════════════════════════════════════════════════════
+
+Type Code │ Type Name         │ QID │ Questionnaire Title              │ Use For
+──────────┼──────────────────┼─────┼──────────────────────────────────┼──────────────
+C         │ Contract         │ 2   │ Contract Position Questions      │ Temp contract
+C2H       │ Contract to Hire │ 3   │ Contract to Hire Questions       │ C→Permanent
+FL        │ Freelance        │ 4   │ Freelance Position Questions     │ Freelance
+FT        │ Full Time        │ 5   │ Full Time Position Questions     │ Permanent FT
+H         │ Hire             │ 6   │ Direct Hire Questions            │ Direct hire
+
+
+QUICK DECISION GUIDE:
+════════════════════════════════════════════════════════════════════════════
+
+Which Type Should I Choose?
+
+"I need someone for a 6-month project"
+  → Use Type: C (Contract)
+  → Gets: Questionnaire ID 2 - Contract Position Questions
+
+"I want to try someone on contract, maybe hire them later"
+  → Use Type: C2H (Contract to Hire)
+  → Gets: Questionnaire ID 3 - Contract to Hire Questions
+
+"I need someone to work independently on specific projects"
+  → Use Type: FL (Freelance)
+  → Gets: Questionnaire ID 4 - Freelance Position Questions
+
+"I'm hiring someone for a permanent, full-time position"
+  → Use Type: FT (Full Time)
+  → Gets: Questionnaire ID 5 - Full Time Position Questions
+
+"I need someone for a permanent position, direct hire"
+  → Use Type: H (Hire)
+  → Gets: Questionnaire ID 6 - Direct Hire Questions
+
+
+REAL WORLD EXAMPLES:
+════════════════════════════════════════════════════════════════════════════
+
+EXAMPLE 1: PHP Developer - Full Time Position
+───────────────────────────────────────────────
+Job Order Details:
+  Title: PHP Developer
+  Company: ABC Corp
+  Type: FT ← YOU SELECT THIS
+  Questionnaire: (auto-selects) → Full Time Position Questions ✓
+
+When Candidate Applies:
+  Sees questionnaire: "Full Time Position Questions"
+  Gets asked:
+    - Salary expectations?
+    - Willing to relocate?
+    - Seeking permanent position?
+    (Relevant to FT position!)
+
+---
+
+EXAMPLE 2: Data Entry - 3 Month Contract
+──────────────────────────────────────────
+Job Order Details:
+  Title: Data Entry Specialist
+  Company: XYZ Corp
+  Type: C ← YOU SELECT THIS
+  Questionnaire: (auto-selects) → Contract Position Questions ✓
+
+When Candidate Applies:
+  Sees questionnaire: "Contract Position Questions"
+  Gets asked:
+    - Contract experience?
+    - Can you start within 2 weeks?
+    - Preferred contract length?
+    (Relevant to Contract position!)
+
+---
+
+EXAMPLE 3: Project Manager - Contract to Hire
+───────────────────────────────────────────────
+Job Order Details:
+  Title: Senior Project Manager
+  Company: Tech Corp
+  Type: C2H ← YOU SELECT THIS
+  Questionnaire: (auto-selects) → Contract to Hire Questions ✓
+
+When Candidate Applies:
+  Sees questionnaire: "Contract to Hire Questions"
+  Gets asked:
+    - Would you accept contract initially?
+    - Open to permanent conversion?
+    - Timeline expectations?
+    (Relevant to C2H position!)
+
+---
+
+EXAMPLE 4: Graphic Designer - Freelance
+────────────────────────────────────────
+Job Order Details:
+  Title: Freelance Graphic Designer
+  Company: Design Studio
+  Type: FL ← YOU SELECT THIS
+  Questionnaire: (auto-selects) → Freelance Position Questions ✓
+
+When Candidate Applies:
+  Sees questionnaire: "Freelance Position Questions"
+  Gets asked:
+    - Freelance experience?
+    - Own equipment available?
+    - Comfortable with project-based work?
+    (Relevant to Freelance position!)
+
+
+FREQUENTLY ASKED QUESTIONS:
+════════════════════════════════════════════════════════════════════════════
+
+Q: Do I have to use the auto-selected questionnaire?
+A: No! You can change it if you want. The auto-selection is just a default to
+   save you time. You can select any questionnaire you prefer.
+
+Q: What if I don't want any questionnaire for a job?
+A: When creating the job order, you can remove the questionnaire by selecting
+   "None" in the dropdown after it auto-selects.
+
+Q: Can I create custom questionnaires for my types?
+A: Yes! Create new questionnaires in Settings → Career Portal → Questionnaires,
+   then update the mapping in JobOrderTypeQuestionnaires.php with new IDs.
+
+Q: Do existing job orders change if I change the mapping?
+A: No! Existing job orders keep their assigned questionnaire. The mapping only
+   affects NEW job orders created after the change.
+
+Q: Why do different types need different questionnaires?
+A: Different positions attract different candidates and need different
+   screening questions. FT candidates have different expectations than
+   contract candidates, so asking different questions helps better screening.
+
+Q: Where is this mapping configured?
+A: In the file: /lib/JobOrderTypeQuestionnaires.php
+   This is where all the Type → Questionnaire mappings are defined.
+
+
+STEP-BY-STEP WORKFLOW:
+════════════════════════════════════════════════════════════════════════════
+
+Creating a New Job Order:
+
+1. Click: Job Orders → Add Job Order
+2. Fill in: Title, Company, Contact, etc.
+3. Select: Type (C, C2H, FL, FT, or H)
+4. Watch: Questionnaire AUTOMATICALLY changes!
+5. Review: Check the questionnaire that was selected
+6. Change: If needed (click dropdown to select different one)
+7. Save: Click "Save Job Order"
+8. Result: Job order created with correct questionnaire! ✓
+
+When Candidate Applies:
+1. Candidate visits career portal
+2. Sees your job order (e.g., "PHP Developer - FT")
+3. Clicks "Apply"
+4. Sees: The questionnaire that was assigned (e.g., "Full Time Questions")
+5. Answers: The job-type-specific questions
+6. Submits: Application with answers
+7. You get: Better-screened candidates! ✓
+
+
+CONFIGURATION REFERENCE:
+════════════════════════════════════════════════════════════════════════════
+
+Current Mapping (from JobOrderTypeQuestionnaires.php):
+
+```php
+'C' => array(
+    'title' => 'Contract Position Questions',
+    'questionnaireID' => 2
+),
+'C2H' => array(
+    'title' => 'Contract to Hire Questions',
+    'questionnaireID' => 3
+),
+'FL' => array(
+    'title' => 'Freelance Position Questions',
+    'questionnaireID' => 4
+),
+'FT' => array(
+    'title' => 'Full Time Position Questions',
+    'questionnaireID' => 5
+),
+'H' => array(
+    'title' => 'Direct Hire Questions',
+    'questionnaireID' => 6
+)
+```
+
+All 5 types → 5 different questionnaires mapped!
+
+
+TESTING THE AUTO-SELECTION:
+════════════════════════════════════════════════════════════════════════════
+
+Test Each Type:
+
+1. Create job order with Type = C
+   └─ Verify: Questionnaire shows "Contract Position Questions" ✓
+
+2. Create job order with Type = C2H
+   └─ Verify: Questionnaire shows "Contract to Hire Questions" ✓
+
+3. Create job order with Type = FL
+   └─ Verify: Questionnaire shows "Freelance Position Questions" ✓
+
+4. Create job order with Type = FT
+   └─ Verify: Questionnaire shows "Full Time Position Questions" ✓
+
+5. Create job order with Type = H
+   └─ Verify: Questionnaire shows "Direct Hire Questions" ✓
+
+All Tests Pass? → System working perfectly! ✓
+
+
+BENEFITS OF THIS SYSTEM:
+════════════════════════════════════════════════════════════════════════════
+
+✓ Automatic: No manual selection needed
+✓ Intelligent: Each type gets appropriate questions
+✓ Organized: Consistent questionnaire for each position type
+✓ Professional: Shows organized screening process
+✓ Flexible: Can change if needed
+✓ Scalable: Can add more types and questionnaires later
+
+
+SUMMARY:
+════════════════════════════════════════════════════════════════════════════
+
+Job Type Selected → Questionnaire Auto-Selects:
+
+C    (Contract)         → ID 2 - Contract Position Questions
+C2H  (Contract to Hire) → ID 3 - Contract to Hire Questions
+FL   (Freelance)        → ID 4 - Freelance Position Questions
+FT   (Full Time)        → ID 5 - Full Time Position Questions
+H    (Hire)             → ID 6 - Direct Hire Questions
+
+That's it! Simple, automatic, and effective! 🎉
+
+════════════════════════════════════════════════════════════════════════════

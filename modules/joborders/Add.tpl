@@ -4,6 +4,85 @@
 <?php TemplateUtility::printTabs($this->active, $this->subActive); ?>
     <script type="text/javascript">
         window.CATSUserDateFormat = '<?php echo($_SESSION['CATS']->isDateDMY() ? 'DD-MM-YY' : 'MM-DD-YY'); ?>';
+
+        // Auto-generate Company Job ID based on company selection
+        function generateCompanyJobID() {
+            var companyID = document.getElementById('companyID').value;
+            if (!companyID || companyID == '0') {
+                document.getElementById('companyJobID').value = '';
+                return;
+            }
+
+            // Show loading indicator
+            var jobIDField = document.getElementById('companyJobID');
+            jobIDField.style.opacity = '0.5';
+
+            // Call AJAX endpoint to generate Company Job ID
+            fetch('<?php echo(CATSUtility::getIndexName()); ?>?f=generateCompanyJobID', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: 'companyID=' + encodeURIComponent(companyID) + '&siteID=<?php echo($this->_siteID); ?>'
+            })
+            .then(response => response.json())
+            .then(data => {
+                jobIDField.style.opacity = '1';
+                if (data.success && data.companyJobID) {
+                    document.getElementById('companyJobID').value = data.companyJobID;
+                } else if (data.error) {
+                    console.error('Error generating Company Job ID:', data.error);
+                }
+            })
+            .catch(error => {
+                jobIDField.style.opacity = '1';
+                console.error('Error:', error);
+            });
+        }
+
+        // Auto-select questionnaire based on job order type
+        function selectQuestionnaireByType() {
+            var jobType = document.getElementById('type').value;
+            if (!jobType || jobType === 'N/A') {
+                return;
+            }
+
+            // Show loading indicator
+            var questionnaireField = document.getElementById('questionnaire');
+            if (!questionnaireField) {
+                return;
+            }
+            questionnaireField.style.opacity = '0.5';
+
+            // Call AJAX endpoint to get questionnaire for this job type
+            fetch('<?php echo(CATSUtility::getIndexName()); ?>?f=getQuestionnaireByJobType', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: 'jobOrderType=' + encodeURIComponent(jobType) + '&siteID=<?php echo($this->_siteID); ?>'
+            })
+            .then(response => response.json())
+            .then(data => {
+                questionnaireField.style.opacity = '1';
+                if (data.success && data.questionnaireID) {
+                    // Auto-select the questionnaire
+                    questionnaireField.value = data.questionnaireID;
+                    console.log('Questionnaire auto-selected for ' + jobType + ' type');
+                } else if (data.success && !data.questionnaireID) {
+                    // No questionnaire configured for this type
+                    questionnaireField.value = 'none';
+                    console.info(data.message);
+                } else if (data.error) {
+                    console.info('No specific questionnaire for this job type - manual selection available');
+                    questionnaireField.value = 'none';
+                }
+            })
+            .catch(error => {
+                questionnaireField.style.opacity = '1';
+                console.error('Error auto-selecting questionnaire:', error);
+            });
+        }
     </script>
     <div id="main">
         <?php TemplateUtility::printQuickSearch(); ?>
@@ -60,17 +139,17 @@
                                 <input type="hidden" name="companyID" id="companyID" value="<?php if ($this->selectedCompanyID === false) { if (isset($this->jobOrderSourceRS['companyID'])) { echo ($this->jobOrderSourceRS['companyID']); } else { echo(0); } } else { echo($this->selectedCompanyID); } ?>" />
 
                                 <?php if ($this->defaultCompanyID !== false): ?>
-                                    <input type="radio" name="typeCompany" checked onchange="document.getElementById('companyName').disabled = false; if (oldCompanyID != -1) document.getElementById('companyID').value = oldCompanyID;">
-                                    <input type="text" name="companyName" id="companyName" tabindex="2" value="<?php if ($this->selectedCompanyID !== false) { $this->_($this->companyRS['name']); } ?><?php if(isset($this->jobOrderSourceRS['companyName']) && $this->selectedCompanyID == false ): ?><?php $this->_($this->jobOrderSourceRS['companyName']); ?><?php endif; ?>" class="inputbox" style="width: 125px" onFocus="suggestListActivate('getCompanyNames', 'companyName', 'CompanyResults', 'companyID', 'ajaxTextEntryHover', 0, '<?php echo($this->sessionCookie); ?>', 'helpShim');" <?php if ($this->selectedCompanyID !== false) { echo('disabled'); } ?>/>&nbsp;*
+                                    <input type="radio" name="typeCompany" checked onchange="document.getElementById('companyName').disabled = false; if (oldCompanyID != -1) document.getElementById('companyID').value = oldCompanyID; generateCompanyJobID();">
+                                    <input type="text" name="companyName" id="companyName" tabindex="2" value="<?php if ($this->selectedCompanyID !== false) { $this->_($this->companyRS['name']); } ?><?php if(isset($this->jobOrderSourceRS['companyName']) && $this->selectedCompanyID == false ): ?><?php $this->_($this->jobOrderSourceRS['companyName']); ?><?php endif; ?>" class="inputbox" style="width: 125px" onFocus="suggestListActivate('getCompanyNames', 'companyName', 'CompanyResults', 'companyID', 'ajaxTextEntryHover', 0, '<?php echo($this->sessionCookie); ?>', 'helpShim');" onchange="generateCompanyJobID();" <?php if ($this->selectedCompanyID !== false) { echo('disabled'); } ?>/>&nbsp;*
                                 <?php else: ?>
-                                    <input type="text" name="companyName" id="companyName" tabindex="2" value="<?php if ($this->selectedCompanyID !== false) { $this->_($this->companyRS['name']); } ?><?php if(isset($this->jobOrderSourceRS['companyName']) && $this->selectedCompanyID == false ): ?><?php $this->_($this->jobOrderSourceRS['companyName']); ?><?php endif; ?>" class="inputbox" style="width: 150px" onFocus="suggestListActivate('getCompanyNames', 'companyName', 'CompanyResults', 'companyID', 'ajaxTextEntryHover', 0, '<?php echo($this->sessionCookie); ?>', 'helpShim');" <?php if ($this->selectedCompanyID !== false) { echo('disabled'); } ?>/>&nbsp;*
+                                    <input type="text" name="companyName" id="companyName" tabindex="2" value="<?php if ($this->selectedCompanyID !== false) { $this->_($this->companyRS['name']); } ?><?php if(isset($this->jobOrderSourceRS['companyName']) && $this->selectedCompanyID == false ): ?><?php $this->_($this->jobOrderSourceRS['companyName']); ?><?php endif; ?>" class="inputbox" style="width: 150px" onFocus="suggestListActivate('getCompanyNames', 'companyName', 'CompanyResults', 'companyID', 'ajaxTextEntryHover', 0, '<?php echo($this->sessionCookie); ?>', 'helpShim');" onchange="generateCompanyJobID();" <?php if ($this->selectedCompanyID !== false) { echo('disabled'); } ?>/>&nbsp;*
                                 <?php endif; ?>
                                 <br />
                                 <iframe id="helpShim" src="javascript:void(0);" scrolling="no" frameborder="0" style="position:absolute; display:none;"></iframe>
                                 <div id="CompanyResults" class="ajaxSearchResults"></div>
 
                                 <?php if ($this->defaultCompanyID !== false): ?>
-                                    <input type="radio" name="typeCompany" id="defaultCompany" onchange="if(document.getElementById('companyName').disabled == false && document.getElementById('companyID').value > 0) {oldCompanyID = document.getElementById('companyID').value; } else if(document.getElementById('companyName').disabled == false) { oldCompanyID = 0; } document.getElementById('companyName').disabled = true; document.getElementById('companyID').value = '<?php echo($this->defaultCompanyID); ?>'; ">&nbsp;<?php echo($this->defaultCompanyRS['name']); ?><br />
+                                    <input type="radio" name="typeCompany" id="defaultCompany" onchange="if(document.getElementById('companyName').disabled == false && document.getElementById('companyID').value > 0) {oldCompanyID = document.getElementById('companyID').value; } else if(document.getElementById('companyName').disabled == false) { oldCompanyID = 0; } document.getElementById('companyName').disabled = true; document.getElementById('companyID').value = '<?php echo($this->defaultCompanyID); ?>'; generateCompanyJobID();">&nbsp;<?php echo($this->defaultCompanyRS['name']); ?><br />
                                 <?php endif; ?>
 
                                 <script type="text/javascript">oldCompanyID = -1; watchCompanyIDChangeJO('<?php echo($this->sessionCookie); ?>');</script>
@@ -127,9 +206,9 @@
                                 <label id="typeLabel" for="type">Type:</label>
                             </td>
                             <td class="tdData">
-                                <select tabindex="7" id="type" name="type" class="inputbox" style="width: 150px;">
+                                <select tabindex="7" id="type" name="type" class="inputbox" style="width: 150px;" onchange="selectQuestionnaireByType();">
                                 <?php foreach($this->jobTypes as $jobTypeShort => $jobTypeLong): ?>
-                                    <option value="<?php echo $jobTypeShort ?>" 
+                                    <option value="<?php echo $jobTypeShort ?>"
                                             <?php if(isset($this->jobOrderSourceRS['type']) && $this->jobOrderSourceRS['type'] == $jobTypeShort) echo('selected'); ?>>
                                             <?php echo $jobTypeShort." (".$jobTypeLong.")";?>
                                     </option>

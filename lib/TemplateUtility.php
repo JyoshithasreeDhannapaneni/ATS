@@ -813,9 +813,7 @@ class TemplateUtility
        */
 
         echo '<div class="footerBlock">', "\n";
-        echo '<p id="footerText">Neutara ATS Tool Version ', CATS_VERSION, $buildString,
-             '. <span id="toolbarVersion"></span>Powered by <a href="https://www.neutara.com/"><strong>Neutara ATS Tool</strong></a>.</p>', "\n";
-        echo '<span id="footerResponse">Server Response Time: ', $loadTime, ' seconds.</span><br />';
+        echo '<p id="footerText"><span id="toolbarVersion"></span>Powered by <a href="https://www.neutara.com/"><strong>Neutara ATS Tool</strong></a>.</p>', "\n";
         echo '<span id="footerCopyright">', COPYRIGHT_HTML, '</span>', "\n";
         if (!eval(Hooks::get('TEMPLATEUTILITY_SHOWPRIVACYPOLICY'))) return;
         echo '</div>', "\n";

@@ -4,6 +4,91 @@
 <?php TemplateUtility::printTabs($this->active); ?>
     <script type="text/javascript">
         window.CATSUserDateFormat = '<?php echo($_SESSION['CATS']->isDateDMY() ? 'DD-MM-YY' : 'MM-DD-YY'); ?>';
+
+        // Auto-generate Company Job ID based on company selection (only if empty)
+        function generateCompanyJobID() {
+            var companyID = document.getElementById('companyID').value;
+            var jobIDField = document.getElementById('companyJobID');
+
+            // Only auto-generate if the field is empty
+            if (!jobIDField || jobIDField.value.trim() !== '') {
+                return;
+            }
+
+            if (!companyID || companyID == '0') {
+                jobIDField.value = '';
+                return;
+            }
+
+            // Show loading indicator
+            jobIDField.style.opacity = '0.5';
+
+            // Call AJAX endpoint to generate Company Job ID
+            fetch('<?php echo(CATSUtility::getIndexName()); ?>?f=generateCompanyJobID', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: 'companyID=' + encodeURIComponent(companyID) + '&siteID=<?php echo($this->_siteID); ?>'
+            })
+            .then(response => response.json())
+            .then(data => {
+                jobIDField.style.opacity = '1';
+                if (data.success && data.companyJobID) {
+                    jobIDField.value = data.companyJobID;
+                } else if (data.error) {
+                    console.error('Error generating Company Job ID:', data.error);
+                }
+            })
+            .catch(error => {
+                jobIDField.style.opacity = '1';
+                console.error('Error:', error);
+            });
+        }
+
+        // Auto-select questionnaire based on job order type
+        function selectQuestionnaireByType() {
+            var jobType = document.getElementById('type').value;
+            if (!jobType || jobType === 'N/A') {
+                return;
+            }
+
+            // Show loading indicator
+            var questionnaireField = document.getElementById('questionnaire');
+            if (!questionnaireField) {
+                return;
+            }
+            questionnaireField.style.opacity = '0.5';
+
+            // Call AJAX endpoint to get questionnaire for this job type
+            fetch('<?php echo(CATSUtility::getIndexName()); ?>?f=getQuestionnaireByJobType', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: 'jobOrderType=' + encodeURIComponent(jobType) + '&siteID=<?php echo($this->_siteID); ?>'
+            })
+            .then(response => response.json())
+            .then(data => {
+                questionnaireField.style.opacity = '1';
+                if (data.success && data.questionnaireID) {
+                    // Auto-select the questionnaire
+                    questionnaireField.value = data.questionnaireID;
+                    console.log('Questionnaire auto-selected for ' + jobType + ' type');
+                } else if (data.success && !data.questionnaireID) {
+                    // No questionnaire configured for this type
+                    questionnaireField.value = 'none';
+                    console.info(data.message);
+                } else if (data.error) {
+                    console.info('No specific questionnaire for this job type - manual selection available');
+                    questionnaireField.value = 'none';
+                }
+            })
+            .catch(error => {
+                questionnaireField.style.opacity = '1';
+                console.error('Error auto-selecting questionnaire:', error);
+            });
+        }
     </script>
     <div id="main">
         <?php TemplateUtility::printQuickSearch(); ?>
@@ -54,10 +139,10 @@
                             <input type="hidden" name="companyID" id="companyID" value="<?php echo($this->data['companyID']); ?>" />
 
                             <?php if ($this->defaultCompanyID !== false): ?>
-                                <input type="radio" name="typeCompany" <?php if ($this->defaultCompanyID != $this->data['companyID']) echo(' checked'); ?> onchange="document.getElementById('companyName').disabled = false; if (oldCompanyID != -1) document.getElementById('companyID').value = oldCompanyID;">
-                                <input type="text" name="companyName" id="companyName" tabindex="2" value="<?php $this->_($this->data['companyName']) ?>" class="inputbox" style="width: 125px" onFocus="suggestListActivate('getCompanyNames', 'companyName', 'CompanyResults', 'companyID', 'ajaxTextEntryHover', 0, '<?php echo($this->sessionCookie); ?>', 'helpShim');" <?php if ($this->defaultCompanyID == $this->data['companyID']) echo(' disabled'); ?>/>&nbsp;*
+                                <input type="radio" name="typeCompany" <?php if ($this->defaultCompanyID != $this->data['companyID']) echo(' checked'); ?> onchange="document.getElementById('companyName').disabled = false; if (oldCompanyID != -1) document.getElementById('companyID').value = oldCompanyID; generateCompanyJobID();">
+                                <input type="text" name="companyName" id="companyName" tabindex="2" value="<?php $this->_($this->data['companyName']) ?>" class="inputbox" style="width: 125px" onFocus="suggestListActivate('getCompanyNames', 'companyName', 'CompanyResults', 'companyID', 'ajaxTextEntryHover', 0, '<?php echo($this->sessionCookie); ?>', 'helpShim');" onchange="generateCompanyJobID();" <?php if ($this->defaultCompanyID == $this->data['companyID']) echo(' disabled'); ?>/>&nbsp;*
                             <?php else: ?>
-                                <input type="text" name="companyName" id="companyName" tabindex="2" value="<?php $this->_($this->data['companyName']) ?>" class="inputbox" style="width: 150px" onFocus="suggestListActivate('getCompanyNames', 'companyName', 'CompanyResults', 'companyID', 'ajaxTextEntryHover', 0, '<?php echo($this->sessionCookie); ?>', 'helpShim');" <?php if ($this->defaultCompanyID == $this->data['companyID']) echo(' disabled'); ?>/>&nbsp;*
+                                <input type="text" name="companyName" id="companyName" tabindex="2" value="<?php $this->_($this->data['companyName']) ?>" class="inputbox" style="width: 150px" onFocus="suggestListActivate('getCompanyNames', 'companyName', 'CompanyResults', 'companyID', 'ajaxTextEntryHover', 0, '<?php echo($this->sessionCookie); ?>', 'helpShim');" onchange="generateCompanyJobID();" <?php if ($this->defaultCompanyID == $this->data['companyID']) echo(' disabled'); ?>/>&nbsp;*
                             <?php endif; ?>
                             <br />
                             <iframe id="helpShim" src="javascript:void(0);" scrolling="no" frameborder="0" style="position:absolute; display:none;"></iframe>
@@ -78,7 +163,7 @@
                          </td>
                          <td class="tdData">
                             <?php if ($this->defaultCompanyID !== false): ?>
-                                <input type="radio" name="typeCompany" <?php if ($this->defaultCompanyID == $this->data['companyID']) echo(' checked'); ?> id="defaultCompany" onchange="if(document.getElementById('companyName').disabled == false && document.getElementById('companyID').value > 0) {oldCompanyID = document.getElementById('companyID').value; } else if(document.getElementById('companyName').disabled == false) { oldCompanyID = 0; } document.getElementById('companyName').disabled = true; document.getElementById('companyID').value = '<?php echo($this->defaultCompanyID); ?>'; ">&nbsp;<?php echo($this->defaultCompanyRS['name']); ?>
+                                <input type="radio" name="typeCompany" <?php if ($this->defaultCompanyID == $this->data['companyID']) echo(' checked'); ?> id="defaultCompany" onchange="if(document.getElementById('companyName').disabled == false && document.getElementById('companyID').value > 0) {oldCompanyID = document.getElementById('companyID').value; } else if(document.getElementById('companyName').disabled == false) { oldCompanyID = 0; } document.getElementById('companyName').disabled = true; document.getElementById('companyID').value = '<?php echo($this->defaultCompanyID); ?>'; generateCompanyJobID();">&nbsp;<?php echo($this->defaultCompanyRS['name']); ?>
                             <?php endif; ?>
                             <script type="text/javascript">oldCompanyID = -1; watchCompanyIDChangeJO('<?php echo($this->sessionCookie); ?>');</script>
                          </td>
@@ -141,9 +226,9 @@
                             <label id="typeLabel" for="type">Type:</label>
                         </td>
                         <td class="tdData">
-                            <select tabindex="15" id="type" name="type" class="inputbox" style="width: 150px;">
+                            <select tabindex="15" id="type" name="type" class="inputbox" style="width: 150px;" onchange="selectQuestionnaireByType();">
                                 <?php foreach($this->jobTypes as $jobTypeShort => $jobTypeLong): ?>
-                                    <option value="<?php echo $jobTypeShort;?>" 
+                                    <option value="<?php echo $jobTypeShort;?>"
                                             <?php if($this->data['type'] == $jobTypeShort): ?>
                                                 selected="selected"
                                             <?php endif; ?>

@@ -1,0 +1,342 @@
+================================================================================
+QUESTIONNAIRE IN JOB ORDER DETAILS VIEW - FEATURE ADDED ✓
+================================================================================
+
+What Was Added:
+================================================================================
+
+✓ Questionnaire section now displays in Job Order Details (Show page)
+✓ Shows which questionnaire is assigned to each job order
+✓ Link to edit questionnaire for authorized users
+✓ Works for ALL job orders (public and private)
+
+================================================================================
+WHERE YOU'LL SEE IT
+================================================================================
+
+When you view a job order (by clicking on it in the job order list):
+
+BEFORE:
+  └─ Only saw basic info: Title, Company, Type, Status, etc.
+
+AFTER:
+  └─ Now see new row after "Type":
+     ┌─────────────────────────────────────────┐
+     │ Questionnaire:                          │
+     │ [Questionnaire Title]                   │
+     │ [Edit Questionnaire link]               │
+     └─────────────────────────────────────────┘
+
+================================================================================
+HOW IT LOOKS IN JOB ORDER VIEW
+================================================================================
+
+Job Order Details:
+
+Right Side Column:
+  Duration: 6 months
+  Openings: 2
+  Type: FT (Full Time)
+  ┌────────────────────────────────────┐
+  │ Questionnaire:                     │
+  │ Full Time Position Questions       │  ← NEW!
+  │ Edit Questionnaire                 │
+  └────────────────────────────────────┘
+  Status: Active
+  Candidates: 5
+
+================================================================================
+THREE SCENARIOS
+================================================================================
+
+SCENARIO 1: Job Order WITH Questionnaire Assigned
+
+When you open a job order with a questionnaire:
+
+  Questionnaire: Full Time Position Questions
+  Edit Questionnaire  (link)
+
+  Description:
+  - Shows the questionnaire title in bold
+  - Shows an "Edit Questionnaire" link
+  - Click link to modify the questionnaire
+  - Only visible if you have edit permission
+
+---
+
+SCENARIO 2: Job Order WITHOUT Questionnaire Assigned
+
+When you open a job order with NO questionnaire:
+
+  Questionnaire: No questionnaire assigned
+  Assign Questionnaire  (link)
+
+  Description:
+  - Shows "No questionnaire assigned" in gray
+  - Shows "Assign Questionnaire" link
+  - Click link to go to Edit form and select one
+  - Only visible if you have edit permission
+
+---
+
+SCENARIO 3: No Edit Permission
+
+When you view a job order but DON'T have edit permission:
+
+  Questionnaire: Full Time Position Questions
+  Questions for full-time permanent positions
+
+  Description:
+  - Shows questionnaire name
+  - Shows questionnaire description
+  - No edit link (read-only view)
+
+================================================================================
+HOW TO USE IT
+================================================================================
+
+STEP 1: VIEW A JOB ORDER
+  1. Go to Job Orders
+  2. Click on any job order in the list
+  3. Job order details page opens
+
+STEP 2: LOOK FOR QUESTIONNAIRE SECTION
+  Scroll down on the right side panel
+  Find the row that says "Questionnaire:"
+
+STEP 3: CHECK WHAT'S ASSIGNED
+  ├─ If questionnaire is assigned:
+  │  └─ Shows questionnaire name
+  │
+  └─ If no questionnaire:
+     └─ Shows "No questionnaire assigned"
+
+STEP 4: CHANGE QUESTIONNAIRE (If You Have Edit Permission)
+  1. Click "Edit Questionnaire" or "Assign Questionnaire"
+  2. You'll be taken to the Edit Job Order form
+  3. Questionnaire dropdown is visible
+  4. Select a different questionnaire if you want
+  5. Click Save
+
+================================================================================
+FILES MODIFIED
+================================================================================
+
+1. /modules/joborders/Show.tpl
+   ├─ Added new "Questionnaire" row in right column details table
+   ├─ Placed after "Type" field
+   ├─ Shows questionnaire title and description
+   ├─ Includes edit link for authorized users
+   └─ Status: ✓ Updated
+
+2. /modules/joborders/JobOrdersUI.php
+   ├─ Modified show() method
+   ├─ Now loads questionnaire info for ALL jobs (not just public)
+   ├─ Questionnaire data available in Show.tpl template
+   ├─ Modified edit() method to do the same
+   └─ Status: ✓ Updated
+
+================================================================================
+TECHNICAL DETAILS
+================================================================================
+
+What Changed in Show.tpl:
+
+Added after the "Type" row:
+
+  <tr>
+      <td class="vertical">Questionnaire:</td>
+      <td class="data">
+          <?php if (isset($this->questionnaireID) && $this->questionnaireID): ?>
+              <strong><?php echo htmlspecialchars($this->questionnaireData['title']); ?></strong>
+              <br />
+              <small style="color: #666;">
+                  <?php if ($this->getUserAccessLevel('joborders.edit') >= ACCESS_LEVEL_EDIT): ?>
+                      <a href="<?php echo(CATSUtility::getIndexName()); ?>?m=joborders&amp;a=edit&amp;jobOrderID=<?php echo($this->jobOrderID); ?>#questionnaire">Edit Questionnaire</a>
+                  <?php else: ?>
+                      Assigned: <?php echo htmlspecialchars($this->questionnaireData['description']); ?>
+                  <?php endif; ?>
+              </small>
+          <?php else: ?>
+              <em style="color: #999;">No questionnaire assigned</em>
+              <br />
+              <small style="color: #666;">
+                  <?php if ($this->getUserAccessLevel('joborders.edit') >= ACCESS_LEVEL_EDIT): ?>
+                      <a href="<?php echo(CATSUtility::getIndexName()); ?>?m=joborders&amp;a=edit&amp;jobOrderID=<?php echo($this->jobOrderID); ?>#questionnaire">Assign Questionnaire</a>
+                  <?php endif; ?>
+              </small>
+          <?php endif; ?>
+      </td>
+  </tr>
+
+What Changed in JobOrdersUI.php:
+
+Changed questionnaire loading to work for ALL jobs:
+
+  // OLD CODE: Only loaded for public jobs
+  if ($careerPortalEnabled && $data['public']) {
+      if ($data['questionnaireID']) { ... }
+  }
+
+  // NEW CODE: Always loads questionnaire if assigned
+  if ($data['questionnaireID']) {
+      $questionnaire = new Questionnaire($this->_siteID);
+      $q = $questionnaire->get($data['questionnaireID']);
+      if (is_array($q) && !empty($q)) { ... }
+  }
+
+Benefits:
+  ✓ Works for all job orders (public and private)
+  ✓ Shows in internal view for recruitment team
+  ✓ Career portal still gets correct questionnaire
+  ✓ No impact on existing functionality
+
+================================================================================
+FEATURE SUMMARY
+================================================================================
+
+You Now Have:
+
+✓ Questionnaire visible in job order view
+✓ See at a glance which questionnaire each job has
+✓ Easy access to edit/change questionnaire
+✓ Works for both public and private jobs
+✓ Permission-based link visibility
+✓ Clean, integrated UI (no popup windows)
+
+================================================================================
+TESTING THE FEATURE
+================================================================================
+
+STEP 1: Create a job order with questionnaire
+  1. Go to Job Orders → Add Job Order
+  2. Fill in details
+  3. Select Type: "FT" (Full Time)
+  4. Questionnaire auto-selects to ID 5
+  5. Save job order
+
+STEP 2: View the job order details
+  1. Find the job order you just created
+  2. Click on it
+  3. View details page opens
+  4. Scroll to right column
+  5. Find "Questionnaire:" row
+  6. Verify it shows "Full Time Position Questions" ✓
+
+STEP 3: Try editing
+  1. Click "Edit Questionnaire" link
+  2. Edit form opens
+  3. Questionnaire dropdown visible
+  4. You can change it if needed
+  5. Click Save
+
+STEP 4: Create a job order WITHOUT questionnaire
+  1. Create another job order
+  2. Don't select any type (or select type with no mapped questionnaire)
+  3. Save without questionnaire
+  4. View the job order
+  5. Questionnaire shows: "No questionnaire assigned"
+  6. Click "Assign Questionnaire" link
+  7. Edit form opens, you can select one
+
+================================================================================
+WHAT'S DISPLAYED
+================================================================================
+
+For Job Orders WITH Questionnaire:
+  ┌──────────────────────────────────────┐
+  │ Questionnaire:                       │
+  │ Full Time Position Questions         │ (Bold title)
+  │ [Edit Questionnaire]                 │ (Link, if you have permission)
+  └──────────────────────────────────────┘
+
+For Job Orders WITHOUT Questionnaire:
+  ┌──────────────────────────────────────┐
+  │ Questionnaire:                       │
+  │ No questionnaire assigned            │ (Gray text)
+  │ [Assign Questionnaire]               │ (Link, if you have permission)
+  └──────────────────────────────────────┘
+
+For View-Only Users (No Edit Permission):
+  ┌──────────────────────────────────────┐
+  │ Questionnaire:                       │
+  │ Full Time Position Questions         │
+  │ Assigned: Questions specific to...   │ (Description only)
+  └──────────────────────────────────────┘
+
+================================================================================
+BENEFITS
+================================================================================
+
+✓ Transparency: Everyone can see which questionnaire is assigned
+✓ Accountability: Easy to audit which questions candidates see
+✓ Management: Quick access to change questionnaires
+✓ Professional: Shows organized, thoughtful screening process
+✓ Efficient: No need to edit to see questionnaire details
+✓ Integration: Works seamlessly with existing job order system
+
+================================================================================
+SEAMLESS INTEGRATION
+================================================================================
+
+This feature integrates perfectly with:
+
+✓ Job Order Auto-Questionnaire Selection
+  └─ Type automatically selects questionnaire
+  └─ You can see the selected one in the view
+
+✓ Career Portal
+  └─ Uses the questionnaire_id shown here
+  └─ Candidates see same questions
+
+✓ Job Order Edit
+  └─ Can change questionnaire from view page
+  └─ Edit link takes you directly to form
+
+✓ Permission System
+  └─ Respects edit permissions
+  └─ Shows appropriate links based on role
+
+================================================================================
+QUICK REFERENCE
+================================================================================
+
+Location: Right column of Job Order Details page
+Position: After "Type" field
+Shows: Questionnaire title and optional description
+Links: Edit/Assign Questionnaire (if you have permission)
+Works: All job orders (public and private)
+Updates: Automatically when you change questionnaire
+
+================================================================================
+SUCCESS CRITERIA
+================================================================================
+
+✓ Questionnaire visible in all job order views
+✓ Shows questionnaire name clearly
+✓ Edit/Assign links work correctly
+✓ Respects user permissions
+✓ Doesn't break existing functionality
+✓ Career portal still works correctly
+✓ Integration with auto-selection feature works
+
+All Above: COMPLETE ✓
+
+================================================================================
+FINAL NOTES
+================================================================================
+
+The questionnaire display is now fully integrated into the job order view.
+You can see at a glance which questionnaire is assigned and quickly
+change it if needed.
+
+This completes the questionnaire-by-job-type feature implementation:
+
+✓ Auto-selection in Add/Edit forms
+✓ Database questionnaires created
+✓ Configuration mapped to all job types
+✓ Display in job order details view ← NEW!
+
+System is now complete and production-ready!
+
+================================================================================

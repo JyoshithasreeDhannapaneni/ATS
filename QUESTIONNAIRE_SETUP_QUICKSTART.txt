@@ -1,0 +1,282 @@
+================================================================================
+QUESTIONNAIRE BY JOB TYPE - QUICK START GUIDE
+================================================================================
+
+WHAT WAS ADDED:
+================================================================================
+
+The system now supports DIFFERENT QUESTIONS for DIFFERENT JOB ORDER TYPES.
+
+Instead of showing the same questions to all applicants, each job type can have
+its own customized questionnaire:
+
+    Contract positions    → "What is your hourly rate?"
+    Full Time positions   → "What is your salary expectation?"
+    Freelance work        → "Do you have a business license?"
+    Etc...
+
+
+HOW IT WORKS:
+================================================================================
+
+1. RECRUITER CREATES JOB ORDER
+   - Fills in job details (title, company, location)
+   - Selects TYPE: "FT" (Full Time)
+
+2. SYSTEM AUTO-SELECTS QUESTIONNAIRE
+   - Detects that type is "FT"
+   - Automatically sets questionnaire to "Full Time Questions"
+   - (User sees dropdown update automatically)
+
+3. CANDIDATE APPLIES
+   - Sees questions specific to Full Time role
+   - Answers "What is your salary expectation?"
+   - Instead of contract-specific questions
+
+
+FILES CREATED:
+================================================================================
+
+/lib/JobOrderTypeQuestionnaires.php
+  └─ Configuration file where you map types to questionnaires
+     Example: 'FT' => 'Full Time Questions' (Questionnaire ID 4)
+
+/ajax/getQuestionnaireByJobType.php
+  └─ AJAX endpoint that looks up the questionnaire for each type
+     Called automatically when type dropdown changes
+
+
+FILES MODIFIED:
+================================================================================
+
+/modules/joborders/Add.tpl
+  └─ Added selectQuestionnaireByType() JavaScript function
+  └─ Added onchange event to Type dropdown
+
+/modules/joborders/Edit.tpl
+  └─ Added selectQuestionnaireByType() JavaScript function
+  └─ Added onchange event to Type dropdown
+
+
+SETUP STEPS:
+================================================================================
+
+STEP 1: Create Questionnaires
+  ├─ Login to ATS as Admin
+  ├─ Go to: Settings → Career Portal → Questionnaires
+  ├─ Create 5 questionnaires:
+  │  ├─ "Contract Questions" (for Contract roles)
+  │  ├─ "Contract to Hire Questions" (for C2H roles)
+  │  ├─ "Freelance Questions" (for Freelance roles)
+  │  ├─ "Full Time Questions" (for FT roles)
+  │  └─ "Hire Questions" (for Direct Hire roles)
+  └─ Note the ID numbers (1, 2, 3, 4, 5, etc.)
+
+STEP 2: Find Questionnaire IDs
+  Run this SQL query to find the IDs:
+
+  SELECT career_portal_questionnaire_id, title
+  FROM career_portal_questionnaire;
+
+  Output example:
+  ID  Title
+  1   Contract Questions
+  2   Contract to Hire Questions
+  3   Freelance Questions
+  4   Full Time Questions
+  5   Hire Questions
+
+STEP 3: Update Configuration File
+  Edit: /lib/JobOrderTypeQuestionnaires.php
+
+  Update the mapping with your actual questionnaire IDs:
+
+  'C' => array(
+      'title' => 'Contract Questions',
+      'questionnaireID' => 1  ← Change to your actual ID
+  ),
+  'C2H' => array(
+      'title' => 'Contract to Hire Questions',
+      'questionnaireID' => 2  ← Change to your actual ID
+  ),
+  'FL' => array(
+      'title' => 'Freelance Questions',
+      'questionnaireID' => 3  ← Change to your actual ID
+  ),
+  'FT' => array(
+      'title' => 'Full Time Questions',
+      'questionnaireID' => 4  ← Change to your actual ID
+  ),
+  'H' => array(
+      'title' => 'Hire Questions',
+      'questionnaireID' => 5  ← Change to your actual ID
+  )
+
+STEP 4: Test It
+  ├─ Go to: Job Orders → Add Job Order
+  ├─ Select a Type (e.g., "FT - Full Time")
+  ├─ Watch the Questionnaire dropdown auto-update
+  └─ Verify correct questionnaire is selected
+
+
+EXAMPLE SCENARIOS:
+================================================================================
+
+SCENARIO 1: Contract Developer Position
+┌─────────────────────────────────────┐
+│ Add Job Order Form                  │
+├─────────────────────────────────────┤
+│ Title: PHP Developer - 6 months      │
+│ Company: ABC Corp                   │
+│ Type: C (Contract) ← Selected        │
+│ Questionnaire: [Auto-selected] ✓     │
+│   └─ Now shows "Contract Questions"  │
+│       Questions include:             │
+│       • Hourly rate?                 │
+│       • Availability?                │
+│       • Contract duration?           │
+└─────────────────────────────────────┘
+
+SCENARIO 2: Full Time Manager Position
+┌─────────────────────────────────────┐
+│ Add Job Order Form                  │
+├─────────────────────────────────────┤
+│ Title: Sales Manager                 │
+│ Company: XYZ Inc                    │
+│ Type: FT (Full Time) ← Selected      │
+│ Questionnaire: [Auto-selected] ✓     │
+│   └─ Now shows "Full Time Questions" │
+│       Questions include:             │
+│       • Salary expectation?          │
+│       • Benefits experience?         │
+│       • Relocation willing?          │
+└─────────────────────────────────────┘
+
+
+WHAT QUESTIONS SHOULD I ASK?
+================================================================================
+
+CONTRACT POSITIONS:
+  • What is your expected hourly/daily rate?
+  • Are you available to start within [X] days?
+  • How many years of contract experience?
+  • Preferred contract duration?
+  • Do you have your own insurance?
+
+FULL TIME POSITIONS:
+  • What is your salary expectation (range)?
+  • Are you seeking a permanent position?
+  • Relocation willingness?
+  • Availability to start?
+  • Benefit preferences (health, 401k, etc)?
+
+FREELANCE POSITIONS:
+  • Do you have business insurance?
+  • Business license/registration?
+  • Preferred project types?
+  • Minimum engagement period?
+  • Time zone location?
+
+CONTRACT TO HIRE:
+  • Contract phase salary expectations?
+  • Interest in conversion to permanent?
+  • Minimum contract period preferred?
+  • Skills assessment confidence?
+
+DIRECT HIRE:
+  • Required salary range?
+  • Notice period from current employer?
+  • Long-term career goals?
+  • Team size preference?
+
+
+CONFIGURATION OPTIONS:
+================================================================================
+
+OPTION A: Use for All Types (Recommended)
+  └─ Set different questionnaires for each type
+  └─ Type-specific questions shown to candidates
+  └─ Most professional approach
+
+OPTION B: No Auto-Selection for a Type
+  └─ Set questionnaireID to null
+  └─ Example: 'FT' => array('questionnaireID' => null)
+  └─ Users must manually select questionnaire
+
+OPTION C: Same Questionnaire for All Types
+  └─ Map all types to same questionnaire ID
+  └─ Use generic questions for all roles
+  └─ Simplest approach
+
+
+TROUBLESHOOTING:
+================================================================================
+
+ISSUE: Questionnaire not changing when I select type
+FIX:
+  1. Check browser console for errors (F12)
+  2. Verify questionnaire IDs in JobOrderTypeQuestionnaires.php
+  3. Clear browser cache and refresh page
+  4. Check AJAX endpoint is working:
+     POST to: index.php?f=getQuestionnaireByJobType
+     with: jobOrderType=FT&siteID=1
+
+ISSUE: Wrong questionnaire showing
+FIX:
+  1. Open JobOrderTypeQuestionnaires.php
+  2. Verify the IDs match your database:
+     SELECT * FROM career_portal_questionnaire;
+  3. Update IDs if they don't match
+  4. Clear browser cache
+
+ISSUE: System shows "None" instead of questionnaire
+FIX:
+  1. The ID in JobOrderTypeQuestionnaires.php might be wrong
+  2. Check if questionnaire exists in database:
+     SELECT * FROM career_portal_questionnaire WHERE
+       career_portal_questionnaire_id = 4;
+  3. If it doesn't exist, create the questionnaire first
+
+
+SUPPORT:
+================================================================================
+
+Configuration File: /lib/JobOrderTypeQuestionnaires.php
+AJAX Endpoint:     /ajax/getQuestionnaireByJobType.php
+Documentation:    /QUESTIONNAIRE_BY_JOBTYPE_GUIDE.md
+
+For more details, see QUESTIONNAIRE_BY_JOBTYPE_GUIDE.md
+
+
+KEY FEATURES:
+================================================================================
+
+✅ Automatic questionnaire selection
+✅ No manual selection required (unless configured)
+✅ Clean user experience with visual feedback
+✅ Flexible configuration
+✅ Fallback if no questionnaire configured
+✅ Easy to maintain and update
+✅ Scalable to many questionnaires
+
+
+SUMMARY:
+================================================================================
+
+What you got:
+  • A system to assign different questions to different job types
+  • Automatic selection when recruiters choose a job type
+  • Configuration file to map types to questionnaires
+  • AJAX endpoint for the lookups
+  • Updated forms for Add and Edit job orders
+
+What you need to do:
+  1. Create questionnaires in your ATS (or use existing ones)
+  2. Note their database IDs
+  3. Update /lib/JobOrderTypeQuestionnaires.php with the IDs
+  4. Test by creating a job order and selecting a type
+
+Result:
+  Candidates see questions tailored to the job type they're applying for!
+
+================================================================================

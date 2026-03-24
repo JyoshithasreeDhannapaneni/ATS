@@ -15,9 +15,9 @@
                     display: flex;
                     align-items: center;
                     justify-content: space-between;
-                    padding: 20px 24px;
-                    border-radius: 14px;
-                    margin-bottom: 20px;
+                    padding: 14px 20px;
+                    border-radius: 12px;
+                    margin-bottom: 18px;
                     animation: fadeInUp 0.5s ease;
                     font-family: 'Inter', system-ui, sans-serif;
                     position: relative;
@@ -38,23 +38,23 @@
                 .role-banner-interviewer { background: linear-gradient(135deg, #fffbeb, #fef3c7); color: #92400e; }
 
                 .role-welcome-text h2 {
-                    font-size: 20px;
+                    font-size: 17px;
                     font-weight: 700;
-                    margin: 0 0 4px;
+                    margin: 0 0 2px;
                     letter-spacing: -0.02em;
                 }
 
                 .role-welcome-text p {
-                    font-size: 13px;
+                    font-size: 12px;
                     margin: 0;
                     opacity: 0.7;
                     font-weight: 400;
                 }
 
                 .role-badge-lg {
-                    padding: 6px 16px;
-                    border-radius: 20px;
-                    font-size: 12px;
+                    padding: 4px 12px;
+                    border-radius: 16px;
+                    font-size: 11px;
                     font-weight: 700;
                     text-transform: uppercase;
                     letter-spacing: 0.05em;
@@ -94,10 +94,14 @@
                 .stat-card:nth-child(4) { animation-delay: 0.2s; }
 
                 .stat-card:hover {
-                    border-color: #2563eb;
                     box-shadow: 0 4px 16px rgba(37, 99, 235, 0.1);
                     transform: translateY(-2px);
                 }
+
+                .quick-stats .stat-card:nth-child(1) { border-left: 3px solid #2563eb; }
+                .quick-stats .stat-card:nth-child(2) { border-left: 3px solid #059669; }
+                .quick-stats .stat-card:nth-child(3) { border-left: 3px solid #7c3aed; }
+                .quick-stats .stat-card:nth-child(4) { border-left: 3px solid #d97706; }
 
                 .stat-icon {
                     width: 44px;
@@ -371,6 +375,7 @@
                             <div style="padding: 40px 20px; text-align: center; color: #9ca3af; font-size: 13px; background: #f9fafb;">
                                 <svg width="36" height="36" fill="none" stroke="#d1d5db" stroke-width="1.5" viewBox="0 0 24 24" style="margin: 0 auto 8px; display: block;"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87m-4-12a4 4 0 010 7.75"/></svg>
                                 No recent hires yet
+                                <a href="<?php echo CATSUtility::getIndexName(); ?>?m=candidates&amp;a=add" style="display: inline-block; margin-top: 10px; padding: 6px 16px; background: #2563eb; color: #fff; border-radius: 6px; font-size: 12px; font-weight: 600; text-decoration: none;">+ Add Candidate</a>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -389,9 +394,11 @@
                         </map>
                         <div id="hiringOverviewContainer" style="width: 100%; height: 220px; background: #f9fafb; position: relative; overflow: hidden;">
                             <img src="<?php echo(CATSUtility::getIndexName()); ?>?m=graphs&amp;a=miniPlacementStatistics&amp;width=495&amp;height=230&amp;view=<?php echo(DASHBOARD_GRAPH_WEEKLY); ?>&amp;t=<?php echo(time()); ?>" id="homeGraph" alt="Hiring Overview" usemap="#dashboardmap" border="0" style="display: block; width: 100%; height: 100%; object-fit: contain;" onerror="handleGraphError(this);" onload="handleGraphLoad(this);" />
-                            <div id="hiringOverviewError" style="display: none; text-align: center; padding-top: 80px; color: #9ca3af; font-size: 13px; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #f9fafb;">
-                                Unable to load hiring overview graph.<br />
-                                <a href="javascript:void(0);" onclick="retryGraph(); return false;" style="color: #2563eb; margin-top: 6px; display: inline-block;">Retry</a>
+                            <div id="hiringOverviewError" style="display: none; text-align: center; padding-top: 60px; color: #9ca3af; font-size: 13px; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #f9fafb;">
+                                <svg width="36" height="36" fill="none" stroke="#d1d5db" stroke-width="1.5" viewBox="0 0 24 24" style="margin: 0 auto 8px; display: block;"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                                No hiring data available yet
+                                <div style="margin-top: 6px; font-size: 11px; color: #b0b7c3;">Start placing candidates to see trends here.</div>
+                                <a href="javascript:void(0);" onclick="retryGraph(); return false;" style="color: #2563eb; margin-top: 8px; display: inline-block; font-size: 12px;">Retry loading</a>
                             </div>
                             <div id="hiringOverviewLoading" style="display: none; text-align: center; padding-top: 80px; color: #9ca3af; font-size: 13px; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #f9fafb;">
                                 Loading graph...
@@ -443,6 +450,7 @@
                     <div style="padding: 40px 20px; text-align: center; color: #9ca3af; font-size: 13px; background: #f9fafb;">
                         <svg width="36" height="36" fill="none" stroke="#d1d5db" stroke-width="1.5" viewBox="0 0 24 24" style="margin: 0 auto 8px; display: block;"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
                         No important candidates at the moment
+                        <div style="margin-top: 6px; font-size: 11px; color: #b0b7c3;">Mark candidates as "Hot" from their profile to see them here.</div>
                     </div>
                     <?php endif; ?>
                 </div>

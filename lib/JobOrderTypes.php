@@ -17,6 +17,7 @@ class JobOrderTypes
             'C' => 'Contract',
             'C2H' => 'Contract To Hire',
             'FL' => 'Freelance',
+            'FT' => 'Full Time',
             'H' => 'Hire'
         );
     }

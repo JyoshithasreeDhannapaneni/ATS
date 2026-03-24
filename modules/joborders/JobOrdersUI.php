@@ -492,21 +492,21 @@ class JobOrdersUI extends UserInterface
         $careerPortalURL = false;
         $isPublic = false;
 
-
+        // Always load questionnaire info if attached (for internal use and display)
+        if ($data['questionnaireID'])
+        {
+            $questionnaire = new Questionnaire($this->_siteID);
+            $q = $questionnaire->get($data['questionnaireID']);
+            if (is_array($q) && !empty($q))
+            {
+                $questionnaireID = $q['questionnaireID'];
+                $questionnaireData = $q;
+            }
+        }
 
         if ($careerPortalEnabled && $data['public'])
         {
             $isPublic = true;
-            if ($data['questionnaireID'])
-            {
-                $questionnaire = new Questionnaire($this->_siteID);
-                $q = $questionnaire->get($data['questionnaireID']);
-                if (is_array($q) && !empty($q))
-                {
-                    $questionnaireID = $q['questionnaireID'];
-                    $questionnaireData = $q;
-                }
-            }
         }
 
         $careerPortalSettings = new CareerPortalSettings($this->_siteID);
@@ -903,19 +903,20 @@ class JobOrdersUI extends UserInterface
 
         $questionnaires = $questionnaire->getAll(false);
 
+        // Always load questionnaire info if attached (for internal use and display)
+        if ($data['questionnaireID'])
+        {
+            $q = $questionnaire->get($data['questionnaireID']);
+            if (is_array($q) && !empty($q))
+            {
+                $questionnaireID = $q['questionnaireID'];
+                $questionnaireData = $q;
+            }
+        }
+
         if ($careerPortalEnabled && $data['public'])
         {
             $isPublic = true;
-            if ($data['questionnaireID'])
-            {
-                $questionnaire = new Questionnaire($this->_siteID);
-                $q = $questionnaire->get($data['questionnaireID']);
-                if (is_array($q) && !empty($q))
-                {
-                    $questionnaireID = $q['questionnaireID'];
-                    $questionnaireData = $q;
-                }
-            }
         }
 
         $this->_template->assign('extraFieldRS', $extraFieldRS);

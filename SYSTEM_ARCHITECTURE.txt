@@ -1,0 +1,351 @@
+================================================================================
+QUESTIONNAIRE BY JOB TYPE - SYSTEM ARCHITECTURE
+================================================================================
+
+
+COMPLETE SYSTEM FLOW DIAGRAM:
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          USER INTERACTION LAYER                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  RECRUITER AT ADD JOB ORDER FORM                                            │
+│  ┌────────────────────────────────────────┐                                 │
+│  │ Add Job Order Form (Add.tpl)           │                                 │
+│  ├────────────────────────────────────────┤                                 │
+│  │ Title: PHP Developer                   │                                 │
+│  │ Company: ABC Corp                      │                                 │
+│  │ Type: [Dropdown] ← CHANGES TO "FT"     │                                 │
+│  │       ▼ onchange event fired!          │                                 │
+│  │ Questionnaire: [Loading...]            │                                 │
+│  └────────────────────────────────────────┘                                 │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        JAVASCRIPT LAYER (Browser)                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  selectQuestionnaireByType() Function                                       │
+│  ┌────────────────────────────────────────┐                                 │
+│  │ 1. Get selected job type: "FT"         │                                 │
+│  │ 2. Check if valid                      │                                 │
+│  │ 3. Show loading indicator              │                                 │
+│  │ 4. Make AJAX request ────────────────┐ │                                 │
+│  │    fetch('?f=getQuestionnaireByJobType')  │                             │
+│  │    POST: jobOrderType=FT               │ │                               │
+│  │                                        ↓ │                               │
+│  └────────────────────────────────────────┘ │                               │
+│                                              │                               │
+└──────────────────────────────────────────────┼───────────────────────────────┘
+                                               │
+                                               ↓ HTTP POST Request
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        AJAX ENDPOINT LAYER (Server)                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  /ajax/getQuestionnaireByJobType.php                                        │
+│  ┌────────────────────────────────────────┐                                 │
+│  │ 1. Receive: jobOrderType = "FT"        │                                 │
+│  │ 2. Create JobOrderTypeQuestionnaires() │                                 │
+│  │ 3. Call getMappingForType("FT")        │                                 │
+│  │ 4. Get result: { questionnaireID: 4 }  │                                 │
+│  │ 5. Return JSON response ───────┐       │                                 │
+│  │    { success: true,            │       │                                 │
+│  │      questionnaireID: 4,        │       │                                 │
+│  │      title: "FT Questions" }    │       │                                 │
+│  └────────────────────────────────────────┘                                 │
+│                                            │                                 │
+└────────────────────────────────────────────┼─────────────────────────────────┘
+                                             │
+                                    ┌────────┴──────┐
+                                    │               │
+┌───────────────────────────────────┴────────┐     │
+│                                            │     │
+│  JobOrderTypeQuestionnaires.php            │     │
+│  ┌──────────────────────────────────────┐  │     │
+│  │ _typeQuestionnaireMapping array:     │  │     │
+│  ├──────────────────────────────────────┤  │     │
+│  │ 'C' => questionnaireID: 1            │  │     │
+│  │ 'C2H' => questionnaireID: 2          │  │     │
+│  │ 'FL' => questionnaireID: 3           │  │     │
+│  │ 'FT' => questionnaireID: 4 ←──────┐  │  │     │
+│  │ 'H' => questionnaireID: 5          │  │  │     │
+│  └──────────────────────────────────────┘  │  │     │
+│         (CONFIGURATION FILE)                │  │     │
+│                                             │  │     │
+└─────────────────────────────────────────────┘  │     │
+                                                 │     │
+                                        ┌────────┘     │
+                                        │              │
+                                        ↓              ↓
+                        JSON Response returns to JavaScript
+                        { questionnaireID: 4 }
+                                        │
+                                        ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        JAVASCRIPT RESPONSE HANDLING                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  Back in selectQuestionnaireByType()                                        │
+│  ┌────────────────────────────────────────┐                                 │
+│  │ 1. Parse JSON response                 │                                 │
+│  │ 2. Get questionnaireID = 4             │                                 │
+│  │ 3. Update form element:                │                                 │
+│  │    document.getElementById('questionnaire')  │                           │
+│  │    .value = 4                          │                                 │
+│  │ 4. Hide loading indicator              │                                 │
+│  │ 5. Show success message in console     │                                 │
+│  └────────────────────────────────────────┘                                 │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            UPDATED UI                                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  RECRUITER SEES UPDATED FORM                                                │
+│  ┌────────────────────────────────────────┐                                 │
+│  │ Add Job Order Form (Add.tpl)           │                                 │
+│  ├────────────────────────────────────────┤                                 │
+│  │ Title: PHP Developer                   │                                 │
+│  │ Company: ABC Corp                      │                                 │
+│  │ Type: FT (Full Time) ✓                 │                                 │
+│  │ Questionnaire: ✓ UPDATED!              │                                 │
+│  │   [Full Time Questions] ← AUTO-SELECTED│                                 │
+│  │                                        │                                 │
+│  │ [Save Job Order]                       │                                 │
+│  └────────────────────────────────────────┘                                 │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ↓ (When saved, questionnaire_id = 4)
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          DATABASE STORAGE                                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  job_order table:                                                            │
+│  ┌────────────────────────────────────────────────────────────┐              │
+│  │ job_order_id: 123                                          │              │
+│  │ title: "PHP Developer"                                     │              │
+│  │ type: "FT"                                                 │              │
+│  │ company_id: 45                                             │              │
+│  │ questionnaire_id: 4 ← Links to questionnaire              │              │
+│  │ ...                                                        │              │
+│  └────────────────────────────────────────────────────────────┘              │
+│                                                                              │
+│  career_portal_questionnaire table:                                          │
+│  ┌────────────────────────────────────────────────────────────┐              │
+│  │ career_portal_questionnaire_id: 4                          │              │
+│  │ title: "Full Time Questions"                               │              │
+│  │ description: "Questions for FT positions"                  │              │
+│  │ is_active: 1                                               │              │
+│  │ site_id: 1                                                 │              │
+│  └────────────────────────────────────────────────────────────┘              │
+│                                                                              │
+│  career_portal_questionnaire_question table:                                 │
+│  ┌────────────────────────────────────────────────────────────┐              │
+│  │ questionnaire_id: 4                                        │              │
+│  │ text: "What is your salary expectation?"                   │              │
+│  │ type: QUESTIONNAIRE_QUESTION_TYPE_TEXT                     │              │
+│  │ ...                                                        │              │
+│  └────────────────────────────────────────────────────────────┘              │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+COMPLETE TECHNICAL FLOW:
+================================================================================
+
+1. USER CHANGES JOB TYPE
+   └─ Type dropdown value changes from "C" to "FT"
+   └─ onchange="selectQuestionnaireByType();" fires
+
+2. JAVASCRIPT EXECUTES
+   └─ Reads type value: "FT"
+   └─ Shows loading indicator on questionnaire field
+   └─ Prepares AJAX call
+
+3. AJAX REQUEST SENT
+   └─ POST to: index.php?f=getQuestionnaireByJobType
+   └─ Body: jobOrderType=FT&siteID=1
+   └─ Content-Type: application/x-www-form-urlencoded
+
+4. SERVER PROCESSES REQUEST
+   └─ getQuestionnaireByJobType.php receives POST
+   └─ Creates new JobOrderTypeQuestionnaires()
+   └─ Calls getMappingForType("FT")
+   └─ Gets: { questionnaireID: 4, title: "Full Time Questions" }
+   └─ Returns JSON with questionnaireID
+
+5. JAVASCRIPT RECEIVES RESPONSE
+   └─ Parses JSON: { success: true, questionnaireID: 4 }
+   └─ Updates form element: questionnaire.value = 4
+   └─ Hides loading indicator
+   └─ Logs success message to console
+
+6. USER SEES UPDATED FORM
+   └─ Questionnaire dropdown now shows "Full Time Questions"
+   └─ Visual feedback confirms auto-selection worked
+   └─ Recruiter can proceed to save the job order
+
+7. JOB ORDER SAVED
+   └─ Database stores: type="FT", questionnaire_id=4
+   └─ Link established between job type and questionnaire
+
+8. CANDIDATE APPLIES
+   └─ Career portal loads job_order record
+   └─ Sees questionnaire_id=4
+   └─ Shows questions from "Full Time Questions" questionnaire
+   └─ Candidate answers FT-specific questions
+
+
+DATABASE RELATIONSHIPS:
+================================================================================
+
+JobOrderTypeQuestionnaires Class        Database Tables
+┌──────────────────────────┐           ┌──────────────────────────┐
+│ _typeQuestionnaireMapping│           │ job_order                │
+├──────────────────────────┤           ├──────────────────────────┤
+│ 'C' => ID: 1            │──Link────→│ type = 'C'               │
+│ 'C2H' => ID: 2          │           │ questionnaire_id = 1     │
+│ 'FL' => ID: 3           │           └──────────────────────────┘
+│ 'FT' => ID: 4           │
+│ 'H' => ID: 5            │           ┌──────────────────────────┐
+└──────────────────────────┘           │ career_portal_           │
+                                       │ questionnaire            │
+     (In-Memory Mapping)              ├──────────────────────────┤
+                                       │ ID: 1 = "Contract Q..."  │
+                                       │ ID: 2 = "C2H Q..."       │
+                                       │ ID: 3 = "Freelance Q.."  │
+                                       │ ID: 4 = "Full Time Q.."  │
+                                       │ ID: 5 = "Hire Q..."      │
+                                       └──────────────────────────┘
+
+
+ERROR HANDLING & FALLBACKS:
+================================================================================
+
+Error Scenario 1: No Mapping for Type
+┌─────────────────────────┐
+│ Job Type: "UNKNOWN"     │
+│ Mapping: Not found      │
+└─────────────────────────┘
+         │
+         ↓
+┌─────────────────────────────────────────┐
+│ getQuestionnaireByJobType.php           │
+│ Returns: { error: "Not configured" }    │
+└─────────────────────────────────────────┘
+         │
+         ↓
+┌─────────────────────────────────────────┐
+│ JavaScript Response Handler             │
+│ Sets questionnaire to 'none'            │
+│ Shows console message to user           │
+│ User can manually select questionnaire  │
+└─────────────────────────────────────────┘
+
+Error Scenario 2: Invalid Questionnaire ID
+┌─────────────────────────┐
+│ Job Type: 'FT'          │
+│ Mapped ID: 999 (invalid)│
+└─────────────────────────┘
+         │
+         ↓
+┌─────────────────────────────────────────┐
+│ Database lookup returns NULL             │
+│ Career portal handles gracefully         │
+│ No questionnaire shown to candidates     │
+└─────────────────────────────────────────┘
+
+Error Scenario 3: JavaScript Error
+┌─────────────────────────┐
+│ selectQuestionnaireByType()       │
+│ JavaScript Error                  │
+└─────────────────────────┘
+         │
+         ↓
+┌─────────────────────────────────────────┐
+│ Catch error in browser console (F12)    │
+│ Questionnaire field remains unchanged   │
+│ User can manually select                │
+└─────────────────────────────────────────┘
+
+
+CONFIGURATION POINTS:
+================================================================================
+
+Primary Configuration Point: /lib/JobOrderTypeQuestionnaires.php
+
+    ┌──────────────────────────────────────┐
+    │ public function __construct()        │
+    │ {                                    │
+    │   $this->_typeQuestionnaire...       │
+    │     'C' => array(                    │
+    │       'questionnaireID' => 1         │ ← Edit these IDs
+    │     ),                               │
+    │     'FT' => array(                   │
+    │       'questionnaireID' => 4         │ ← Edit these IDs
+    │     ),                               │
+    │     ...                              │
+    │   }                                  │
+    │ }                                    │
+    └──────────────────────────────────────┘
+
+
+FILES INTERACTION:
+================================================================================
+
+/modules/joborders/Add.tpl (User Interface)
+    ├─ Contains form HTML
+    ├─ Has selectQuestionnaireByType() function
+    └─ Calls AJAX endpoint on type change
+           │
+           ↓
+/ajax/getQuestionnaireByJobType.php (API Layer)
+    ├─ Receives job type
+    ├─ Instantiates JobOrderTypeQuestionnaires
+    └─ Returns questionnaire ID as JSON
+           │
+           ↓
+/lib/JobOrderTypeQuestionnaires.php (Configuration)
+    ├─ Maps types to questionnaire IDs
+    ├─ Provides getMappingForType() method
+    └─ Returns IDs for requested types
+           │
+           ↓
+Database (Data Storage)
+    ├─ career_portal_questionnaire table
+    ├─ career_portal_questionnaire_question table
+    └─ job_order table (stores selected questionnaire_id)
+
+
+PERFORMANCE CONSIDERATIONS:
+================================================================================
+
+✓ Lightweight: Only loads configuration into memory on demand
+✓ Fast: Simple array lookup, no database queries in mapping
+✓ Cacheable: Configuration rarely changes, could be cached
+✓ Async: AJAX call doesn't block form usage
+✓ Responsive: Loading indicator provides visual feedback
+
+Future optimization options:
+  • Cache JobOrderTypeQuestionnaires object
+  • Move to database-driven configuration
+  • Pre-load all questionnaires on form load
+
+
+SECURITY CONSIDERATIONS:
+================================================================================
+
+✓ Session validation: AJAX endpoint requires authentication
+✓ Input validation: Job type is validated against allowed types
+✓ No SQL injection: Using prepared database queries
+✓ No XSS: Questionnaire IDs are integers, not user strings
+✓ CSRF protection: Uses standard session-based authentication
+
+================================================================================

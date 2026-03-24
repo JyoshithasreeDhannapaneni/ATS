@@ -19,12 +19,12 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
 
             // Initialize tabs on page load
             window.addEventListener('DOMContentLoaded', function() {
-                // Hide all tabs first
-                document.getElementById('resumeTabContent').style.setProperty('display', 'none', 'important');
-                document.getElementById('feedbackTabContent').style.setProperty('display', 'none', 'important');
-                document.getElementById('emailTabContent').style.setProperty('display', 'none', 'important');
+                var allTabs = ['resumeTabContent', 'feedbackTabContent', 'emailTabContent', 'documentsTabContent'];
+                allTabs.forEach(function(id) {
+                    var el = document.getElementById(id);
+                    if (el) el.style.setProperty('display', 'none', 'important');
+                });
 
-                // Show only Resume tab by default
                 var resumeTab = document.getElementById('resumeTabContent');
                 resumeTab.style.setProperty('display', 'flex', 'important');
                 resumeTab.style.setProperty('flex-direction', 'row', 'important');
@@ -32,30 +32,21 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
             });
 
             function showTab(tabName) {
-                // Hide all tab contents with !important override
-                var resumeTab = document.getElementById('resumeTabContent');
-                var feedbackTab = document.getElementById('feedbackTabContent');
-                var emailTab = document.getElementById('emailTabContent');
+                var allTabs = ['resume', 'feedback', 'email', 'documents'];
+                allTabs.forEach(function(name) {
+                    var content = document.getElementById(name + 'TabContent');
+                    var tab = document.getElementById(name + 'Tab');
+                    if (content) content.style.setProperty('display', 'none', 'important');
+                    if (tab) tab.classList.remove('active');
+                });
 
-                resumeTab.style.setProperty('display', 'none', 'important');
-                feedbackTab.style.setProperty('display', 'none', 'important');
-                emailTab.style.setProperty('display', 'none', 'important');
-
-                // Remove active class from all tabs
-                document.getElementById('resumeTab').classList.remove('active');
-                document.getElementById('feedbackTab').classList.remove('active');
-                document.getElementById('emailTab').classList.remove('active');
-
-                // Show selected tab content with !important
                 var tabContent = document.getElementById(tabName + 'TabContent');
-                if (tabName === 'resume' || tabName === 'feedback' || tabName === 'email') {
-                    tabContent.style.setProperty('display', 'flex', 'important');
-                    tabContent.style.setProperty('flex-direction', 'row', 'important');
-                    tabContent.style.setProperty('width', '100%', 'important');
-                } else {
-                    tabContent.style.setProperty('display', 'block', 'important');
-                }
+                tabContent.style.setProperty('display', 'flex', 'important');
+                tabContent.style.setProperty('flex-direction', 'row', 'important');
+                tabContent.style.setProperty('width', '100%', 'important');
                 document.getElementById(tabName + 'Tab').classList.add('active');
+
+                if (tabName === 'documents') { loadCandidateDocuments(); }
 
                 // Animate tab indicator
                 var activeTabEl = document.getElementById(tabName + 'Tab');
@@ -174,6 +165,85 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                     }
                 }, 100);
             });
+
+            function generateUploadLink() {
+                var candidateID = <?php echo (int)$this->candidateID; ?>;
+                var xhr = new XMLHttpRequest();
+                xhr.open('GET', 'ajax/generateUploadLink.php?candidateID=' + candidateID + '&expiryDays=7', true);
+                xhr.onload = function() {
+                    try {
+                        var resp = JSON.parse(xhr.responseText);
+                        if (resp.success) {
+                            document.getElementById('uploadLinkURL').value = resp.url;
+                            document.getElementById('uploadLinkResult').style.display = 'block';
+                        } else {
+                            alert('Error: ' + resp.error);
+                        }
+                    } catch(e) {
+                        alert('Failed to generate link. Please try again.');
+                    }
+                };
+                xhr.send();
+            }
+
+            function copyUploadLink() {
+                var input = document.getElementById('uploadLinkURL');
+                input.select();
+                document.execCommand('copy');
+                var btn = input.nextElementSibling;
+                btn.textContent = 'Copied!';
+                setTimeout(function() { btn.textContent = 'Copy'; }, 2000);
+            }
+
+            var documentsLoaded = false;
+            function loadCandidateDocuments() {
+                if (documentsLoaded) return;
+                var candidateID = <?php echo (int)$this->candidateID; ?>;
+                var container = document.getElementById('documentsListContainer');
+
+                var xhr = new XMLHttpRequest();
+                xhr.open('GET', 'ajax/getCandidateDocuments.php?candidateID=' + candidateID, true);
+                xhr.onload = function() {
+                    try {
+                        var resp = JSON.parse(xhr.responseText);
+                        if (resp.success && resp.documents.length > 0) {
+                            var html = '<table style="width: 100%; border-collapse: collapse; font-size: 13px;">';
+                            html += '<tr style="background: #f9fafb; border-bottom: 2px solid #e5e7eb;">';
+                            html += '<th style="padding: 10px 14px; text-align: left; font-weight: 600; color: #374151;">Document</th>';
+                            html += '<th style="padding: 10px 14px; text-align: left; font-weight: 600; color: #374151;">Type</th>';
+                            html += '<th style="padding: 10px 14px; text-align: left; font-weight: 600; color: #374151;">Size</th>';
+                            html += '<th style="padding: 10px 14px; text-align: left; font-weight: 600; color: #374151;">Uploaded</th>';
+                            html += '<th style="padding: 10px 14px; text-align: left; font-weight: 600; color: #374151;">Status</th>';
+                            html += '<th style="padding: 10px 14px; text-align: center; font-weight: 600; color: #374151;">Action</th>';
+                            html += '</tr>';
+
+                            for (var i = 0; i < resp.documents.length; i++) {
+                                var d = resp.documents[i];
+                                var statusColor = d.status === 'approved' ? '#059669' : (d.status === 'rejected' ? '#dc2626' : '#d97706');
+                                var statusBg = d.status === 'approved' ? '#ecfdf5' : (d.status === 'rejected' ? '#fef2f2' : '#fffbeb');
+                                html += '<tr style="border-bottom: 1px solid #f3f4f6;">';
+                                html += '<td style="padding: 10px 14px;"><div style="font-weight: 600; color: #1f2937;">' + d.original_filename + '</div></td>';
+                                html += '<td style="padding: 10px 14px; color: #6b7280;">' + d.typeLabel + '</td>';
+                                html += '<td style="padding: 10px 14px; color: #6b7280;">' + d.file_size_kb + ' KB</td>';
+                                html += '<td style="padding: 10px 14px; color: #6b7280;">' + d.uploadedDateFormatted + '</td>';
+                                html += '<td style="padding: 10px 14px;"><span style="padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; background: ' + statusBg + '; color: ' + statusColor + ';">' + d.status + '</span></td>';
+                                html += '<td style="padding: 10px 14px; text-align: center;"><a href="ajax/downloadDocument.php?id=' + d.document_id + '" target="_blank" style="color: #2563eb; font-weight: 600; text-decoration: none;">View</a></td>';
+                                html += '</tr>';
+                            }
+                            html += '</table>';
+                            container.innerHTML = html;
+                        } else {
+                            container.innerHTML = '<div style="text-align: center; padding: 40px; color: #9ca3af; font-size: 13px;">' +
+                                '<svg width="36" height="36" fill="none" stroke="#d1d5db" stroke-width="1.5" viewBox="0 0 24 24" style="margin: 0 auto 10px; display: block;"><path d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>' +
+                                'No documents uploaded yet.<br><span style="font-size: 11px; color: #b0b7c3; margin-top: 4px; display: inline-block;">Generate an upload link and share it with the candidate.</span></div>';
+                        }
+                        documentsLoaded = true;
+                    } catch(e) {
+                        container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ef4444; font-size: 13px;">Failed to load documents.</div>';
+                    }
+                };
+                xhr.send();
+            }
         </script>
 
         <style type="text/css">
@@ -1289,128 +1359,6 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                         </div>
                     </div>
 
-                    <!-- ==================== INFO CARDS ROW ==================== -->
-                    <div class="info-cards-row anim-fade-up-2">
-                        <!-- Card 1: Personal Info -->
-                        <div class="info-card">
-                            <div class="info-card-header">
-                                <div class="info-card-icon blue">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                                </div>
-                                <span class="info-card-title">Personal Info</span>
-                            </div>
-                            <div class="info-card-body">
-                                <div class="info-row">
-                                    <span class="info-row-label">Employer</span>
-                                    <span class="info-row-value"><?php $this->_($this->data['currentEmployer']); ?></span>
-                                </div>
-                                <div class="info-row">
-                                    <span class="info-row-label">Expected CTC</span>
-                                    <span class="info-row-value"><?php echo !empty($this->data['desiredPay']) ? $this->data['desiredPay'] : (!empty($this->data['currentPay']) ? $this->data['currentPay'] : 'Not Specified'); ?></span>
-                                </div>
-                                <div class="info-row">
-                                    <span class="info-row-label">Notice</span>
-                                    <span class="info-row-value"><?php echo !empty($this->data['dateAvailable']) ? '30 Days' : 'Not Specified'; ?></span>
-                                </div>
-                                <?php if (!empty($this->primaryJobOrder)): ?>
-                                <div class="info-row">
-                                    <span class="info-row-label">Job</span>
-                                    <span class="info-row-value"><?php $this->_($this->primaryJobOrder['title']); ?> (<?php echo($this->primaryJobOrder['clientJobID'] ? $this->primaryJobOrder['clientJobID'] : $this->primaryJobOrder['jobOrderID']); ?>)</span>
-                                </div>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-
-                        <!-- Card 2: Contact Details -->
-                        <div class="info-card">
-                            <div class="info-card-header">
-                                <div class="info-card-icon green">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-                                </div>
-                                <span class="info-card-title">Contact Details</span>
-                            </div>
-                            <div class="info-card-body">
-                                <div class="info-row">
-                                    <span class="info-row-label">Email</span>
-                                    <span class="info-row-value"><a href="mailto:<?php $this->_($this->data['email1']); ?>"><?php $this->_($this->data['email1']); ?></a></span>
-                                </div>
-                                <?php if (!empty($this->data['email2'])): ?>
-                                <div class="info-row">
-                                    <span class="info-row-label">Email 2</span>
-                                    <span class="info-row-value"><a href="mailto:<?php $this->_($this->data['email2']); ?>"><?php $this->_($this->data['email2']); ?></a></span>
-                                </div>
-                                <?php endif; ?>
-                                <?php if (!empty($this->data['phoneCell'])): ?>
-                                <div class="info-row">
-                                    <span class="info-row-label">Cell</span>
-                                    <span class="info-row-value"><?php $this->_($this->data['phoneCell']); ?></span>
-                                </div>
-                                <?php endif; ?>
-                                <?php if (!empty($this->data['phoneHome'])): ?>
-                                <div class="info-row">
-                                    <span class="info-row-label">Home</span>
-                                    <span class="info-row-value"><?php $this->_($this->data['phoneHome']); ?></span>
-                                </div>
-                                <?php endif; ?>
-                                <?php if (!empty($this->data['phoneWork'])): ?>
-                                <div class="info-row">
-                                    <span class="info-row-label">Work</span>
-                                    <span class="info-row-value"><?php $this->_($this->data['phoneWork']); ?></span>
-                                </div>
-                                <?php endif; ?>
-                                <div class="info-row">
-                                    <span class="info-row-label">Location</span>
-                                    <span class="info-row-value"><?php $this->_($this->data['cityAndState']); ?></span>
-                                </div>
-                                <?php if (!empty($this->data['webSite'])): ?>
-                                <div class="info-row">
-                                    <span class="info-row-label">Website</span>
-                                    <span class="info-row-value"><a href="<?php $this->_($this->data['webSite']); ?>" target="_blank"><?php $this->_($this->data['webSite']); ?></a></span>
-                                </div>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-
-                        <!-- Card 3: Skills & Notes -->
-                        <div class="info-card">
-                            <div class="info-card-header">
-                                <div class="info-card-icon purple">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                                </div>
-                                <span class="info-card-title">Skills & Notes</span>
-                            </div>
-                            <div class="info-card-body">
-                                <?php if (!empty($this->data['keySkills'])): ?>
-                                <div style="margin-bottom: 12px;">
-                                    <span class="info-row-label" style="display: block; margin-bottom: 8px;">Key Skills</span>
-                                    <div class="skill-pills">
-                                        <?php
-                                            $skills = preg_split('/[,;]+/', $this->data['keySkills']);
-                                            foreach ($skills as $skill):
-                                                $skill = trim($skill);
-                                                if (!empty($skill)):
-                                        ?>
-                                            <span class="skill-pill"><?php echo htmlspecialchars($skill); ?></span>
-                                        <?php
-                                                endif;
-                                            endforeach;
-                                        ?>
-                                    </div>
-                                </div>
-                                <?php endif; ?>
-                                <?php if (!empty($this->data['notes'])): ?>
-                                <div style="margin-top: 12px;">
-                                    <span class="info-row-label" style="display: block; margin-bottom: 6px;">Notes</span>
-                                    <p style="font-size: 13px; color: #4b5563; line-height: 1.6; margin: 0;"><?php echo nl2br(htmlspecialchars($this->data['notes'])); ?></p>
-                                </div>
-                                <?php endif; ?>
-                                <?php if (empty($this->data['keySkills']) && empty($this->data['notes'])): ?>
-                                    <p style="color: #9ca3af; text-align: center; padding: 20px 0; font-size: 13px;">No skills or notes recorded.</p>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- ==================== TABS BAR ==================== -->
                     <div class="cand-tabs-bar anim-fade-up-3">
                         <ul class="cand-tabs-list">
@@ -1430,6 +1378,12 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                                 <a href="javascript:void(0);" onclick="showTab('email');">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
                                     Email
+                                </a>
+                            </li>
+                            <li id="documentsTab" class="cand-tab">
+                                <a href="javascript:void(0);" onclick="showTab('documents');">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                                    Documents
                                 </a>
                             </li>
                             <div id="tabIndicator" class="tab-indicator"></div>
@@ -1654,9 +1608,163 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                         </div>
                     </div>
                         </div>
+
+                        <!-- ===== DOCUMENTS TAB ===== -->
+                        <div id="documentsTabContent" style="display: none; flex-direction: row; width: 100%;">
+                            <div class="tab-left-panel">
+                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+                                    <h3 class="tab-section-title" style="margin-bottom: 0;">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                        Candidate Documents
+                                    </h3>
+                                    <button type="button" onclick="generateUploadLink();" style="padding: 8px 16px; background: #2563eb; color: #fff; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: 'Inter', system-ui, sans-serif; display: flex; align-items: center; gap: 6px;">
+                                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+                                        Generate Upload Link
+                                    </button>
+                                </div>
+
+                                <div id="uploadLinkResult" style="display: none; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 14px 18px; margin-bottom: 16px;">
+                                    <div style="font-size: 12px; font-weight: 600; color: #1e40af; margin-bottom: 6px;">Upload Link (share with candidate):</div>
+                                    <div style="display: flex; gap: 8px; align-items: center;">
+                                        <input type="text" id="uploadLinkURL" readonly style="flex: 1; padding: 8px 12px; border: 1px solid #93c5fd; border-radius: 6px; font-size: 12px; font-family: monospace; background: #fff; color: #1e3a8a;" />
+                                        <button type="button" onclick="copyUploadLink();" style="padding: 8px 14px; background: #2563eb; color: #fff; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;">Copy</button>
+                                    </div>
+                                    <div style="font-size: 11px; color: #6b7280; margin-top: 6px;">Link expires in 7 days. Candidate can upload up to 20 documents.</div>
+                                </div>
+
+                                <div id="documentsListContainer">
+                                    <div id="documentsLoading" style="text-align: center; padding: 40px; color: #9ca3af; font-size: 13px;">
+                                        Loading documents...
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>
+
+            <!-- ==================== INFO CARDS ROW (below tabs) ==================== -->
+                    <div class="info-cards-row anim-fade-up-2" style="margin-top: 16px;">
+                        <!-- Card 1: Personal Info -->
+                        <div class="info-card">
+                            <div class="info-card-header">
+                                <div class="info-card-icon blue">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                </div>
+                                <span class="info-card-title">Personal Info</span>
+                            </div>
+                            <div class="info-card-body">
+                                <div class="info-row">
+                                    <span class="info-row-label">Employer</span>
+                                    <span class="info-row-value"><?php $this->_($this->data['currentEmployer']); ?></span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-row-label">Expected CTC</span>
+                                    <span class="info-row-value"><?php echo !empty($this->data['desiredPay']) ? $this->data['desiredPay'] : (!empty($this->data['currentPay']) ? $this->data['currentPay'] : 'Not Specified'); ?></span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-row-label">Notice</span>
+                                    <span class="info-row-value"><?php echo !empty($this->data['dateAvailable']) ? '30 Days' : 'Not Specified'; ?></span>
+                                </div>
+                                <?php if (!empty($this->primaryJobOrder)): ?>
+                                <div class="info-row">
+                                    <span class="info-row-label">Job</span>
+                                    <span class="info-row-value"><?php $this->_($this->primaryJobOrder['title']); ?> (<?php echo($this->primaryJobOrder['clientJobID'] ? $this->primaryJobOrder['clientJobID'] : $this->primaryJobOrder['jobOrderID']); ?>)</span>
+                                </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
+                        <!-- Card 2: Contact Details -->
+                        <div class="info-card">
+                            <div class="info-card-header">
+                                <div class="info-card-icon green">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                                </div>
+                                <span class="info-card-title">Contact Details</span>
+                            </div>
+                            <div class="info-card-body">
+                                <div class="info-row">
+                                    <span class="info-row-label">Email</span>
+                                    <span class="info-row-value"><a href="mailto:<?php $this->_($this->data['email1']); ?>"><?php $this->_($this->data['email1']); ?></a></span>
+                                </div>
+                                <?php if (!empty($this->data['email2'])): ?>
+                                <div class="info-row">
+                                    <span class="info-row-label">Email 2</span>
+                                    <span class="info-row-value"><a href="mailto:<?php $this->_($this->data['email2']); ?>"><?php $this->_($this->data['email2']); ?></a></span>
+                                </div>
+                                <?php endif; ?>
+                                <?php if (!empty($this->data['phoneCell'])): ?>
+                                <div class="info-row">
+                                    <span class="info-row-label">Cell</span>
+                                    <span class="info-row-value"><?php $this->_($this->data['phoneCell']); ?></span>
+                                </div>
+                                <?php endif; ?>
+                                <?php if (!empty($this->data['phoneHome'])): ?>
+                                <div class="info-row">
+                                    <span class="info-row-label">Home</span>
+                                    <span class="info-row-value"><?php $this->_($this->data['phoneHome']); ?></span>
+                                </div>
+                                <?php endif; ?>
+                                <?php if (!empty($this->data['phoneWork'])): ?>
+                                <div class="info-row">
+                                    <span class="info-row-label">Work</span>
+                                    <span class="info-row-value"><?php $this->_($this->data['phoneWork']); ?></span>
+                                </div>
+                                <?php endif; ?>
+                                <div class="info-row">
+                                    <span class="info-row-label">Location</span>
+                                    <span class="info-row-value"><?php $this->_($this->data['cityAndState']); ?></span>
+                                </div>
+                                <?php if (!empty($this->data['webSite'])): ?>
+                                <div class="info-row">
+                                    <span class="info-row-label">Website</span>
+                                    <span class="info-row-value"><a href="<?php $this->_($this->data['webSite']); ?>" target="_blank"><?php $this->_($this->data['webSite']); ?></a></span>
+                                </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
+                        <!-- Card 3: Skills & Notes -->
+                        <div class="info-card">
+                            <div class="info-card-header">
+                                <div class="info-card-icon purple">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                                </div>
+                                <span class="info-card-title">Skills & Notes</span>
+                            </div>
+                            <div class="info-card-body">
+                                <?php if (!empty($this->data['keySkills'])): ?>
+                                <div style="margin-bottom: 12px;">
+                                    <span class="info-row-label" style="display: block; margin-bottom: 8px;">Key Skills</span>
+                                    <div class="skill-pills">
+                                        <?php
+                                            $skills = preg_split('/[,;]+/', $this->data['keySkills']);
+                                            foreach ($skills as $skill):
+                                                $skill = trim($skill);
+                                                if (!empty($skill)):
+                                        ?>
+                                            <span class="skill-pill"><?php echo htmlspecialchars($skill); ?></span>
+                                        <?php
+                                                endif;
+                                            endforeach;
+                                        ?>
+                                    </div>
+                                </div>
+                                <?php endif; ?>
+                                <?php if (!empty($this->data['notes'])): ?>
+                                <div style="margin-top: 12px;">
+                                    <span class="info-row-label" style="display: block; margin-bottom: 6px;">Notes</span>
+                                    <p style="font-size: 13px; color: #4b5563; line-height: 1.6; margin: 0;"><?php echo nl2br(htmlspecialchars($this->data['notes'])); ?></p>
+                                </div>
+                                <?php endif; ?>
+                                <?php if (empty($this->data['keySkills']) && empty($this->data['notes'])): ?>
+                                    <p style="color: #9ca3af; text-align: center; padding: 20px 0; font-size: 13px;">No skills or notes recorded.</p>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
 
             <!-- ==================== JOB ORDERS SECTION ==================== -->
             <div class="section-card anim-fade-up-4">

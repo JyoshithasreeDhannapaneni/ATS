@@ -1,0 +1,275 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                    QUESTIONNAIRE FEATURE - VISUAL GUIDE                     ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+SCENARIO 1: VIEW JOB ORDER WITH QUESTIONNAIRE ASSIGNED
+════════════════════════════════════════════════════════════════════════════
+
+Job Orders → Click "PHP Developer - Full Time"
+                              ↓
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ Job Orders: Job Order Details                                           │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│ Left Column:                  │ Right Column:                           │
+│ ─────────────────────────────┼────────────────────────────────────     │
+│ Title: PHP Developer          │ Duration: 6 months                      │
+│ Company: ABC Corp             │ Openings: 2 (1 Available)               │
+│ Department: Engineering       │ Type: FT (Full Time)                    │
+│ CATS Job ID: 123              │ ╔════════════════════════════════╗      │
+│ Company Job ID: NT1           │ ║ Questionnaire:               ║      │
+│ Contact: John Doe             │ ║ Full Time Position Questions  ║ ← NEW │
+│ Contact Phone: (555)123-4567  │ ║                              ║      │
+│ Contact Email: john@abc.com   │ ║ Edit Questionnaire           ║      │
+│ Location: New York, NY        │ ╚════════════════════════════════╝      │
+│ Max Rate: $80/hr              │                                         │
+│ Salary: $150,000              │ Status: Active                          │
+│ Start Date: 04-15-2026        │ Candidates: 5                           │
+│                               │ Submitted: 3                            │
+│                               │ Days Old: 12                            │
+│                               │ Created: 03-23-2026 (Admin User)        │
+│                               │ Recruiter: Jane Smith                   │
+│                               │ Owner: Bob Johnson                      │
+│                               │                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+
+What You See:
+✓ Questionnaire title displayed prominently
+✓ "Edit Questionnaire" link available
+✓ Clean integration with other job details
+✓ No disruption to existing layout
+
+
+SCENARIO 2: VIEW JOB ORDER WITHOUT QUESTIONNAIRE
+════════════════════════════════════════════════════════════════════════════
+
+Job Orders → Click "Sales Manager - No Questionnaire"
+                              ↓
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ Job Orders: Job Order Details                                           │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│ Right Column:                                                           │
+│ ─────────────────────────────────────────────────────────────────      │
+│ Type: H (Hire)                                                          │
+│ ╔════════════════════════════════════════════╗                         │
+│ ║ Questionnaire:                             ║                        │
+│ ║ No questionnaire assigned                  ║ ← NEW                  │
+│ ║                                            ║                        │
+│ ║ Assign Questionnaire                       ║                        │
+│ ╚════════════════════════════════════════════╝                         │
+│ Status: Active                                                          │
+│ Candidates: 2                                                           │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+
+What You See:
+✓ Clear indication that no questionnaire is assigned
+✓ Easy access to assign one via link
+✓ Grayed out text for "no questionnaire assigned"
+
+
+SCENARIO 3: EDIT QUESTIONNAIRE FLOW
+════════════════════════════════════════════════════════════════════════════
+
+Step 1: View Job Order
+┌──────────────────────────┐
+│ Questionnaire:           │
+│ Full Time Questions      │
+│ [Edit Questionnaire] ← Click this
+└──────────────────────────┘
+
+        ↓ Click
+
+Step 2: Taken to Edit Job Order Form
+┌──────────────────────────────────────┐
+│ Edit Job Order                       │
+├──────────────────────────────────────┤
+│ Title: [PHP Developer            ]   │
+│ Company: [ABC Corp             ▼]   │
+│ Type: [FT                      ▼]   │
+│                                      │
+│ Questionnaire:                       │
+│ ┌────────────────────────────────┐  │
+│ │ Full Time Position Questions ▼│  │
+│ │ • Contract Questions          │  │
+│ │ • Contract to Hire Questions  │  │
+│ │ • Freelance Questions         │  │
+│ │ • Full Time Questions (SEL)   │  │
+│ │ • Direct Hire Questions       │  │
+│ │ • None                        │  │
+│ └────────────────────────────────┘  │
+│                                      │
+│ [Save Job Order] [Cancel]           │
+└──────────────────────────────────────┘
+
+Step 3: Change If Needed
+• Select different questionnaire from dropdown
+• Or keep same one
+• Click Save
+
+        ↓
+
+Step 4: Back to View
+Questionnaire updated! Shows new selection.
+
+
+WORKFLOW: CREATE JOB ORDER → AUTO-SELECT → VIEW → EDIT
+════════════════════════════════════════════════════════════════════════════
+
+1. Create Job Order
+   ┌─────────────────────────┐
+   │ Add Job Order Form       │
+   ├─────────────────────────┤
+   │ Title: [               ] │
+   │ Company: [           ▼] │
+   │ Type: [FT          ▼]   │  ← Select Type
+   │       ↓                 │
+   │ Questionnaire updates!  │
+   │ [Full Time Questions]   │  ← Auto-selected!
+   └─────────────────────────┘
+
+2. Save & View Job Order
+   ┌──────────────────────────┐
+   │ Job Order Details        │
+   ├──────────────────────────┤
+   │ Type: FT                 │
+   │ ╔══════════════════════╗ │
+   │ ║ Questionnaire:       ║ │
+   │ ║ Full Time Questions  ║ │  ← Shows here!
+   │ ║ [Edit...]            ║ │
+   │ ╚══════════════════════╝ │
+   └──────────────────────────┘
+
+3. Edit If Needed
+   Click "Edit Questionnaire" → Edit Form opens
+   Change if needed → Save
+
+
+QUICK ACTION PATHS
+════════════════════════════════════════════════════════════════════════════
+
+Path 1: VIEW QUESTIONNAIRE (Read-Only)
+  Job Order List → Click Job Order → View Details → See Questionnaire
+
+Path 2: CHANGE QUESTIONNAIRE
+  Job Order Details → Click "Edit Questionnaire" → Select New One → Save
+
+Path 3: ASSIGN QUESTIONNAIRE (if empty)
+  Job Order Details → Click "Assign Questionnaire" → Select One → Save
+
+
+BEFORE AND AFTER COMPARISON
+════════════════════════════════════════════════════════════════════════════
+
+BEFORE (Old Way):
+  Job Order Details View:
+  ┌────────────────────────────┐
+  │ Title: PHP Developer       │
+  │ Company: ABC Corp          │
+  │ Type: FT (Full Time)       │
+  │ Status: Active             │
+  │ Candidates: 5              │
+  │ ... (no questionnaire info)
+  │                            │
+  │ To see questionnaire:      │
+  │ → Click Edit              │
+  │ → Scroll to Questionnaire │
+  │ → See dropdown            │
+  └────────────────────────────┘
+
+
+AFTER (New Way):
+  Job Order Details View:
+  ┌────────────────────────────┐
+  │ Title: PHP Developer       │
+  │ Company: ABC Corp          │
+  │ Type: FT (Full Time)       │
+  │ ╔════════════════════════╗ │
+  │ ║ Questionnaire:         ║ │
+  │ ║ Full Time Questions    ║ │ ← SEE IT HERE!
+  │ ║ Edit Questionnaire     ║ │
+  │ ╚════════════════════════╝ │
+  │ Status: Active             │
+  │ Candidates: 5              │
+  │ ... (rest of details)      │
+  └────────────────────────────┘
+
+Benefits:
+✓ See questionnaire without editing
+✓ Quick access to change if needed
+✓ Better visibility and organization
+
+
+PERMISSION-BASED DISPLAY
+════════════════════════════════════════════════════════════════════════════
+
+As Admin/Recruiter (Has Edit Permission):
+  ┌─────────────────────────────────┐
+  │ Questionnaire:                  │
+  │ Full Time Position Questions    │
+  │                                 │
+  │ [Edit Questionnaire] ← Visible! │
+  └─────────────────────────────────┘
+
+
+As Viewer (No Edit Permission):
+  ┌─────────────────────────────────┐
+  │ Questionnaire:                  │
+  │ Full Time Position Questions    │
+  │ Assigned: Questions specific... │ (Just description)
+  └─────────────────────────────────┘
+  (No edit link)
+
+
+COMPLETE FLOW DIAGRAM
+════════════════════════════════════════════════════════════════════════════
+
+                        Start Here
+                           │
+                           ↓
+                    Go to Job Orders
+                           │
+                           ↓
+                  Click a Job Order
+                           │
+                           ↓
+            ┌──────────────────────────────┐
+            │  View Job Order Details      │
+            ├──────────────────────────────┤
+            │  Title, Company, Type, etc.  │
+            │  ╔══════════════════════╗    │
+            │  ║ Questionnaire Info   ║ ← NEW SECTION
+            │  ║ [Edit/Assign Link]   ║
+            │  ╚══════════════════════╝    │
+            └──────────────────────────────┘
+                           │
+               ┌───────────┼───────────┐
+               │           │           │
+          Want to      Want to       Want to
+          just view    edit it      change it
+               │           │           │
+               ↓           ↓           ↓
+         Read it      Click link    Click link
+         & close      → Edit form   → Select new
+                      → Save        → Save
+
+                 All Paths ↓
+
+            Job Order Updated! ✓
+
+
+KEY POINTS
+════════════════════════════════════════════════════════════════════════════
+
+Location:       Right column of job order details, after "Type" field
+Always Shows:   For ALL job orders (public and private)
+Display Format: Bold title if assigned, gray text if not assigned
+Links:          "Edit Questionnaire" or "Assign Questionnaire"
+Permissions:    Links only visible if you have edit permission
+Integration:    Works with auto-selection feature perfectly
+Career Portal:  Uses same questionnaire_id shown here
+
+════════════════════════════════════════════════════════════════════════════

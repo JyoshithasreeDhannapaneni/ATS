@@ -1,0 +1,328 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                                                                            ║
+║           CAREER PORTAL - COLOR PALETTE & HEX CODES                       ║
+║                        Quick Reference Card                              ║
+║                                                                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+PRIMARY COLOR PALETTE:
+════════════════════════════════════════════════════════════════════════════
+
+🔵 BLUE (PRIMARY)
+   Hex Code: #2563eb
+   RGB: rgb(37, 99, 235)
+   Used For: Main buttons, headers, links, accents
+   Example: Login page header, button hover states
+
+   Color Preview:
+   ┌────────────────────────────────────────┐
+   │                                        │ ← This is #2563eb
+   │            Primary Blue                │
+   │                                        │
+   └────────────────────────────────────────┘
+
+🔵 DARK BLUE (PRIMARY DARK)
+   Hex Code: #1d4ed8
+   RGB: rgb(29, 78, 216)
+   Used For: Gradients, hover states, dark accents
+   Example: Button hover effect, gradient endpoints
+
+   Color Preview:
+   ┌────────────────────────────────────────┐
+   │                                        │ ← This is #1d4ed8
+   │            Dark Blue                   │
+   │                                        │
+   └────────────────────────────────────────┘
+
+🔵 LIGHT BLUE (PRIMARY LIGHT)
+   Hex Code: #dbeafe
+   RGB: rgb(219, 234, 254)
+   Used For: Backgrounds, borders, subtle accents
+   Example: Form section backgrounds, hover backgrounds
+
+   Color Preview:
+   ┌────────────────────────────────────────┐
+   │                                        │ ← This is #dbeafe
+   │            Light Blue                  │
+   │                                        │
+   └────────────────────────────────────────┘
+
+🔵 VERY LIGHT BLUE (PRIMARY 50)
+   Hex Code: #eff6ff
+   RGB: rgb(239, 246, 255)
+   Used For: Very subtle backgrounds
+   Example: Table headers, card backgrounds
+
+   Color Preview:
+   ┌────────────────────────────────────────┐
+   │                                        │ ← This is #eff6ff
+   │            Very Light Blue             │
+   │                                        │
+   └────────────────────────────────────────┘
+
+
+NEUTRAL COLORS (Grays):
+════════════════════════════════════════════════════════════════════════════
+
+⚪ WHITE
+   Hex Code: #ffffff
+   RGB: rgb(255, 255, 255)
+   Used For: Main background, card backgrounds
+
+⬜ GRAY 50 (Very Light)
+   Hex Code: #f9fafb
+   RGB: rgb(249, 250, 251)
+   Used For: Section backgrounds, footer background
+
+🟩 GRAY 100 (Light)
+   Hex Code: #f3f4f6
+   RGB: rgb(243, 244, 246)
+   Used For: Hover backgrounds, subtle dividers
+
+🟨 GRAY 200 (Medium Light)
+   Hex Code: #e5e7eb
+   RGB: rgb(229, 231, 235)
+   Used For: Input borders, table lines
+
+🟧 GRAY 300
+   Hex Code: #d1d5db
+   RGB: rgb(209, 213, 219)
+   Used For: Disabled states, dividers
+
+🟥 GRAY 400 (Medium)
+   Hex Code: #9ca3af
+   RGB: rgb(156, 163, 175)
+   Used For: Secondary text, placeholders
+
+🟪 GRAY 500 (Medium Dark)
+   Hex Code: #6b7280
+   RGB: rgb(107, 114, 128)
+   Used For: Body text, secondary information
+
+🟩 GRAY 600
+   Hex Code: #4b5563
+   RGB: rgb(75, 85, 99)
+   Used For: Labels, emphasized text
+
+🟫 GRAY 700 (Dark)
+   Hex Code: #374151
+   RGB: rgb(55, 65, 81)
+   Used For: Strong text, labels
+
+⬛ GRAY 800 (Very Dark)
+   Hex Code: #1f2937
+   RGB: rgb(31, 41, 55)
+   Used For: Headings, main text
+
+⬛ GRAY 900 (Black)
+   Hex Code: #111827
+   RGB: rgb(17, 24, 39)
+   Used For: Strong headings, dark text
+
+
+STATUS COLORS:
+════════════════════════════════════════════════════════════════════════════
+
+✅ SUCCESS (GREEN)
+   Hex Code: #059669
+   RGB: rgb(5, 150, 105)
+   Dark: #047857
+   Light: #d1fae5
+   Used For: Success messages, confirmation
+
+❌ DANGER (RED)
+   Hex Code: #dc2626
+   RGB: rgb(220, 38, 38)
+   Light: #fef2f2
+   Used For: Error messages, warnings
+
+
+GRADIENTS USED:
+════════════════════════════════════════════════════════════════════════════
+
+PRIMARY GRADIENT (Buttons):
+   linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)
+   From: #2563eb (Primary Blue)
+   To: #1d4ed8 (Dark Blue)
+   Angle: 135 degrees (diagonal top-left to bottom-right)
+
+   Visual:
+   ┌─────────────────────────────────────────┐
+   │ ███ Blue ───────────────────── Dark ███ │
+   │ ███ ─────────────────────────────── ███ │
+   │ ███ ─────────────────────────────── ███ │
+   │ ███ ─────────────────────────────── ███ │
+   └─────────────────────────────────────────┘
+
+BACKGROUND GRADIENT (Sections):
+   linear-gradient(135deg, #eff6ff 0%, rgba(37,99,235,0.05) 100%)
+   From: #eff6ff (Very Light Blue)
+   To: Transparent primary with 5% opacity
+   Creates: Subtle blue tint fading away
+
+HEADER GRADIENT (Dark):
+   linear-gradient(135deg, #1e3a8a 0%, #2563eb 35%, #60a5fa 65%, #1d4ed8 100%)
+   Multiple color stops for complex effect
+   Used in: Login page header background
+
+
+SHADOWS:
+════════════════════════════════════════════════════════════════════════════
+
+STANDARD SHADOW:
+   0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06)
+   Used For: Cards, boxes, buttons
+
+LARGE SHADOW:
+   0 20px 40px rgba(0,0,0,0.08), 0 8px 16px rgba(0,0,0,0.04)
+   Used For: Modals, dropdowns, hover states
+
+LARGE SHADOW (Alternative):
+   0 25px 60px rgba(37, 99, 235, 0.12), 0 10px 20px rgba(37, 99, 235, 0.06)
+   Uses: Primary blue color for shadow tint
+   Effect: More professional, color-coordinated
+
+
+BORDER COLORS:
+════════════════════════════════════════════════════════════════════════════
+
+PRIMARY BORDER: #dbeafe (Light Blue) - Used for active states
+NEUTRAL BORDER: #e5e7eb (Gray-200) - Used for regular borders
+DARK BORDER: #1d4ed8 (Dark Blue) - Used for emphasis
+
+
+HOVER STATE COLORS:
+════════════════════════════════════════════════════════════════════════════
+
+Input Field Hover:
+   Border Color: #dbeafe (Light Blue)
+   Box Shadow: 0 4px 12px rgba(37,99,235,0.1)
+
+Input Field Focus:
+   Border Color: #2563eb (Primary Blue)
+   Box Shadow: 0 0 0 3px rgba(37,99,235,0.1)
+
+Button Hover:
+   Background: Lighter version of gradient
+   Transform: Lift up 4px
+   Box Shadow: 0 12px 32px rgba(37,99,235,0.4)
+
+Link Hover:
+   Color: #1d4ed8 (Dark Blue)
+   Text Decoration: Underline
+
+Table Row Hover:
+   Background: #eff6ff (Very Light Blue)
+   Box Shadow: inset 0 0 0 1px #dbeafe
+
+
+TRANSPARENCY / OPACITY USAGE:
+════════════════════════════════════════════════════════════════════════════
+
+Shadow with Blue Tint:
+   rgba(37, 99, 235, 0.1)   ← 10% opacity
+   rgba(37, 99, 235, 0.15)  ← 15% opacity
+   rgba(37, 99, 235, 0.2)   ← 20% opacity
+   rgba(37, 99, 235, 0.3)   ← 30% opacity
+
+Button White Shimmer:
+   rgba(255, 255, 255, 0.3) ← 30% opacity
+
+Text with Transparency:
+   rgba(255, 255, 255, 0.8) ← 80% opacity
+   rgba(0, 0, 0, 0.07)      ← 7% opacity
+
+
+QUICK COLOR REFERENCE BY USAGE:
+════════════════════════════════════════════════════════════════════════════
+
+BUTTONS:
+   Normal:  Gradient #2563eb → #1d4ed8
+   Hover:   Lighter gradient + shadow
+   Active:  Darker with reduced shadow
+   Text:    White (#ffffff)
+
+HEADERS:
+   Background: #2563eb or gradient
+   Text:       White (#ffffff)
+   Border:     None or #dbeafe
+
+FORM SECTIONS:
+   Background: #eff6ff (Very Light Blue)
+   Border:     #dbeafe (Light Blue)
+   Text:       #4b5563 (Gray-600)
+
+INPUT FIELDS:
+   Border:     #e5e7eb (Gray-200) default
+   Border:     #dbeafe (Light Blue) hover
+   Border:     #2563eb (Primary) focus
+   Background: #ffffff (White)
+   Text:       #1f2937 (Gray-800)
+
+LINKS:
+   Normal:     #2563eb (Primary Blue)
+   Hover:      #1d4ed8 (Dark Blue)
+   Visited:    #6b7280 (Gray-500)
+
+TEXT:
+   Headings:   #1f2937 (Gray-800)
+   Body:       #4b5563 (Gray-600)
+   Secondary: #6b7280 (Gray-500)
+   Tertiary:   #9ca3af (Gray-400)
+   Disabled:   #d1d5db (Gray-300)
+
+
+HOW TO USE THESE COLORS:
+════════════════════════════════════════════════════════════════════════════
+
+In CSS:
+   color: #2563eb;                    ← Direct hex code
+   background: var(--primary);        ← Using CSS variable
+   border: 1px solid #dbeafe;
+   box-shadow: 0 4px 6px rgba(37, 99, 235, 0.1);
+
+In HTML (inline):
+   <div style="background-color: #eff6ff;">
+
+CSS Variables (Preferred):
+   background: var(--primary);
+   color: var(--gray-700);
+   border-color: var(--primary-light);
+
+
+PRINT REFERENCE:
+════════════════════════════════════════════════════════════════════════════
+
+Primary Colors:
+  • #2563eb - Main Blue
+  • #1d4ed8 - Dark Blue
+  • #dbeafe - Light Blue
+  • #eff6ff - Very Light Blue
+
+Text Colors:
+  • #1f2937 - Dark text (headings)
+  • #4b5563 - Body text
+  • #6b7280 - Secondary text
+  • #ffffff - White text (on blue backgrounds)
+
+Utility:
+  • #ffffff - White background
+  • #f9fafb - Light gray background
+  • #e5e7eb - Light border
+  • #059669 - Success
+  • #dc2626 - Error
+
+
+THEME SUMMARY:
+════════════════════════════════════════════════════════════════════════════
+
+Overall Appearance: Professional, Modern, Clean
+Primary Color: Blue (#2563eb) - Trustworthy, Professional
+Accent Color: Light Blue (#dbeafe) - Elegant, Subtle
+Text Color: Dark Gray (#4b5563) - Readable, Professional
+Background: White (#ffffff) - Clean, Spacious
+
+This color palette creates a professional, modern appearance while
+maintaining excellent readability and user experience.
+
+════════════════════════════════════════════════════════════════════════════

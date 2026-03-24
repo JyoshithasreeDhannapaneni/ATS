@@ -1,0 +1,445 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                                                                            ║
+║          CAREER PORTAL THEME UPDATED TO MATCH LOGIN PAGE                  ║
+║                   Blue & White Professional Theme Applied                 ║
+║                                                                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+WHAT WAS CHANGED:
+════════════════════════════════════════════════════════════════════════════
+
+The Career Portal (careersPage.css) has been completely redesigned to match
+the beautiful Blue & White theme used in the Login page.
+
+File Updated: careersPage.css
+
+
+COLOR PALETTE (Now Consistent):
+════════════════════════════════════════════════════════════════════════════
+
+PRIMARY COLORS:
+├─ Primary Blue:         #2563eb (Main accent color)
+├─ Primary Dark Blue:    #1d4ed8 (Gradients, hover states)
+├─ Light Blue:           #dbeafe (Backgrounds, borders)
+├─ Light Blue 50:        #eff6ff (Very light backgrounds)
+└─ White:                #ffffff (Main background)
+
+SECONDARY COLORS:
+├─ Success Green:        #059669 (For success messages)
+├─ Danger Red:           #dc2626 (For errors)
+└─ Gray Scale:           #f9fafb to #111827 (8 shades)
+
+FONTS:
+└─ Inter (Google Fonts) - Same as login page
+
+
+VISUAL ELEMENTS WITH NEW THEME:
+════════════════════════════════════════════════════════════════════════════
+
+Before → After
+
+HEADER & NAVIGATION:
+  Before: Gray background (#efefef) with plain borders
+  After:  Gradient blue background with smooth shadows and hover effects
+          ┌─────────────────────────────────────────┐
+          │ Light Blue Gradient Background          │
+          │ Box Shadow: 0 4px 6px rgba(37,99,235..)│
+          │ Hover Effect: Lifts & brightens         │
+          └─────────────────────────────────────────┘
+
+JOB LISTING TABLE:
+  Before: Gray header with plain text
+  After:  ┌─────────────────────────────────────────┐
+          │ Blue Gradient Header (Primary → Dark)   │
+          │ White Text, Rounded Corners             │
+          │ Row Hover: Light Blue Highlight         │
+          │ Drop Shadow: Professional appearance    │
+          └─────────────────────────────────────────┘
+
+JOB DETAILS BOX:
+  Before: Plain gray box
+  After:  ┌─────────────────────────────────────────┐
+          │ White Card with Blue Border             │
+          │ Light Blue Gradient Background          │
+          │ Smooth Shadows on Hover                 │
+          │ Subtle Transform (Lift Effect)          │
+          └─────────────────────────────────────────┘
+
+APPLICATION FORM:
+  Before: Flat gray boxes
+  After:  ┌─────────────────────────────────────────┐
+          │ Form Section Header: Blue Background    │
+          │ Input Fields: Bordered with focus effects
+          │ Submit Button: Blue Gradient            │
+          │ Shadows on Hover/Focus                  │
+          └─────────────────────────────────────────┘
+
+BUTTONS:
+  Before: Plain gray buttons
+  After:  ┌─────────────────────────────────────────┐
+          │ Gradient: #2563eb → #1d4ed8             │
+          │ Shadow: 0 8px 24px rgba(37,99,235..)   │
+          │ Hover: Lifts up with stronger shadow    │
+          │ Active: Subtle push-down effect         │
+          └─────────────────────────────────────────┘
+
+INPUTS & TEXTAREAS:
+  Before: Basic text boxes
+  After:  ┌─────────────────────────────────────────┐
+          │ Border: 1.5px solid gray-200            │
+          │ Hover: Blue border + subtle shadow      │
+          │ Focus: Blue border + blue glow effect   │
+          │ Rounded: 8px corners                    │
+          └─────────────────────────────────────────┘
+
+FOOTER:
+  Before: Simple centered text
+  After:  ┌─────────────────────────────────────────┐
+          │ Light gray background                   │
+          │ Top border in gray-200                  │
+          │ Rounded corners & subtle shadow         │
+          │ Professional spacing                    │
+          └─────────────────────────────────────────┘
+
+
+THEME ELEMENTS ADDED:
+════════════════════════════════════════════════════════════════════════════
+
+✓ Smooth Transitions
+  └─ All interactive elements have smooth 0.3s transitions
+  └─ Professional feel with no jarring changes
+
+✓ Hover Effects
+  └─ Buttons lift up on hover
+  └─ Table rows highlight in light blue
+  └─ Input fields brighten on focus
+  └─ Images scale slightly on hover
+
+✓ Shadows
+  └─ Standard shadow: 0 4px 6px rgba(37, 99, 235, 0.07)
+  └─ Large shadow: 0 20px 40px rgba(37, 99, 235, 0.08)
+  └─ All shadows use primary blue with low opacity
+
+✓ Gradients
+  └─ Primary buttons: Blue to Dark Blue
+  └─ Backgrounds: Light blue with transparency
+  └─ Headers: Vibrant blue gradient
+
+✓ Rounded Corners
+  └─ Small elements: 8px radius
+  └─ Medium elements: 16px radius
+  └─ Large elements: 20px radius
+
+✓ Consistent Typography
+  └─ Font: Inter (same as login page)
+  └─ Colors: Gray-800 for body, Primary for accents
+  └─ Proper hierarchy with h1, h2, h3, p tags
+
+
+SPECIFIC CHANGES BY SECTION:
+════════════════════════════════════════════════════════════════════════════
+
+1. HEADER (#logo, #actions)
+   ├─ Background: Linear gradient primary-50 to transparent
+   ├─ Border: 1.5px solid primary-light
+   ├─ Shadow: Standard shadow with primary colors
+   ├─ Hover: Brightens and lifts slightly
+   └─ Radius: 16px
+
+2. JOB TABLE (#displayTable)
+   ├─ Header: Gradient blue (primary → primary-dark)
+   ├─ Odd rows: White background
+   ├─ Even rows: Light gray background
+   ├─ Row hover: Light blue background
+   ├─ Overall shadow: Large shadow on table
+   └─ Radius: 16px rounded container
+
+3. JOB DETAILS (#detailsTable, #discriptive, #detailsTools)
+   ├─ Header cells: Blue background (#primary-50)
+   ├─ Border: 1px solid primary-light
+   ├─ Tools box: Gradient background with shadow
+   ├─ Hover: Border color changes to primary
+   └─ Transform: -4px translateY on hover
+
+4. APPLICATION FORM (applyBoxLeft/Right)
+   ├─ Background: White with rounded corners
+   ├─ Border: 1.5px solid primary-light
+   ├─ Section headers: Blue background (#primary-50)
+   ├─ Shadow: Large shadow with primary color
+   ├─ Hover: Border primary color, stronger shadow, lift effect
+   └─ Radius: 20px
+
+5. INPUT FIELDS & TEXTAREAS
+   ├─ Border: 1.5px solid gray-200
+   ├─ Hover: Border changes to primary-light
+   ├─ Focus: Border primary, box-shadow blue glow
+   ├─ Padding: 10px 12px for comfort
+   ├─ Font: Inter, 13px
+   └─ Transition: All 0.3s smooth
+
+6. SUBMIT BUTTONS
+   ├─ Gradient: primary → primary-dark
+   ├─ Color: White text
+   ├─ Padding: 12px 28px
+   ├─ Shadow: 0 8px 24px rgba(37,99,235,0.3)
+   ├─ Hover: Lifts 2px, stronger shadow
+   ├─ Active: Push down effect
+   ├─ Radius: 8px
+   └─ Transition: All 0.4s smooth
+
+7. TYPOGRAPHY
+   ├─ h1: Blue gradient text (primary → primary-dark)
+   ├─ h2: Gray-800 with primary-light bottom border
+   ├─ h3: Gray-700 text
+   ├─ Links: Primary blue, hover → primary-dark
+   └─ Body text: Gray-600 for readability
+
+
+BEFORE & AFTER VISUAL COMPARISON:
+════════════════════════════════════════════════════════════════════════════
+
+BEFORE (Old Gray Theme):
+─────────────────────────────────────────────────────────────────────────
+┌─────────────────────────────────────────────────────────────────────────┐
+│ ┌───────────────────────────────────────────────────────────────────┐  │
+│ │ [Logo]                        [Gray Box with Gray Text]          │  │
+│ └───────────────────────────────────────────────────────────────────┘  │
+│                                                                         │
+│ ┌────────────────────────────────────────────────────────────────────┐  │
+│ │ Job Title    | Department | Location | Salary                    │  │
+│ ├────────────────────────────────────────────────────────────────────┤  │
+│ │ Developer    | Engineering| NYC      | $80k                      │  │
+│ │ Manager      | Sales      | LA       | $90k                      │  │
+│ │ Designer     | Marketing  | SF       | $75k                      │  │
+│ └────────────────────────────────────────────────────────────────────┘  │
+│                                                                         │
+│ ┌────────────────────────┐  ┌────────────────────────┐                │
+│ │ [Gray Box]             │  │ [Gray Box]             │                │
+│ │ [Gray Text]            │  │ [Gray Text]            │                │
+│ │ [Plain Button]         │  │ [Plain Button]         │                │
+│ └────────────────────────┘  └────────────────────────┘                │
+└─────────────────────────────────────────────────────────────────────────┘
+
+
+AFTER (New Blue & White Theme):
+─────────────────────────────────────────────────────────────────────────
+┌─────────────────────────────────────────────────────────────────────────┐
+│ ┌───────────────────────────────────────────────────────────────────┐  │
+│ │ [Logo]        [▼ Blue Gradient Box - Light Blue Text] ▲          │  │
+│ └───────────────────────────────────────────────────────────────────┘  │
+│                                                                         │
+│ ┌────────────────────────────────────────────────────────────────────┐  │
+│ │ ▓▓▓▓▓ Blue Gradient Header - White Text ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓   │  │
+│ ├────────────────────────────────────────────────────────────────────┤  │
+│ │ Developer    | Engineering| NYC      | $80k        [Hover: ▓▓▓]   │  │
+│ │ Manager      | Sales      | LA       | $90k        [Hover: ▓▓▓]   │  │
+│ │ Designer     | Marketing  | SF       | $75k        [Hover: ▓▓▓]   │  │
+│ └────────────────────────────────────────────────────────────────────┘  │
+│                                                                         │
+│ ┌────────────────────────────┐  ┌────────────────────────────┐         │
+│ │ ▓ Blue Header ▓            │  │ ▓ Blue Header ▓            │         │
+│ │ ┌──────────────────────────┐  │ ┌──────────────────────────┐        │
+│ │ │ Input Field      [Focus] │  │ │ Input Field      [Focus] │        │
+│ │ │ ━━━━━━━━━━━━━━━━━━━━━━  │  │ │ ━━━━━━━━━━━━━━━━━━━━━━  │        │
+│ │ │ [Blue Gradient Button]   │  │ │ [Blue Gradient Button]   │        │
+│ │ └──────────────────────────┘  │ └──────────────────────────┘        │
+│ └────────────────────────────────┘  └────────────────────────────────┘  │
+│  (With shadows and hover effects)   (With shadows and hover effects)    │
+└─────────────────────────────────────────────────────────────────────────┘
+
+
+HOW IT LOOKS NOW:
+════════════════════════════════════════════════════════════════════════════
+
+Professional Blue Theme:
+  ✓ Clean, modern appearance
+  ✓ Matches login page perfectly
+  ✓ Professional corporate look
+  ✓ Easy to navigate and read
+  ✓ Interactive feedback on all elements
+  ✓ Consistent with your brand
+
+Color Scheme:
+  ✓ Primary: Blue (#2563eb) - Professional and trustworthy
+  ✓ Accents: Light Blue (#dbeafe) - Subtle, elegant
+  ✓ Text: Dark Gray (#1f2937) - High readability
+  ✓ Background: White (#ffffff) - Clean, spacious
+
+Interactive Elements:
+  ✓ Buttons glow and lift on hover
+  ✓ Input fields highlight in blue on focus
+  ✓ Table rows highlight on hover
+  ✓ Smooth transitions everywhere
+  ✓ Shadow effects add depth
+
+
+CONSISTENCY ACROSS SYSTEM:
+════════════════════════════════════════════════════════════════════════════
+
+Login Page:         ✓ Blue & White Theme
+Career Portal:      ✓ Blue & White Theme (Just Updated!)
+Admin Panel:        Can be updated separately if needed
+Email Templates:    Can use same colors
+
+Now users see a consistent, professional appearance across all touchpoints!
+
+
+TECHNICAL DETAILS:
+════════════════════════════════════════════════════════════════════════════
+
+CSS Variables Used:
+  --primary: #2563eb              (Main blue)
+  --primary-dark: #1d4ed8         (Dark blue for gradients)
+  --primary-light: #dbeafe        (Light blue for backgrounds)
+  --primary-50: #eff6ff           (Very light blue)
+  --gray-50 through --gray-900    (Gray scale)
+
+Transitions:
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+  (Smooth, professional easing function)
+
+Shadows:
+  --shadow: 0 4px 6px rgba(0,0,0,0.07)...
+  --shadow-lg: 0 20px 40px rgba(0,0,0,0.08)...
+
+Radius:
+  --radius: 8px (Small elements)
+  --radius-lg: 16px (Medium elements)
+  --radius-xl: 20px (Large elements)
+
+
+FONT FAMILY:
+════════════════════════════════════════════════════════════════════════════
+
+Changed from: Arial, Helvetica (generic fonts)
+Changed to:   Inter (Google Fonts) - Same as login page
+
+Benefits:
+  ✓ Modern, clean appearance
+  ✓ Better readability on all devices
+  ✓ Professional technology company feel
+  ✓ Consistent with design trends
+  ✓ Free and open source
+
+
+RESPONSIVE DESIGN:
+════════════════════════════════════════════════════════════════════════════
+
+The new theme is fully responsive:
+  ✓ Mobile-friendly layouts
+  ✓ Flexible containers
+  ✓ Max-width 1200px for optimal readability
+  ✓ Proper padding and margins on all screen sizes
+  ✓ Stacks nicely on mobile devices
+
+
+BROWSER COMPATIBILITY:
+════════════════════════════════════════════════════════════════════════════
+
+The new theme works great in:
+  ✓ Chrome/Edge (Latest)
+  ✓ Firefox (Latest)
+  ✓ Safari (Latest)
+  ✓ Mobile browsers (iOS Safari, Chrome Mobile)
+
+CSS Features Used:
+  ✓ CSS Variables (--primary, etc.)
+  ✓ Gradients (linear-gradient)
+  ✓ Box shadows
+  ✓ Flexbox
+  ✓ Transitions
+  ✓ Border radius
+  (All widely supported)
+
+
+TESTING THE NEW THEME:
+════════════════════════════════════════════════════════════════════════════
+
+To see the new theme:
+
+1. Go to: /careers/index.php
+2. Look at the career portal page
+3. You should see:
+   ├─ Blue header section
+   ├─ Blue-themed job listing table
+   ├─ Blue job details boxes
+   ├─ Blue form with blue buttons
+   └─ Professional shadows and hover effects
+
+4. Try interacting:
+   ├─ Hover over table rows (should highlight light blue)
+   ├─ Hover over buttons (should lift up)
+   ├─ Click input fields (should glow blue)
+   ├─ Hover over form boxes (should lift and brighten)
+   └─ Everything should feel smooth and responsive
+
+If you see the blue theme → It's working! ✓
+
+
+COLOR CODES FOR REFERENCE:
+════════════════════════════════════════════════════════════════════════════
+
+If you need to customize:
+
+Primary Colors:
+  #2563eb - Main blue (buttons, headers, accents)
+  #1d4ed8 - Dark blue (gradients, hover states)
+  #dbeafe - Light blue (backgrounds, borders)
+  #eff6ff - Very light blue (subtle backgrounds)
+  #ffffff - White (main background)
+
+Grays:
+  #f9fafb - Gray-50 (very light background)
+  #f3f4f6 - Gray-100 (light background)
+  #e5e7eb - Gray-200 (light borders)
+  #d1d5db - Gray-300 (medium borders)
+  #9ca3af - Gray-400 (secondary text)
+  #6b7280 - Gray-500 (tertiary text)
+  #4b5563 - Gray-600 (body text)
+  #374151 - Gray-700 (bold text)
+  #1f2937 - Gray-800 (dark text)
+  #111827 - Gray-900 (headings)
+
+Status Colors:
+  #059669 - Success green
+  #dc2626 - Error red
+
+
+CUSTOMIZATION GUIDE:
+════════════════════════════════════════════════════════════════════════════
+
+To change colors, edit careersPage.css:
+
+Find this section:
+  :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      ... etc
+  }
+
+Change values to your desired colors. All elements using --primary will
+automatically update.
+
+Example: To make buttons green instead of blue
+  --primary: #10b981;
+  --primary-dark: #059669;
+  --primary-light: #d1fae5;
+
+
+SUMMARY:
+════════════════════════════════════════════════════════════════════════════
+
+✅ Career Portal CSS Completely Redesigned
+✅ Matches Login Page Theme Perfectly
+✅ Professional Blue & White Color Scheme
+✅ Modern, Interactive Elements
+✅ Smooth Transitions & Hover Effects
+✅ Consistent Typography (Inter Font)
+✅ Responsive Design
+✅ Easy to Customize
+
+Your Career Portal now has a cohesive, professional appearance that matches
+your login page perfectly. Users will experience a consistent, polished
+interface across your entire ATS system!
+
+════════════════════════════════════════════════════════════════════════════

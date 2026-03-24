@@ -1,60 +1,464 @@
 @charset "utf-8";
-/* CATS Applicant Tracking System Careers Page
-Released: 11.13.2007
-Created By: Sae Vang
+/*
+ * CATS Applicant Tracking System Careers Page
+ * Neutara ATS - Blue & White Modern Theme
+ * Matches Login Page Theme for Consistency
+ * Colors: Primary Blue (#2563eb), White (#fff), Light Blue (#dbeafe)
  */
 
-/* COMMON */
-body, html { margin: 0; padding: 0; background: #ffffff; font: normal 12px/14px Arial, Helvetica, sans-serif; color: #000000; }
-#container { margin: 0 auto; padding: 0; width: 930px; height: auto; }
-#logo { float: left; margin: 0; }
-	#logo img { width: 424px; height: 103px; }
-#actions { float: right; margin: 0; width: 310px; height: 100px; background: #efefef; border: 1px solid #cccccc; }
-	#actions img { float: left; margin: 2px 6px 2px 15px; width: 130px; height: 25px; }
-#footer { clear: both; margin: 20px auto 0 auto; width: 150px; }
-	#footer img { width: 137px; height: 38px; }
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
-a:link, a:active { color: #1763b9; }
-a:hover { color: #c75a01; }
-a:visited { color: #333333; }
+/* ===== CSS Variables - Theme Colors ===== */
+:root {
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --primary-light: #dbeafe;
+    --primary-50: #eff6ff;
+    --success: #059669;
+    --success-light: #d1fae5;
+    --danger: #dc2626;
+    --danger-light: #fef2f2;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --gray-900: #111827;
+    --font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    --radius: 8px;
+    --radius-lg: 16px;
+    --radius-xl: 20px;
+    --shadow: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06);
+    --shadow-lg: 0 20px 40px rgba(0,0,0,0.08), 0 8px 16px rgba(0,0,0,0.04);
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
 
-h1 { margin: 0 0 10px 0; font: bold 18px Arial, Helvetica, sans-serif; }
-h2 { margin: 8px 0 8px 15px; font: bold 14px Arial, Helvetica, sans-serif; }
-h3 { margin: 0; font: bold 14px Arial, Helvetica, sans-serif; }
-p { font: normal 12px Arial, Helvetica, sans-serif; }
+/* ===== Base Styles ===== */
+*, *::before, *::after { box-sizing: border-box; }
+
+body, html {
+    margin: 0;
+    padding: 0;
+    background: #ffffff;
+    font: normal 14px/1.6 var(--font-family);
+    color: var(--gray-800);
+    line-height: 1.6;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* ===== Container ===== */
+#container {
+    margin: 0 auto;
+    padding: 24px;
+    width: 100%;
+    max-width: 1200px;
+    height: auto;
+}
+
+/* ===== Header Section ===== */
+#logo {
+    float: left;
+    margin: 0;
+    display: flex;
+    align-items: center;
+}
+
+#logo img {
+    width: 200px;
+    height: auto;
+    max-height: 80px;
+    object-fit: contain;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+
+#actions {
+    float: right;
+    margin: 0;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--primary-50) 0%, rgba(37, 99, 235, 0.05) 100%);
+    border: 1.5px solid var(--primary-light);
+    border-radius: var(--radius-lg);
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
+    transition: var(--transition);
+}
+
+#actions:hover {
+    background: linear-gradient(135deg, var(--primary-50) 0%, rgba(37, 99, 235, 0.08) 100%);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12);
+    border-color: rgba(37, 99, 235, 0.3);
+}
+
+#actions img {
+    float: left;
+    margin: 0;
+    width: 120px;
+    height: 24px;
+    object-fit: contain;
+    transition: var(--transition);
+}
+
+#actions img:hover {
+    filter: brightness(1.1) drop-shadow(0 2px 4px rgba(37, 99, 235, 0.2));
+}
+
+#footer {
+    clear: both;
+    margin: 40px auto 20px;
+    padding: 24px;
+    text-align: center;
+    border-top: 1px solid var(--gray-200);
+    background: var(--gray-50);
+    border-radius: var(--radius-lg);
+}
+
+#footer img {
+    width: 137px;
+    height: 38px;
+    opacity: 0.8;
+    transition: opacity 0.3s ease;
+}
+
+#footer img:hover {
+    opacity: 1;
+}
+
+/* ===== Links ===== */
+a:link, a:active {
+    color: var(--primary);
+    text-decoration: none;
+    transition: var(--transition);
+    font-weight: 500;
+}
+
+a:hover {
+    color: var(--primary-dark);
+    text-decoration: underline;
+}
+
+a:visited {
+    color: var(--gray-600);
+}
+
+/* ===== Typography ===== */
+h1 {
+    margin: 0 0 16px 0;
+    font: bold 32px var(--font-family);
+    color: var(--gray-900);
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+h2 {
+    margin: 24px 0 12px 0;
+    font: bold 22px var(--font-family);
+    color: var(--gray-800);
+    border-bottom: 2px solid var(--primary-light);
+    padding-bottom: 8px;
+}
+
+h3 {
+    margin: 16px 0 8px 0;
+    font: bold 18px var(--font-family);
+    color: var(--gray-700);
+}
+
+p {
+    font: normal 14px var(--font-family);
+    color: var(--gray-600);
+    line-height: 1.7;
+}
+
 img { border: none; }
-strong { font-weight: bold; }
-em { font-style: italics; }
 
+strong {
+    font-weight: 600;
+    color: var(--gray-800);
+}
 
-/* CONTENTS ON PAGE SPECS */
-#careerContent { clear: both; padding: 15px 0 0 0; }
+em {
+    font-style: italic;
+    color: var(--gray-700);
+}
 
-/* DISPLAY ALL JOBS PAGE */
-#displayTable { width: 930px; }
-#displayTable tr.header { background: #e0e0e0; border: 1px solid #cccccc; border-left: none; border-right: none; }
-#displayTable tr.odd { background: #ffffff; }
-#displayTable tr.even { background: #ebebeb; }
-#displayTable td { padding: 5px; }
-	
-/* DISPLAY JOB DETAILS */
-#detailsTable { width: 400px; }
-	#detailsTable td.detailsHeader { width: 30%; }
-div#discriptive { float: left; width: 585px; }
-div#detailsTools { float: right; width: 330px; height: 70px; background: #ffffff; border: 1px solid #cccccc; }
-	div#detailsTools img { float: left; margin: 2px 6px 5px 15px;  }
+/* ===== Content Area ===== */
+#careerContent {
+    clear: both;
+    padding: 24px 0;
+    flex: 1;
+}
 
-/* DISPLAY APPLICATION FORM */
-div.applyBoxLeft, div.applyBoxRight { width: 450px; height: 470px; background: #f9f9f9; border: 1px solid #cccccc; border-top: none; }
-div.applyBoxLeft { float: left; margin: 0 10px 30px 0; }
-div.applyBoxRight { float: right; margin: 0 0 30px 10px; }
-	div.applyBoxLeft div, div.applyBoxRight div { margin: 0 0 5px 0; padding: 3px 10px; background: #efefef; border-top: 1px solid #cccccc; border-bottom: 1px solid #cccccc; }
-	div.applyBoxLeft table, div.applyBoxRight table { margin: 0 auto; width: 420px; }
-	div.applyBoxLeft table td, div.applyBoxRight table td { padding: 3px; vertical-align: top; }
-		td.label { text-align: right; width: 110px; }
-	label { font-weight: bold; }
-	input#documentFile { width: 342px; }
-	input.inputbox { width: 285px; height: 15px; }
-	input.submitbutton { float: right; width: 195px; height: 25px; }
-	textarea { margin: 8px 0 0 0; width: 410px; height: 170px; }
-	textarea.inputboxlarge { width: 285px; height: 70px; }
+/* ===== Job Display Table ===== */
+#displayTable {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 24px 0;
+    box-shadow: var(--shadow-lg);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+#displayTable tr.header {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: #fff;
+    font-weight: 600;
+    border: none;
+}
+
+#displayTable tr.header th,
+#displayTable tr.header td {
+    padding: 14px 16px;
+    text-align: left;
+}
+
+#displayTable tr.odd {
+    background: #ffffff;
+    transition: var(--transition);
+}
+
+#displayTable tr.odd:hover {
+    background: var(--primary-50);
+    box-shadow: inset 0 0 0 1px var(--primary-light);
+}
+
+#displayTable tr.even {
+    background: var(--gray-50);
+    transition: var(--transition);
+}
+
+#displayTable tr.even:hover {
+    background: var(--primary-50);
+    box-shadow: inset 0 0 0 1px var(--primary-light);
+}
+
+#displayTable td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--gray-200);
+    color: var(--gray-700);
+}
+
+#displayTable tr:last-child td {
+    border-bottom: none;
+}
+
+#displayTable a {
+    color: var(--primary);
+    font-weight: 500;
+}
+
+#displayTable a:hover {
+    color: var(--primary-dark);
+    text-decoration: underline;
+}
+
+/* ===== Job Details Section ===== */
+#detailsTable {
+    width: 100%;
+    margin: 24px 0;
+    border-collapse: collapse;
+}
+
+#detailsTable td.detailsHeader {
+    width: 25%;
+    font-weight: 600;
+    color: var(--primary);
+    padding: 12px;
+    background: var(--primary-50);
+    border: 1px solid var(--primary-light);
+    border-radius: var(--radius);
+    vertical-align: top;
+}
+
+#detailsTable td {
+    padding: 12px;
+    border: 1px solid var(--gray-200);
+    color: var(--gray-700);
+}
+
+div#discriptive {
+    float: left;
+    width: calc(65% - 12px);
+    margin-right: 24px;
+}
+
+div#detailsTools {
+    float: right;
+    width: 30%;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--primary-50) 0%, rgba(37, 99, 235, 0.05) 100%);
+    border: 1.5px solid var(--primary-light);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+}
+
+div#detailsTools img {
+    float: left;
+    margin: 6px 12px 6px 0;
+    transition: var(--transition);
+}
+
+div#detailsTools img:hover {
+    transform: scale(1.05);
+}
+
+/* ===== Application Form ===== */
+div.applyBoxLeft, div.applyBoxRight {
+    width: 100%;
+    max-width: 480px;
+    background: #fff;
+    border: 1.5px solid var(--primary-light);
+    border-radius: var(--radius-xl);
+    padding: 24px;
+    box-shadow: var(--shadow-lg);
+    margin-bottom: 24px;
+    transition: var(--transition);
+}
+
+div.applyBoxLeft:hover, div.applyBoxRight:hover {
+    border-color: var(--primary);
+    box-shadow: 0 20px 40px rgba(37, 99, 235, 0.12), 0 8px 16px rgba(37, 99, 235, 0.06);
+    transform: translateY(-4px);
+}
+
+div.applyBoxLeft {
+    float: left;
+    margin-right: 24px;
+}
+
+div.applyBoxRight {
+    float: right;
+}
+
+div.applyBoxLeft div, div.applyBoxRight div {
+    margin: 0 0 16px 0;
+    padding: 12px 16px;
+    background: var(--primary-50);
+    border: 1px solid var(--primary-light);
+    border-radius: var(--radius);
+    font-weight: 600;
+    color: var(--primary);
+}
+
+div.applyBoxLeft table, div.applyBoxRight table {
+    margin: 0;
+    width: 100%;
+}
+
+div.applyBoxLeft table td, div.applyBoxRight table td {
+    padding: 12px;
+    vertical-align: top;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+div.applyBoxLeft table tr:last-child td,
+div.applyBoxRight table tr:last-child td {
+    border-bottom: none;
+}
+
+td.label {
+    text-align: right;
+    width: 25%;
+    font-weight: 600;
+    color: var(--gray-700);
+}
+
+label {
+    font-weight: 600;
+    color: var(--gray-800);
+    display: block;
+    margin-bottom: 6px;
+}
+
+input#documentFile,
+input.inputbox {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid var(--gray-200);
+    border-radius: var(--radius);
+    font: normal 13px var(--font-family);
+    color: var(--gray-800);
+    transition: var(--transition);
+    background: #fff;
+}
+
+input#documentFile:hover,
+input.inputbox:hover {
+    border-color: var(--primary-light);
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
+}
+
+input#documentFile:focus,
+input.inputbox:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+input.submitbutton {
+    padding: 12px 28px;
+    width: 100%;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: #fff;
+    font-weight: 600;
+    font-size: 14px;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: var(--transition);
+    box-shadow: 0 8px 24px rgba(37, 99, 235, 0.3), 0 4px 12px rgba(37, 99, 235, 0.15);
+    margin-top: 12px;
+    font-family: var(--font-family);
+}
+
+input.submitbutton:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(37, 99, 235, 0.4), 0 6px 16px rgba(37, 99, 235, 0.2);
+}
+
+input.submitbutton:active {
+    transform: translateY(0);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+}
+
+textarea {
+    margin-top: 0;
+    padding: 10px 12px;
+    width: 100%;
+    border: 1.5px solid var(--gray-200);
+    border-radius: var(--radius);
+    font: normal 13px var(--font-family);
+    color: var(--gray-800);
+    resize: vertical;
+    transition: var(--transition);
+    font-family: var(--font-family);
+}
+
+textarea:hover {
+    border-color: var(--primary-light);
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
+}
+
+textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+textarea.inputboxlarge {
+    min-height: 120px;
+}

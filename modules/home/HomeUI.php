@@ -138,7 +138,20 @@ class HomeUI extends UserInterface
 
         /* Determine user role for role-based dashboard */
         $accessLevel = $_SESSION['CATS']->getAccessLevel(ACL::SECOBJ_ROOT);
-        $userFullName = $_SESSION['CATS']->getFirstName() . ' ' . $_SESSION['CATS']->getLastName();
+
+        /* Pull fresh name from database so it updates without re-login */
+        include_once(LEGACY_ROOT . '/lib/Users.php');
+        $users = new Users($this->_siteID);
+        $userRS = $users->get($_SESSION['CATS']->getUserID());
+        if (!empty($userRS['firstName']))
+        {
+            $userFullName = $userRS['firstName'] . ' ' . $userRS['lastName'];
+        }
+        else
+        {
+            $userFullName = $_SESSION['CATS']->getFirstName() . ' ' . $_SESSION['CATS']->getLastName();
+        }
+
         $this->_template->assign('accessLevel', $accessLevel);
         $this->_template->assign('userFullName', $userFullName);
         $this->_template->assign('userRole', $this->_getUserRole($accessLevel));
