@@ -71,37 +71,40 @@ $templateParts['CSS'] = <<<'CSS'
 
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: #f0f4f8;
-    color: #1a202c;
+    background: #f1f5f9;
+    color: #334155;
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
 }
 
-/* === HEADER / HERO === */
+/* === HEADER / HERO — light theme === */
 .nt-header {
-    background: linear-gradient(135deg, #0a1628 0%, #1a365d 40%, #2b6cb0 100%);
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 45%, #f1f5f9 100%);
     position: relative;
     overflow: hidden;
+    border-bottom: 1px solid #e2e8f0;
 }
 .nt-header::before {
     content: '';
     position: absolute;
-    top: -50%;
-    right: -20%;
-    width: 600px;
-    height: 600px;
-    background: radial-gradient(circle, rgba(66,153,225,0.15) 0%, transparent 70%);
+    top: -45%;
+    right: -18%;
+    width: 560px;
+    height: 560px;
+    background: radial-gradient(circle, rgba(59,130,246,0.09) 0%, transparent 68%);
     border-radius: 50%;
+    pointer-events: none;
 }
 .nt-header::after {
     content: '';
     position: absolute;
-    bottom: -30%;
+    bottom: -28%;
     left: -10%;
-    width: 400px;
-    height: 400px;
-    background: radial-gradient(circle, rgba(99,179,237,0.1) 0%, transparent 70%);
+    width: 380px;
+    height: 380px;
+    background: radial-gradient(circle, rgba(37,99,235,0.06) 0%, transparent 68%);
     border-radius: 50%;
+    pointer-events: none;
 }
 .nt-topbar {
     display: flex;
@@ -110,7 +113,9 @@ body {
     padding: 18px 60px;
     position: relative;
     z-index: 2;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
+    border-bottom: 1px solid #e2e8f0;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(10px);
 }
 .nt-logo {
     display: flex;
@@ -121,7 +126,7 @@ body {
 .nt-logo-icon {
     width: 44px;
     height: 44px;
-    background: linear-gradient(135deg, #4299e1, #63b3ed);
+    background: linear-gradient(135deg, #3b82f6, #60a5fa);
     border-radius: 12px;
     display: flex;
     align-items: center;
@@ -130,27 +135,27 @@ body {
     font-weight: 800;
     color: #fff;
     letter-spacing: -1px;
-    box-shadow: 0 4px 15px rgba(66,153,225,0.4);
+    box-shadow: 0 2px 14px rgba(59,130,246,0.28);
 }
 .nt-logo-text {
     font-size: 22px;
     font-weight: 700;
-    color: #fff;
+    color: #0f172a;
     letter-spacing: -0.5px;
 }
 .nt-logo-text span {
-    color: #63b3ed;
+    color: #2563eb;
 }
 .nt-nav { display: flex; gap: 32px; align-items: center; }
 .nt-nav a {
-    color: rgba(255,255,255,0.75);
+    color: #475569;
     text-decoration: none;
     font-size: 14px;
     font-weight: 500;
     transition: color 0.2s;
 }
-.nt-nav a:hover, .nt-nav a:link:hover { color: #fff; }
-.nt-nav a:visited { color: rgba(255,255,255,0.75); }
+.nt-nav a:hover, .nt-nav a:link:hover { color: #2563eb; }
+.nt-nav a:visited { color: #64748b; }
 
 .nt-hero {
     text-align: center;
@@ -161,21 +166,21 @@ body {
 .nt-hero h1 {
     font-size: 48px;
     font-weight: 800;
-    color: #fff;
+    color: #0f172a;
     margin-bottom: 16px;
     letter-spacing: -1.5px;
     line-height: 1.1;
 }
 .nt-hero h1 em {
     font-style: normal;
-    background: linear-gradient(90deg, #63b3ed, #90cdf4);
+    background: linear-gradient(90deg, #2563eb, #3b82f6);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
 }
 .nt-hero p {
     font-size: 18px;
-    color: rgba(255,255,255,0.7);
+    color: #64748b;
     max-width: 600px;
     margin: 0 auto 36px;
     font-weight: 400;
@@ -193,13 +198,13 @@ body {
 .nt-hero-stat .number {
     font-size: 36px;
     font-weight: 800;
-    color: #63b3ed;
+    color: #2563eb;
     display: block;
     line-height: 1;
 }
 .nt-hero-stat .label {
     font-size: 13px;
-    color: rgba(255,255,255,0.5);
+    color: #94a3b8;
     text-transform: uppercase;
     letter-spacing: 1.5px;
     margin-top: 6px;
@@ -208,35 +213,35 @@ body {
 .nt-btn {
     display: inline-block;
     padding: 14px 36px;
-    background: linear-gradient(135deg, #4299e1, #3182ce);
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
     color: #fff !important;
     text-decoration: none !important;
     border-radius: 12px;
     font-weight: 600;
     font-size: 15px;
     transition: all 0.3s;
-    box-shadow: 0 4px 20px rgba(66,153,225,0.4);
+    box-shadow: 0 4px 18px rgba(37,99,235,0.28);
     border: none;
     cursor: pointer;
 }
-.nt-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(66,153,225,0.5); }
+.nt-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(37,99,235,0.35); }
 .nt-btn:link, .nt-btn:visited { color: #fff !important; }
 .nt-btn-outline {
     display: inline-block;
     padding: 14px 36px;
-    background: transparent;
-    color: #fff !important;
+    background: #fff;
+    color: #2563eb !important;
     text-decoration: none !important;
     border-radius: 12px;
     font-weight: 600;
     font-size: 15px;
-    border: 2px solid rgba(255,255,255,0.25);
+    border: 2px solid #bfdbfe;
     transition: all 0.3s;
     cursor: pointer;
     margin-left: 16px;
 }
-.nt-btn-outline:hover { border-color: #fff; background: rgba(255,255,255,0.05); }
-.nt-btn-outline:link, .nt-btn-outline:visited { color: #fff !important; }
+.nt-btn-outline:hover { border-color: #2563eb; background: #eff6ff; }
+.nt-btn-outline:link, .nt-btn-outline:visited { color: #2563eb !important; }
 
 /* === CONTENT AREA === */
 .nt-content {
@@ -256,7 +261,7 @@ body {
 .nt-section-title {
     font-size: 28px;
     font-weight: 700;
-    color: #1a365d;
+    color: #0f172a;
     margin-bottom: 8px;
     letter-spacing: -0.5px;
 }
@@ -300,7 +305,7 @@ table.sortable a {
     font-weight: 600;
     transition: color 0.2s;
 }
-table.sortable a:hover { color: #1a365d; }
+table.sortable a:hover { color: #0f172a; }
 table.sortable a:visited { color: #2b6cb0; }
 .rowHeading th { cursor: pointer; }
 .rowHeading th:hover { background: #edf2f7; }
@@ -310,7 +315,7 @@ table.sortable a:visited { color: #2b6cb0; }
 .nt-job-detail h1 {
     font-size: 32px;
     font-weight: 700;
-    color: #1a365d;
+    color: #0f172a;
     margin-bottom: 20px;
 }
 #detailsTable {
@@ -452,12 +457,50 @@ p.instructions {
     font-style: italic;
 }
 
-/* === CANDIDATE REGISTRATION === */
-#careerContent h1 {
+/* === CANDIDATE REGISTRATION / APPLY FORM === */
+#careerContent,
+form#register {
+    color: #334155;
+    position: relative;
+    z-index: 3;
+}
+#careerContent h1,
+form#register h1 {
     font-size: 26px;
     font-weight: 700;
-    color: #1a365d;
+    color: #0f172a;
     margin-bottom: 16px;
+}
+.nt-register-card {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 16px !important;
+    box-shadow: 0 4px 24px rgba(15,23,42,0.06) !important;
+    max-width: 500px !important;
+    margin: 30px auto !important;
+    padding: 30px !important;
+}
+.nt-register-card-wide {
+    max-width: 600px !important;
+    margin: 30px auto !important;
+    padding: 30px !important;
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 16px !important;
+    box-shadow: 0 4px 24px rgba(15,23,42,0.06) !important;
+}
+form#register > div[style*="max-width"] {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 16px !important;
+    box-shadow: 0 4px 24px rgba(15,23,42,0.06) !important;
+}
+form#register p,
+form#register label {
+    color: #475569;
+}
+form#register a {
+    color: #2563eb;
 }
 
 /* === QUESTIONNAIRE === */
@@ -498,11 +541,12 @@ p.instructions {
     line-height: 1.6;
 }
 
-/* === FOOTER === */
+/* === FOOTER — light === */
 .nt-footer {
-    background: #0a1628;
-    color: rgba(255,255,255,0.6);
+    background: #ffffff;
+    color: #64748b;
     padding: 50px 60px 30px;
+    border-top: 1px solid #e2e8f0;
 }
 .nt-footer-grid {
     display: grid;
@@ -511,18 +555,18 @@ p.instructions {
     max-width: 1100px;
     margin: 0 auto;
     padding-bottom: 30px;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
+    border-bottom: 1px solid #e2e8f0;
 }
 .nt-footer-brand h3 {
-    color: #fff;
+    color: #0f172a;
     font-size: 20px;
     font-weight: 700;
     margin-bottom: 12px;
 }
-.nt-footer-brand h3 span { color: #63b3ed; }
-.nt-footer-brand p { font-size: 14px; line-height: 1.7; }
+.nt-footer-brand h3 span { color: #2563eb; }
+.nt-footer-brand p { font-size: 14px; line-height: 1.7; color: #64748b; }
 .nt-footer-col h4 {
-    color: #fff;
+    color: #334155;
     font-size: 13px;
     font-weight: 600;
     text-transform: uppercase;
@@ -531,20 +575,21 @@ p.instructions {
 }
 .nt-footer-col a {
     display: block;
-    color: rgba(255,255,255,0.5);
+    color: #64748b;
     text-decoration: none;
     font-size: 14px;
     margin-bottom: 10px;
     transition: color 0.2s;
 }
-.nt-footer-col a:hover { color: #63b3ed; }
-.nt-footer-col a:visited { color: rgba(255,255,255,0.5); }
+.nt-footer-col a:hover { color: #2563eb; }
+.nt-footer-col a:visited { color: #64748b; }
 .nt-footer-bottom {
     text-align: center;
     padding-top: 24px;
     font-size: 13px;
     max-width: 1100px;
     margin: 0 auto;
+    color: #94a3b8;
 }
 
 /* === RESPONSIVE === */
@@ -721,7 +766,7 @@ $templateParts['Content - Job Details'] = <<<'HTML'
         <div style="padding: 40px;">
             <div style="display:flex;gap:40px;flex-wrap:wrap;">
                 <div style="flex:1;min-width:300px;">
-                    <h2 style="font-size:20px;font-weight:700;color:#1a365d;margin-bottom:20px;">Position Details</h2>
+                    <h2 style="font-size:20px;font-weight:700;color:#0f172a;margin-bottom:20px;">Position Details</h2>
                     <table id="detailsTable">
                         <tr>
                             <td class="detailsHeader"><strong>Location:</strong></td>
@@ -752,7 +797,7 @@ $templateParts['Content - Job Details'] = <<<'HTML'
             </div>
 
             <div style="margin-top:30px;padding-top:30px;border-top:1px solid #e2e8f0;">
-                <h2 style="font-size:20px;font-weight:700;color:#1a365d;margin-bottom:16px;">Job Description</h2>
+                <h2 style="font-size:20px;font-weight:700;color:#0f172a;margin-bottom:16px;">Job Description</h2>
                 <div style="font-size:15px;line-height:1.8;color:#4a5568;">
                     <description>
                 </div>
@@ -909,7 +954,7 @@ $templateParts['Content - Thanks for your Submission'] = <<<'HTML'
 <div class="nt-content">
     <div class="nt-card" style="text-align:center;padding:60px 40px;">
         <div style="font-size:64px;margin-bottom:20px;">&#x2705;</div>
-        <h2 style="font-size:28px;font-weight:700;color:#1a365d;margin-bottom:16px;">We've Received Your Application</h2>
+        <h2 style="font-size:28px;font-weight:700;color:#0f172a;margin-bottom:16px;">We've Received Your Application</h2>
         <p style="font-size:16px;color:#718096;max-width:500px;margin:0 auto 30px;line-height:1.7;">
             Our recruiting team will review your application carefully. If your qualifications match our requirements, we'll reach out to schedule an interview.
         </p>
@@ -923,11 +968,11 @@ HTML;
 
 // === CONTENT - CANDIDATE REGISTRATION ===
 $templateParts['Content - Candidate Registration'] = <<<'HTML'
-<div style="max-width:500px;margin:30px auto;padding:30px;">
+<div class="nt-register-card">
     <applyContent>
-    <h2 style="font-size:22px;color:#1a365d;font-weight:700;margin-bottom:8px;">Applying to <title></h2>
+    <h2 style="font-size:22px;color:#0f172a;font-weight:700;margin-bottom:8px;">Applying to <title></h2>
     </applyContent>
-    <p style="font-size:14px;color:#718096;margin-bottom:24px;">Please provide your details to continue.</p>
+    <p style="font-size:14px;color:#64748b;margin-bottom:24px;">Please provide your details to continue.</p>
 
     <div style="margin-bottom:16px;">
         <input-new> <label for="isNewYes" style="font-weight:500;color:#2d3748;margin-right:20px;">I'm a new applicant</label>
@@ -963,9 +1008,9 @@ HTML;
 
 // === CONTENT - CANDIDATE PROFILE ===
 $templateParts['Content - Candidate Profile'] = <<<'HTML'
-<div style="max-width:600px;margin:30px auto;padding:30px;">
-    <h2 style="font-size:24px;color:#1a365d;font-weight:700;margin-bottom:8px;">My Profile</h2>
-    <p style="font-size:14px;color:#718096;margin-bottom:24px;">Update your details and resume below.</p>
+<div class="nt-register-card-wide">
+    <h2 style="font-size:24px;color:#0f172a;font-weight:700;margin-bottom:8px;">My Profile</h2>
+    <p style="font-size:14px;color:#64748b;margin-bottom:24px;">Update your details and resume below.</p>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
         <div>
@@ -1153,8 +1198,8 @@ echo "\nCareer Site URL: http://localhost:8000/careers/\n";
 echo "Admin Template Settings: Settings > Career Portal\n";
 echo "Active Template: Neutara Technologies\n";
 echo "\nTemplate features:\n";
-echo "  - Modern BambooHR-inspired design\n";
-echo "  - Gradient header with company branding\n";
+echo "  - Light theme (soft white / slate / blue accents)\n";
+echo "  - Clean header and top bar for readability\n";
 echo "  - Benefits/perks showcase grid\n";
 echo "  - Beautiful job listings table\n";
 echo "  - Clean application form\n";

@@ -1,9 +1,7 @@
 FROM php:8.1-apache
 
-# Set working directory
 WORKDIR /var/www/html
 
-# Install system dependencies and PHP extensions
 RUN apt-get update && apt-get install -y \
     git \
     curl \
@@ -13,42 +11,42 @@ RUN apt-get update && apt-get install -y \
     libzip-dev \
     zip \
     unzip \
-    && docker-php-ext-install pdo pdo_mysql mysqli mbstring exif pcntl bcmath gd zip
+    antiword \
+    poppler-utils \
+    html2text \
+    unrtf \
+    && docker-php-ext-install pdo pdo_mysql mysqli mbstring exif pcntl bcmath gd zip \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Copy application files
 COPY . /var/www/html/
 
-# Install PHP dependencies
-RUN composer install --no-dev --optimize-autoloader
+RUN composer install --no-dev --optimize-autoloader 2>/dev/null || true
 
-# Create config.php from example if it doesn't exist
 RUN if [ ! -f config.php ] && [ -f config.php.example ]; then \
         cp config.php.example config.php && \
         chmod 644 config.php; \
     fi
 
-# Set proper permissions
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html \
     && mkdir -p temp attachments uploads \
     && chmod -R 777 temp attachments uploads
 
-# Enable Apache mod_rewrite
 RUN a2enmod rewrite
 
-# Prepare Apache config with placeholder port (replaced at runtime by entrypoint)
-RUN sed -i 's/Listen 80/Listen ${APACHE_PORT}/' /etc/apache2/ports.conf \
-    && sed -i 's/<VirtualHost \*:80>/<VirtualHost *:${APACHE_PORT}>/' /etc/apache2/sites-available/000-default.conf
+RUN echo '<Directory /var/www/html>\n\
+    Options Indexes FollowSymLinks\n\
+    AllowOverride All\n\
+    Require all granted\n\
+</Directory>' > /etc/apache2/conf-available/opencats.conf \
+    && a2enconf opencats
 
-# Copy and set permissions for entrypoint script
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-EXPOSE 10000
+EXPOSE 80
 
-# Use entrypoint script to ensure config.php exists at runtime
 ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["apache2-foreground"]

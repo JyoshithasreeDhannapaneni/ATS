@@ -1,0 +1,72 @@
+services:
+  ats-mysql:
+    image: mariadb:10.7
+    container_name: ats-mysql
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: Root@12345
+      MYSQL_DATABASE: opencats
+      MYSQL_USER: atsuser
+      MYSQL_PASSWORD: AtsUser@12345
+    volumes:
+      - ats_db_data:/var/lib/mysql
+      - ./db/cats_schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    healthcheck:
+      test: ["CMD", "mariadb", "-u", "root", "-pRoot@12345", "-e", "SELECT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - ats-network
+
+  ats-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ats-app
+    ports:
+      - "8080:80"
+    environment:
+      PORT: "80"
+      DATABASE_HOST: ats-mysql
+      DATABASE_PORT: "3306"
+      DATABASE_USER: atsuser
+      DATABASE_PASS: AtsUser@12345
+      DATABASE_NAME: opencats
+    depends_on:
+      ats-mysql:
+        condition: service_healthy
+    volumes:
+      - ats_attachments:/var/www/html/attachments
+      - ats_uploads:/var/www/html/uploads
+      - ats_temp:/var/www/html/temp
+    restart: unless-stopped
+    networks:
+      - ats-network
+
+  ats-phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: ats-phpmyadmin
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: ats-mysql
+      PMA_USER: root
+      PMA_PASSWORD: Root@12345
+    depends_on:
+      - ats-mysql
+    restart: unless-stopped
+    networks:
+      - ats-network
+
+volumes:
+  ats_db_data:
+  ats_attachments:
+  ats_uploads:
+  ats_temp:
+
+networks:
+  ats-network:
+    driver: bridge

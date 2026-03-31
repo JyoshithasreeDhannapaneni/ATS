@@ -170,6 +170,17 @@
                                     Add/Remove tags, description for tags
                                 </td>
                             </tr>
+                            <tr>
+                                <td>
+                                    <img src="images/bullet_black.gif" alt="" />
+                                    <a href="<?php echo(CATSUtility::getIndexName()); ?>?m=settings&amp;a=meetingSettings">
+                                        Video Meeting Integration
+                                    </a>
+                                </td>
+                                <td>
+                                    Configure Microsoft Teams, Zoom, and Google Meet for automatic meeting creation.
+                                </td>
+                            </tr>
                         </table>
                         <br />
 

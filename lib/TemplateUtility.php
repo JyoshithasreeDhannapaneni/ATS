@@ -96,17 +96,16 @@ class TemplateUtility
     public static function printHeaderBlock($showTopRight = true)
     {
         $username     = $_SESSION['CATS']->getUsername();
-        $siteName     = $_SESSION['CATS']->getSiteName();
-        $fullName     = $_SESSION['CATS']->getFullName();
         $indexName    = CATSUtility::getIndexName();
 
         echo '<div id="headerBlock">', "\n";
 
-        /* Neutara ATS Tool Logo — BambooHR style compact top bar */
-        echo '<div style="display: flex; align-items: center; gap: 14px;">', "\n";
-        echo '<img src="images/Neutaralogo.jpg" border="0" alt="Neutara ATS Tool" style="max-height: 38px; max-width: 140px; height: auto; width: auto; display: block; border-radius: 4px;" />', "\n";
-        echo '<span style="color: #e5e7eb; font-weight: 300;">|</span>', "\n";
-        echo '<span style="font-size: 13px; color: #6b7280; font-weight: 500;">Welcome to <span style="color: #1f2937; font-weight: 600;">Neutara ATS</span></span>', "\n";
+        /* Left side — Neutara Logo */
+        echo '<div id="headerLogo" style="display: flex; align-items: center;">', "\n";
+        echo '<a href="', $indexName, '?m=home" style="display: flex; align-items: center; text-decoration: none; gap: 8px;">', "\n";
+        echo '<img src="images/Neutaralogo.jpg" alt="Neutara ATS" style="height: 36px; width: auto; border-radius: 4px;" onerror="this.style.display=\'none\';" />', "\n";
+        echo '<span style="font-size: 18px; font-weight: 600; color: #1e3a5f;">Neutara ATS</span>', "\n";
+        echo '</a>', "\n";
         echo '</div>', "\n";
 
         if (!eval(Hooks::get('TEMPLATE_LIVE_CHAT'))) return;
@@ -126,10 +125,10 @@ class TemplateUtility
 
             if (!eval(Hooks::get('TEMPLATE_LOGIN_INFO_TOP_RIGHT_1'))) return;
 
-            /* Top Right Corner — Single row: links | admin badge | logout */
+            /* Top Right Corner — Admin badge and Logout only */
             echo '<div id="topRight">', "\n";
 
-            echo '<div style="display: flex; align-items: center; gap: 14px;">';
+            echo '<div style="display: flex; align-items: center; gap: 12px;">';
 
             if (!eval(Hooks::get('TEMPLATE_LOGIN_INFO_TOP_RIGHT_UPGRADE'))) return;
 
@@ -1169,8 +1168,6 @@ class TemplateUtility
         echo '<link rel="preconnect" href="https://fonts.googleapis.com" />', "\n";
         echo '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />', "\n";
         echo '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />', "\n";
-        echo '<link rel="icon" href="images/favicon.ico" type="image/x-icon" />', "\n";
-        echo '<link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon" />', "\n";
         echo '<link rel="alternate" type="application/rss+xml" title="RSS" href="',
              CATSUtility::getIndexName(), '?m=rss" />', "\n";
 

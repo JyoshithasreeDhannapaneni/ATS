@@ -1,45 +1,57 @@
 #!/bin/bash
 set -e
 
-# Set Apache to listen on Render's $PORT (defaults to 10000)
-export APACHE_PORT="${PORT:-10000}"
-echo "=== Apache will listen on port $APACHE_PORT ==="
-sed -i "s/\${APACHE_PORT}/$APACHE_PORT/g" /etc/apache2/ports.conf
-sed -i "s/\${APACHE_PORT}/$APACHE_PORT/g" /etc/apache2/sites-available/000-default.conf
+echo "========================================="
+echo "  OpenCATS ATS — Container Starting"
+echo "========================================="
 
-# Ensure config.php exists
+# Apache listens on port 80 by default inside the container.
+# For cloud hosts that inject $PORT (e.g. Render), override Apache's listen port.
+if [ -n "$PORT" ] && [ "$PORT" != "80" ]; then
+    echo "Overriding Apache port to $PORT"
+    sed -i "s/Listen 80/Listen $PORT/" /etc/apache2/ports.conf
+    sed -i "s/<VirtualHost \*:80>/<VirtualHost *:$PORT>/" /etc/apache2/sites-available/000-default.conf
+fi
+
+# Ensure config.php exists (it is excluded from the build by .dockerignore)
 if [ ! -f /var/www/html/config.php ] && [ -f /var/www/html/config.php.example ]; then
     echo "Creating config.php from config.php.example..."
     cp /var/www/html/config.php.example /var/www/html/config.php
     chmod 644 /var/www/html/config.php
+    chown www-data:www-data /var/www/html/config.php
 fi
 
-# Log database configuration (env vars)
-echo "=== Database Configuration ==="
+# Ensure runtime directories exist and are writable
+mkdir -p /var/www/html/temp /var/www/html/attachments /var/www/html/uploads
+chown -R www-data:www-data /var/www/html/temp /var/www/html/attachments /var/www/html/uploads
+chmod -R 777 /var/www/html/temp /var/www/html/attachments /var/www/html/uploads
+
+# Log database configuration
+echo "--- Database Configuration ---"
+echo "  HOST: ${DATABASE_HOST:-NOT SET}"
+echo "  PORT: ${DATABASE_PORT:-3306}"
+echo "  USER: ${DATABASE_USER:-NOT SET}"
+echo "  NAME: ${DATABASE_NAME:-NOT SET}"
+
+# Wait for MySQL to be reachable (up to 60 seconds)
 if [ -n "$DATABASE_HOST" ]; then
-    echo "DATABASE_HOST: $DATABASE_HOST"
-else
-    echo "WARNING: DATABASE_HOST env var is NOT set!"
+    echo "--- Waiting for MySQL at $DATABASE_HOST:${DATABASE_PORT:-3306} ---"
+    for i in $(seq 1 30); do
+        if php -r "
+            \$c = @new mysqli('${DATABASE_HOST}', '${DATABASE_USER}', '${DATABASE_PASS}', '', (int)'${DATABASE_PORT:-3306}');
+            if (\$c->connect_error) exit(1);
+            \$c->close(); exit(0);
+        " 2>/dev/null; then
+            echo "  MySQL connection OK"
+            break
+        fi
+        echo "  Attempt $i/30 — waiting..."
+        sleep 2
+    done
 fi
-echo "DATABASE_PORT: ${DATABASE_PORT:-not set}"
-echo "DATABASE_USER: ${DATABASE_USER:-not set}"
-echo "DATABASE_NAME: ${DATABASE_NAME:-not set}"
-echo "DATABASE_SSL:  ${DATABASE_SSL:-not set}"
 
-# Test DNS resolution of the database host
-if [ -n "$DATABASE_HOST" ]; then
-    echo "--- Testing DNS resolution for $DATABASE_HOST ---"
-    if getent hosts "$DATABASE_HOST" > /dev/null 2>&1; then
-        echo "DNS OK: $(getent hosts $DATABASE_HOST)"
-    else
-        echo "ERROR: Cannot resolve hostname '$DATABASE_HOST'"
-        echo "Possible causes:"
-        echo "  1. Aiven free-tier service has hibernated — go to console.aiven.io and power it on"
-        echo "  2. Hostname is incorrect — double-check the value in Render Environment Variables"
-        echo "  3. DNS propagation delay — wait a few minutes and redeploy"
-    fi
-fi
-echo "=============================="
+echo "========================================="
+echo "  Ready — starting Apache"
+echo "========================================="
 
-# Execute the command passed as arguments
 exec "$@"

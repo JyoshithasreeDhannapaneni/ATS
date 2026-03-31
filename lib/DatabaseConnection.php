@@ -652,6 +652,8 @@ class DatabaseConnection
      */
     public function escapeString($string)
     {
+        // PHP 8.1+: mysqli_real_escape_string expects string, not null.
+        $string = (string) ($string ?? '');
         // FIXME: Security issue, this function is not enough for sanitizing
         // user input. For instance see:
         // https://johnroach.info/2011/02/17/why-mysql_real_escape_string-isnt-enough-to-stop-sql-injection-attacks/
@@ -680,9 +682,10 @@ class DatabaseConnection
      */
     public function makeQueryStringOrNULL($string)
     {
-        $string = trim($string);
+        // PHP 8.1+: trim() must not receive null (e.g. optional job fields).
+        $string = trim((string) ($string ?? ''));
 
-        if (empty($string))
+        if ($string === '')
         {
             return 'NULL';
         }

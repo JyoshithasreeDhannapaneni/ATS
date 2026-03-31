@@ -404,7 +404,7 @@ class CareersUI extends UserInterface
                 $js,
                 CATSUtility::getIndexName(),
                 $jobID
-            ) . $content . '<script>enableFormFields(false); ' . ($js != '' ? 'populateSavedFields();' : '')
+            ) . $content . '<script>enableFormFields(true); ' . ($js != '' ? 'populateSavedFields();' : '')
             . '</script></form>';
 
             $template['Content'] = $content;
@@ -419,7 +419,11 @@ class CareersUI extends UserInterface
             $state = isset($_POST[$id='state']) ? $_POST[$id] : '';
             $zip = isset($_POST[$id='zip']) ? $_POST[$id] : '';
             $phone = isset($_POST[$id='phone']) ? $_POST[$id] : '';
-            $email = isset($_POST[$id='email']) ? $_POST[$id] : '';
+            if ($phone === '' && isset($_POST['phoneWork']))
+            {
+                $phone = $_POST['phoneWork'];
+            }
+            $email = isset($_POST[$id='email']) ? $_POST[$id] : (isset($_POST['email1']) ? $_POST['email1'] : '');
             $phoneHome = isset($_POST[$id='phoneHome']) ? $_POST[$id] : '';
             $phoneCell = isset($_POST[$id='phoneCell']) ? $_POST[$id] : '';
             $bestTimeToCall = isset($_POST[$id='bestTimeToCall']) ? $_POST[$id] : '';

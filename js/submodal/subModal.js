@@ -200,22 +200,17 @@ function centerPopWin(width, height)
         var fullHeight = getViewportHeight();
         var fullWidth = getViewportWidth();
 
-        var theBody = document.documentElement;
-
-        var scTop = parseInt(theBody.scrollTop,10);
-        var scLeft = parseInt(theBody.scrollLeft,10);
-
-        gPopupMask.style.height = fullHeight + 'px';
-        gPopupMask.style.width = fullWidth + 'px';
-        gPopupMask.style.top = scTop + 'px';
-        gPopupMask.style.left = scLeft + 'px';
+        gPopupMask.style.height = '100%';
+        gPopupMask.style.width = '100%';
+        gPopupMask.style.top = '0';
+        gPopupMask.style.left = '0';
 
         window.status = gPopupMask.style.top + ' ' + gPopupMask.style.left + ' ' + gi++;
 
-        var titleBarHeight = parseInt(document.getElementById('popupTitleBar').offsetHeight, 10);
-
-        gPopupContainer.style.top = (scTop + ((fullHeight - (height+titleBarHeight)) / 2)) + 'px';
-        gPopupContainer.style.left =  (scLeft + ((fullWidth - width) / 2)) + 'px';
+        // Use CSS transform for centering (set in main.css)
+        // Just reset top/left to 50% to work with transform: translate(-50%, -50%)
+        gPopupContainer.style.top = '50%';
+        gPopupContainer.style.left = '50%';
     }
 }
 

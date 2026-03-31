@@ -811,15 +811,15 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                padding: 12px 20px;
+                padding: 6px 12px;
                 background: #f8fafc;
                 border-bottom: 1px solid #e5e7eb;
-                border-radius: 12px 12px 0 0;
+                border-radius: 8px 8px 0 0;
                 flex-shrink: 0;
             }
             .resume-toolbar .resume-file-name {
-                font-size: 13px;
-                font-weight: 600;
+                font-size: 12px;
+                font-weight: 500;
                 color: #374151;
                 overflow: hidden;
                 text-overflow: ellipsis;
@@ -827,23 +827,23 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
             }
             .resume-toolbar .resume-actions {
                 display: flex;
-                gap: 8px;
+                gap: 6px;
                 flex-shrink: 0;
             }
             .resume-toolbar .resume-actions a {
-                padding: 6px 14px;
-                font-size: 12px;
-                font-weight: 600;
+                padding: 4px 10px;
+                font-size: 11px;
+                font-weight: 500;
                 color: #2563eb;
                 border: 1px solid #2563eb;
-                border-radius: 6px;
+                border-radius: 4px;
                 text-decoration: none;
                 transition: all 0.2s ease;
             }
             .resume-toolbar .resume-actions a:hover {
                 background: #2563eb;
                 color: #fff;
-                box-shadow: 0 2px 8px rgba(37,99,235,0.3);
+                box-shadow: 0 2px 6px rgba(37,99,235,0.25);
             }
             .resume-viewer h3, .resume-viewer h4 {
                 margin-top: 18px;
@@ -1395,7 +1395,7 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
 
                         <!-- ===== RESUME TAB ===== -->
                         <div id="resumeTabContent" class="tab-fade-in" style="display: flex; flex-direction: row; width: 100%;">
-                            <div class="tab-left-panel">
+                            <div class="tab-left-panel" style="flex: 0 0 55% !important; width: 55% !important; max-width: 55% !important; min-width: 55% !important;">
                                 <h3 class="tab-section-title">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
                                     Resume / CV
@@ -1447,6 +1447,99 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                                         </p>
                                     </div>
                                 <?php endif; ?>
+                            </div>
+                            <!-- Right side: Info Cards -->
+                            <div class="resume-info-cards-panel" style="flex: 0 0 45%; width: 45%; padding: 16px; background: #fff; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; max-height: calc(100vh - 200px);">
+                                <!-- Card 1: Personal Info -->
+                                <div class="info-card" style="margin: 0;">
+                                    <div class="info-card-header" style="padding: 10px 14px 8px;">
+                                        <div class="info-card-icon blue" style="width: 28px; height: 28px; border-radius: 6px;">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                        </div>
+                                        <span class="info-card-title" style="font-size: 12px;">Personal Info</span>
+                                    </div>
+                                    <div class="info-card-body" style="padding: 10px 14px;">
+                                        <div class="info-row" style="padding: 4px 0;">
+                                            <span class="info-row-label" style="font-size: 10px; min-width: 70px;">Employer</span>
+                                            <span class="info-row-value" style="font-size: 11px;"><?php $this->_($this->data['currentEmployer']); ?></span>
+                                        </div>
+                                        <div class="info-row" style="padding: 4px 0;">
+                                            <span class="info-row-label" style="font-size: 10px; min-width: 70px;">Expected CTC</span>
+                                            <span class="info-row-value" style="font-size: 11px;"><?php echo !empty($this->data['desiredPay']) ? $this->data['desiredPay'] : (!empty($this->data['currentPay']) ? $this->data['currentPay'] : 'Not Specified'); ?></span>
+                                        </div>
+                                        <div class="info-row" style="padding: 4px 0;">
+                                            <span class="info-row-label" style="font-size: 10px; min-width: 70px;">Notice</span>
+                                            <span class="info-row-value" style="font-size: 11px;"><?php echo !empty($this->data['dateAvailable']) ? '30 Days' : 'Not Specified'; ?></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Card 2: Contact Details -->
+                                <div class="info-card" style="margin: 0;">
+                                    <div class="info-card-header" style="padding: 10px 14px 8px;">
+                                        <div class="info-card-icon green" style="width: 28px; height: 28px; border-radius: 6px;">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                                        </div>
+                                        <span class="info-card-title" style="font-size: 12px;">Contact Details</span>
+                                    </div>
+                                    <div class="info-card-body" style="padding: 10px 14px;">
+                                        <div class="info-row" style="padding: 4px 0;">
+                                            <span class="info-row-label" style="font-size: 10px; min-width: 70px;">Email</span>
+                                            <span class="info-row-value" style="font-size: 11px;"><a href="mailto:<?php $this->_($this->data['email1']); ?>"><?php $this->_($this->data['email1']); ?></a></span>
+                                        </div>
+                                        <?php if (!empty($this->data['phoneCell'])): ?>
+                                        <div class="info-row" style="padding: 4px 0;">
+                                            <span class="info-row-label" style="font-size: 10px; min-width: 70px;">Phone</span>
+                                            <span class="info-row-value" style="font-size: 11px;"><?php $this->_($this->data['phoneCell']); ?></span>
+                                        </div>
+                                        <?php endif; ?>
+                                        <div class="info-row" style="padding: 4px 0;">
+                                            <span class="info-row-label" style="font-size: 10px; min-width: 70px;">Location</span>
+                                            <span class="info-row-value" style="font-size: 11px;"><?php $this->_($this->data['cityAndState']); ?></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Card 3: Skills & Notes -->
+                                <div class="info-card" style="margin: 0;">
+                                    <div class="info-card-header" style="padding: 10px 14px 8px;">
+                                        <div class="info-card-icon purple" style="width: 28px; height: 28px; border-radius: 6px;">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                                        </div>
+                                        <span class="info-card-title" style="font-size: 12px;">Skills & Notes</span>
+                                    </div>
+                                    <div class="info-card-body" style="padding: 10px 14px;">
+                                        <?php if (!empty($this->data['keySkills'])): ?>
+                                        <div style="margin-bottom: 8px;">
+                                            <span class="info-row-label" style="display: block; margin-bottom: 6px; font-size: 10px;">Key Skills</span>
+                                            <div class="skill-pills" style="gap: 4px;">
+                                                <?php
+                                                    $skills = preg_split('/[,;]+/', $this->data['keySkills']);
+                                                    $skillCount = 0;
+                                                    foreach ($skills as $skill):
+                                                        $skill = trim($skill);
+                                                        if (!empty($skill) && $skillCount < 5):
+                                                            $skillCount++;
+                                                ?>
+                                                    <span class="skill-pill" style="font-size: 10px; padding: 2px 8px;"><?php echo htmlspecialchars($skill); ?></span>
+                                                <?php
+                                                        endif;
+                                                    endforeach;
+                                                    if (count($skills) > 5): ?>
+                                                        <span style="font-size: 10px; color: #6b7280;">+<?php echo count($skills) - 5; ?></span>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                        <?php endif; ?>
+                                        <?php if (!empty($this->data['notes'])): ?>
+                                        <div>
+                                            <span class="info-row-label" style="display: block; margin-bottom: 4px; font-size: 10px;">Notes</span>
+                                            <p style="font-size: 11px; color: #4b5563; line-height: 1.5; margin: 0;"><?php echo nl2br(htmlspecialchars(substr($this->data['notes'], 0, 100))); ?><?php echo strlen($this->data['notes']) > 100 ? '...' : ''; ?></p>
+                                        </div>
+                                        <?php endif; ?>
+                                        <?php if (empty($this->data['keySkills']) && empty($this->data['notes'])): ?>
+                                            <p style="color: #9ca3af; text-align: center; padding: 10px 0; font-size: 11px;">No skills or notes recorded.</p>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -1644,127 +1737,6 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                 </div>
             </div>
 
-            <!-- ==================== INFO CARDS ROW (below tabs) ==================== -->
-                    <div class="info-cards-row anim-fade-up-2" style="margin-top: 16px;">
-                        <!-- Card 1: Personal Info -->
-                        <div class="info-card">
-                            <div class="info-card-header">
-                                <div class="info-card-icon blue">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                                </div>
-                                <span class="info-card-title">Personal Info</span>
-                            </div>
-                            <div class="info-card-body">
-                                <div class="info-row">
-                                    <span class="info-row-label">Employer</span>
-                                    <span class="info-row-value"><?php $this->_($this->data['currentEmployer']); ?></span>
-                                </div>
-                                <div class="info-row">
-                                    <span class="info-row-label">Expected CTC</span>
-                                    <span class="info-row-value"><?php echo !empty($this->data['desiredPay']) ? $this->data['desiredPay'] : (!empty($this->data['currentPay']) ? $this->data['currentPay'] : 'Not Specified'); ?></span>
-                                </div>
-                                <div class="info-row">
-                                    <span class="info-row-label">Notice</span>
-                                    <span class="info-row-value"><?php echo !empty($this->data['dateAvailable']) ? '30 Days' : 'Not Specified'; ?></span>
-                                </div>
-                                <?php if (!empty($this->primaryJobOrder)): ?>
-                                <div class="info-row">
-                                    <span class="info-row-label">Job</span>
-                                    <span class="info-row-value"><?php $this->_($this->primaryJobOrder['title']); ?> (<?php echo($this->primaryJobOrder['clientJobID'] ? $this->primaryJobOrder['clientJobID'] : $this->primaryJobOrder['jobOrderID']); ?>)</span>
-                                </div>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-
-                        <!-- Card 2: Contact Details -->
-                        <div class="info-card">
-                            <div class="info-card-header">
-                                <div class="info-card-icon green">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-                                </div>
-                                <span class="info-card-title">Contact Details</span>
-                            </div>
-                            <div class="info-card-body">
-                                <div class="info-row">
-                                    <span class="info-row-label">Email</span>
-                                    <span class="info-row-value"><a href="mailto:<?php $this->_($this->data['email1']); ?>"><?php $this->_($this->data['email1']); ?></a></span>
-                                </div>
-                                <?php if (!empty($this->data['email2'])): ?>
-                                <div class="info-row">
-                                    <span class="info-row-label">Email 2</span>
-                                    <span class="info-row-value"><a href="mailto:<?php $this->_($this->data['email2']); ?>"><?php $this->_($this->data['email2']); ?></a></span>
-                                </div>
-                                <?php endif; ?>
-                                <?php if (!empty($this->data['phoneCell'])): ?>
-                                <div class="info-row">
-                                    <span class="info-row-label">Cell</span>
-                                    <span class="info-row-value"><?php $this->_($this->data['phoneCell']); ?></span>
-                                </div>
-                                <?php endif; ?>
-                                <?php if (!empty($this->data['phoneHome'])): ?>
-                                <div class="info-row">
-                                    <span class="info-row-label">Home</span>
-                                    <span class="info-row-value"><?php $this->_($this->data['phoneHome']); ?></span>
-                                </div>
-                                <?php endif; ?>
-                                <?php if (!empty($this->data['phoneWork'])): ?>
-                                <div class="info-row">
-                                    <span class="info-row-label">Work</span>
-                                    <span class="info-row-value"><?php $this->_($this->data['phoneWork']); ?></span>
-                                </div>
-                                <?php endif; ?>
-                                <div class="info-row">
-                                    <span class="info-row-label">Location</span>
-                                    <span class="info-row-value"><?php $this->_($this->data['cityAndState']); ?></span>
-                                </div>
-                                <?php if (!empty($this->data['webSite'])): ?>
-                                <div class="info-row">
-                                    <span class="info-row-label">Website</span>
-                                    <span class="info-row-value"><a href="<?php $this->_($this->data['webSite']); ?>" target="_blank"><?php $this->_($this->data['webSite']); ?></a></span>
-                                </div>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-
-                        <!-- Card 3: Skills & Notes -->
-                        <div class="info-card">
-                            <div class="info-card-header">
-                                <div class="info-card-icon purple">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                                </div>
-                                <span class="info-card-title">Skills & Notes</span>
-                            </div>
-                            <div class="info-card-body">
-                                <?php if (!empty($this->data['keySkills'])): ?>
-                                <div style="margin-bottom: 12px;">
-                                    <span class="info-row-label" style="display: block; margin-bottom: 8px;">Key Skills</span>
-                                    <div class="skill-pills">
-                                        <?php
-                                            $skills = preg_split('/[,;]+/', $this->data['keySkills']);
-                                            foreach ($skills as $skill):
-                                                $skill = trim($skill);
-                                                if (!empty($skill)):
-                                        ?>
-                                            <span class="skill-pill"><?php echo htmlspecialchars($skill); ?></span>
-                                        <?php
-                                                endif;
-                                            endforeach;
-                                        ?>
-                                    </div>
-                                </div>
-                                <?php endif; ?>
-                                <?php if (!empty($this->data['notes'])): ?>
-                                <div style="margin-top: 12px;">
-                                    <span class="info-row-label" style="display: block; margin-bottom: 6px;">Notes</span>
-                                    <p style="font-size: 13px; color: #4b5563; line-height: 1.6; margin: 0;"><?php echo nl2br(htmlspecialchars($this->data['notes'])); ?></p>
-                                </div>
-                                <?php endif; ?>
-                                <?php if (empty($this->data['keySkills']) && empty($this->data['notes'])): ?>
-                                    <p style="color: #9ca3af; text-align: center; padding: 20px 0; font-size: 13px;">No skills or notes recorded.</p>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                    </div>
 
             <!-- ==================== JOB ORDERS SECTION ==================== -->
             <div class="section-card anim-fade-up-4">

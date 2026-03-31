@@ -601,6 +601,38 @@ class SettingsUI extends UserInterface
                 }
                 break;
 
+            case 'meetingSettings':
+                if ($this->getUserAccessLevel('settings.administration') < ACCESS_LEVEL_SA)
+                {
+                    CommonErrors::fatal(COMMONERROR_PERMISSION, $this, 'Invalid user level for action.');
+                }
+                $this->meetingSettings();
+                break;
+
+            case 'onMeetingSettings':
+                if ($this->getUserAccessLevel('settings.administration') < ACCESS_LEVEL_SA)
+                {
+                    CommonErrors::fatal(COMMONERROR_PERMISSION, $this, 'Invalid user level for action.');
+                }
+                $this->onMeetingSettings();
+                break;
+
+            case 'testMeetingConnection':
+                if ($this->getUserAccessLevel('settings.administration') < ACCESS_LEVEL_SA)
+                {
+                    CommonErrors::fatal(COMMONERROR_PERMISSION, $this, 'Invalid user level for action.');
+                }
+                $this->testMeetingConnection();
+                break;
+
+            case 'googleMeetCallback':
+                if ($this->getUserAccessLevel('settings.administration') < ACCESS_LEVEL_SA)
+                {
+                    CommonErrors::fatal(COMMONERROR_PERMISSION, $this, 'Invalid user level for action.');
+                }
+                $this->googleMeetCallback();
+                break;
+
             case 'onCareerPortalTweak':
                 if ($this->getUserAccessLevel('settings.careerPortalTweak') < ACCESS_LEVEL_SA && !$_SESSION['CATS']->hasUserCategory('careerportal'))
                 {
@@ -3871,6 +3903,296 @@ class SettingsUI extends UserInterface
         $this->_template->assign('data', $data);
         $this->_template->assign('questions', $questions);
         $this->_template->display('./modules/settings/CareerPortalQuestionnaireShow.tpl');
+    }
+
+    /**
+     * Display meeting integration settings page
+     */
+    private function meetingSettings($message = '', $messageType = 'success')
+    {
+        include_once(LEGACY_ROOT . '/lib/MeetingCredentials.php');
+        include_once(LEGACY_ROOT . '/lib/GoogleMeet.php');
+        
+        $credentials = new MeetingCredentials($this->_siteID);
+        $googleMeet = new GoogleMeet($this->_siteID);
+        
+        // Get default platform
+        $db = DatabaseConnection::getInstance();
+        $sql = sprintf(
+            "SELECT setting_value FROM settings WHERE setting_key = 'meeting_platform' AND site_id = %s",
+            $this->_siteID
+        );
+        $result = $db->query($sql);
+        $defaultPlatform = 'none';
+        if ($result && $db->getNumRows($result) > 0) {
+            $row = $db->getAssoc($result);
+            $defaultPlatform = $row['setting_value'];
+        }
+        
+        // Get Teams credentials (masked for display)
+        $teamsClientId = $credentials->getCredential('teams', 'client_id') ?: '';
+        $teamsTenantId = $credentials->getCredential('teams', 'tenant_id') ?: '';
+        $teamsUserId = $credentials->getCredential('teams', 'user_id') ?: '';
+        $teamsConfigured = $credentials->isPlatformConfigured('teams');
+        
+        // Get Zoom credentials
+        $zoomAccountId = $credentials->getCredential('zoom', 'account_id') ?: '';
+        $zoomClientId = $credentials->getCredential('zoom', 'client_id') ?: '';
+        $zoomUserId = $credentials->getCredential('zoom', 'user_id') ?: '';
+        $zoomConfigured = $credentials->isPlatformConfigured('zoom');
+        
+        // Get Google credentials
+        $googleClientId = $credentials->getCredential('google_meet', 'client_id') ?: '';
+        $googleMeetConfigured = $googleMeet->isConfigured();
+        $googleMeetAuthorized = $googleMeet->isAuthorized();
+        
+        // Build redirect URI for display
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'localhost';
+        $googleRedirectUri = $protocol . '://' . $host . '/index.php?m=settings&a=googleMeetCallback';
+        
+        $this->_template->assign('active', $this);
+        $this->_template->assign('subActive', 'Administration');
+        $this->_template->assign('defaultPlatform', $defaultPlatform);
+        
+        // Teams
+        $this->_template->assign('teamsConfigured', $teamsConfigured);
+        $this->_template->assign('teamsClientId', $teamsClientId);
+        $this->_template->assign('teamsTenantId', $teamsTenantId);
+        $this->_template->assign('teamsUserId', $teamsUserId);
+        
+        // Zoom
+        $this->_template->assign('zoomConfigured', $zoomConfigured);
+        $this->_template->assign('zoomAccountId', $zoomAccountId);
+        $this->_template->assign('zoomClientId', $zoomClientId);
+        $this->_template->assign('zoomUserId', $zoomUserId);
+        
+        // Google
+        $this->_template->assign('googleMeetConfigured', $googleMeetConfigured);
+        $this->_template->assign('googleMeetAuthorized', $googleMeetAuthorized);
+        $this->_template->assign('googleClientId', $googleClientId);
+        $this->_template->assign('googleRedirectUri', $googleRedirectUri);
+        $this->_template->assign('googleAuthUrl', $googleMeetConfigured ? $googleMeet->getAuthorizationUrl() : '');
+        
+        $this->_template->assign('message', $message);
+        $this->_template->assign('messageType', $messageType);
+        
+        $this->_template->display('./modules/settings/MeetingSettings.tpl');
+    }
+
+    /**
+     * Handle meeting settings form submissions
+     */
+    private function onMeetingSettings()
+    {
+        include_once(LEGACY_ROOT . '/lib/MeetingCredentials.php');
+        include_once(LEGACY_ROOT . '/lib/GoogleMeet.php');
+        
+        $credentials = new MeetingCredentials($this->_siteID);
+        $action = isset($_POST['action']) ? $_POST['action'] : '';
+        $message = '';
+        $messageType = 'success';
+        
+        switch ($action) {
+            case 'setDefaultPlatform':
+                $platform = isset($_POST['defaultPlatform']) ? $_POST['defaultPlatform'] : 'none';
+                $validPlatforms = array('none', 'teams', 'zoom', 'google_meet');
+                
+                if (in_array($platform, $validPlatforms)) {
+                    $db = DatabaseConnection::getInstance();
+                    
+                    $sql = sprintf(
+                        "SELECT setting_id FROM settings WHERE setting_key = 'meeting_platform' AND site_id = %s",
+                        $this->_siteID
+                    );
+                    $result = $db->query($sql);
+                    
+                    if ($result && $db->getNumRows($result) > 0) {
+                        $sql = sprintf(
+                            "UPDATE settings SET setting_value = %s WHERE setting_key = 'meeting_platform' AND site_id = %s",
+                            $db->makeQueryString($platform),
+                            $this->_siteID
+                        );
+                    } else {
+                        $sql = sprintf(
+                            "INSERT INTO settings (setting_key, setting_value, site_id) VALUES ('meeting_platform', %s, %s)",
+                            $db->makeQueryString($platform),
+                            $this->_siteID
+                        );
+                    }
+                    
+                    if ($db->query($sql)) {
+                        $platformNames = array('none' => 'None', 'teams' => 'Microsoft Teams', 'zoom' => 'Zoom', 'google_meet' => 'Google Meet');
+                        $message = "Default meeting platform set to: " . $platformNames[$platform];
+                    } else {
+                        $message = "Failed to save default platform setting.";
+                        $messageType = 'error';
+                    }
+                }
+                break;
+                
+            case 'saveTeamsCredentials':
+                $teamsCredentials = array(
+                    'client_id' => isset($_POST['teams_client_id']) ? trim($_POST['teams_client_id']) : '',
+                    'tenant_id' => isset($_POST['teams_tenant_id']) ? trim($_POST['teams_tenant_id']) : '',
+                    'user_id' => isset($_POST['teams_user_id']) ? trim($_POST['teams_user_id']) : ''
+                );
+                
+                // Only update secret if provided
+                if (!empty($_POST['teams_client_secret'])) {
+                    $teamsCredentials['client_secret'] = trim($_POST['teams_client_secret']);
+                }
+                
+                if ($credentials->savePlatformCredentials('teams', $teamsCredentials)) {
+                    $message = "Microsoft Teams credentials saved successfully.";
+                } else {
+                    $message = "Failed to save Microsoft Teams credentials.";
+                    $messageType = 'error';
+                }
+                break;
+                
+            case 'clearTeamsCredentials':
+                if ($credentials->deletePlatformCredentials('teams')) {
+                    $message = "Microsoft Teams credentials removed.";
+                } else {
+                    $message = "Failed to remove Microsoft Teams credentials.";
+                    $messageType = 'error';
+                }
+                break;
+                
+            case 'saveZoomCredentials':
+                $zoomCredentials = array(
+                    'account_id' => isset($_POST['zoom_account_id']) ? trim($_POST['zoom_account_id']) : '',
+                    'client_id' => isset($_POST['zoom_client_id']) ? trim($_POST['zoom_client_id']) : '',
+                    'user_id' => isset($_POST['zoom_user_id']) ? trim($_POST['zoom_user_id']) : ''
+                );
+                
+                if (!empty($_POST['zoom_client_secret'])) {
+                    $zoomCredentials['client_secret'] = trim($_POST['zoom_client_secret']);
+                }
+                
+                if ($credentials->savePlatformCredentials('zoom', $zoomCredentials)) {
+                    $message = "Zoom credentials saved successfully.";
+                } else {
+                    $message = "Failed to save Zoom credentials.";
+                    $messageType = 'error';
+                }
+                break;
+                
+            case 'clearZoomCredentials':
+                if ($credentials->deletePlatformCredentials('zoom')) {
+                    $message = "Zoom credentials removed.";
+                } else {
+                    $message = "Failed to remove Zoom credentials.";
+                    $messageType = 'error';
+                }
+                break;
+                
+            case 'saveGoogleCredentials':
+                $googleCredentials = array(
+                    'client_id' => isset($_POST['google_client_id']) ? trim($_POST['google_client_id']) : ''
+                );
+                
+                if (!empty($_POST['google_client_secret'])) {
+                    $googleCredentials['client_secret'] = trim($_POST['google_client_secret']);
+                }
+                
+                if ($credentials->savePlatformCredentials('google_meet', $googleCredentials)) {
+                    $message = "Google credentials saved successfully. Please authorize the application.";
+                } else {
+                    $message = "Failed to save Google credentials.";
+                    $messageType = 'error';
+                }
+                break;
+                
+            case 'clearGoogleCredentials':
+                $googleMeet = new GoogleMeet($this->_siteID);
+                $googleMeet->revokeAuthorization();
+                if ($credentials->deletePlatformCredentials('google_meet')) {
+                    $message = "Google Meet credentials removed.";
+                } else {
+                    $message = "Failed to remove Google Meet credentials.";
+                    $messageType = 'error';
+                }
+                break;
+                
+            case 'revokeGoogle':
+                $googleMeet = new GoogleMeet($this->_siteID);
+                if ($googleMeet->revokeAuthorization()) {
+                    $message = "Google Meet authorization has been revoked.";
+                } else {
+                    $message = "Failed to revoke Google Meet authorization.";
+                    $messageType = 'error';
+                }
+                break;
+        }
+        
+        $this->meetingSettings($message, $messageType);
+    }
+
+    /**
+     * Test meeting platform connection (AJAX endpoint)
+     */
+    private function testMeetingConnection()
+    {
+        include_once(LEGACY_ROOT . '/lib/MicrosoftTeams.php');
+        include_once(LEGACY_ROOT . '/lib/ZoomMeeting.php');
+        include_once(LEGACY_ROOT . '/lib/GoogleMeet.php');
+        
+        header('Content-Type: application/json');
+        
+        $platform = isset($_POST['platform']) ? $_POST['platform'] : '';
+        $result = array('success' => false, 'message' => 'Unknown platform');
+        
+        switch ($platform) {
+            case 'teams':
+                $teams = new MicrosoftTeams($this->_siteID);
+                if (!$teams->isEnabled()) {
+                    $result = array('success' => false, 'message' => 'Microsoft Teams is not configured.');
+                } else {
+                    $result = array('success' => true, 'message' => 'Microsoft Teams credentials are configured. Connection test passed.');
+                }
+                break;
+                
+            case 'zoom':
+                $zoom = new ZoomMeeting($this->_siteID);
+                $result = $zoom->testConnection();
+                break;
+                
+            case 'google_meet':
+                $googleMeet = new GoogleMeet($this->_siteID);
+                $result = $googleMeet->testConnection();
+                break;
+        }
+        
+        echo json_encode($result);
+        exit;
+    }
+
+    /**
+     * Handle Google OAuth callback
+     */
+    private function googleMeetCallback()
+    {
+        include_once(LEGACY_ROOT . '/lib/GoogleMeet.php');
+        
+        $googleMeet = new GoogleMeet($this->_siteID);
+        
+        if (isset($_GET['code'])) {
+            $code = $_GET['code'];
+            $tokenData = $googleMeet->exchangeCodeForTokens($code);
+            
+            if ($tokenData && isset($tokenData['access_token'])) {
+                $this->meetingSettings('Google Meet has been successfully authorized!', 'success');
+            } else {
+                $this->meetingSettings('Failed to authorize Google Meet. Please try again.', 'error');
+            }
+        } else if (isset($_GET['error'])) {
+            $error = $_GET['error'];
+            $this->meetingSettings("Google authorization failed: {$error}", 'error');
+        } else {
+            $this->meetingSettings('Invalid callback request.', 'error');
+        }
     }
 }
 

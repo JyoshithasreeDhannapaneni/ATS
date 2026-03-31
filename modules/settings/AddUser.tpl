@@ -23,16 +23,16 @@
             <form name="addUserForm" id="addUserForm" action="<?php echo(CATSUtility::getIndexName()); ?>?m=settings&amp;a=addUser" method="post" onsubmit="return checkAddUserForm(document.addUserForm);" autocomplete="off">
                 <input type="hidden" name="postback" id="postback" value="postback" />
 
-                <table width="930">
+                <table width="100%">
                     <tr>
                         <td align="left" valign="top">
-                            <table class="editTable" width="550">
+                            <table class="editTable" width="100%">
                                 <tr>
                                     <td class="tdVertical">
                                         <label id="firstNameLabel" for="firstName">First Name:</label>
                                     </td>
                                     <td class="tdData">
-                                        <input type="text" class="inputbox" id="firstName" name="firstName" style="width: 150px;" />&nbsp;*
+                                        <input type="text" class="inputbox" id="firstName" name="firstName" style="width: 100%; max-width: 400px;" />&nbsp;*
                                     </td>
                                 </tr>
 
@@ -41,7 +41,7 @@
                                         <label id="lastNameLabel" for="lastName">Last Name:</label>
                                     </td>
                                     <td class="tdData">
-                                        <input type="text" class="inputbox" id="lastName" name="lastName" style="width: 150px;" />&nbsp;*
+                                        <input type="text" class="inputbox" id="lastName" name="lastName" style="width: 100%; max-width: 400px;" />&nbsp;*
                                     </td>
                                 </tr>
 
@@ -50,7 +50,7 @@
                                         <label id="emailLabel" for="username">E-Mail:</label>
                                     </td>
                                     <td class="tdData">
-                                        <input type="text" class="inputbox" id="email" name="email" style="width: 150px;" />
+                                        <input type="text" class="inputbox" id="email" name="email" style="width: 100%; max-width: 400px;" />
                                     </td>
                                 </tr>
 
@@ -59,7 +59,7 @@
                                         <label id="usernameLabel" for="username">Username:</label>
                                     </td>
                                     <td class="tdData">
-                                        <input type="text" class="inputbox" id="username" name="username" style="width: 150px;" />&nbsp;*
+                                        <input type="text" class="inputbox" id="username" name="username" style="width: 100%; max-width: 400px;" />&nbsp;*
                                     </td>
                                 </tr>
 
@@ -72,7 +72,7 @@
 					LDAP Authentication is enabled, hence password not required.
                             		<input type="hidden" class="inputbox" id="password" name="password" value="password" />
                             		<?php else: ?>
-                                        <input type="password" class="inputbox" id="password" name="password" style="width: 150px;" />&nbsp;*
+                                        <input type="password" class="inputbox" id="password" name="password" style="width: 100%; max-width: 400px;" />&nbsp;*
 					<?php endif; ?>
                                     </td>
                                 </tr>
@@ -85,7 +85,7 @@
 					<?php if ($this->auth_mode == "ldap"): ?>
                             		<input type="hidden" class="inputbox" id="retypePassword" name="retypePassword" value="password"/>
                              		<?php else: ?>
-                                        <input type="password" class="inputbox" id="retypePassword" name="retypePassword" style="width: 150px;" />&nbsp;*
+                                        <input type="password" class="inputbox" id="retypePassword" name="retypePassword" style="width: 100%; max-width: 400px;" />&nbsp;*
 					<?php endif; ?>
                                     </td>
                                 </tr>

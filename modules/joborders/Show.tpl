@@ -126,6 +126,49 @@ function jo_display($value, $fallback = '&mdash;') {
                 <?php endif; ?>
             <?php endif; ?>
 
+            <?php if (!empty($this->publicApplyUrl)): ?>
+            <div id="jo-share-apply-link" style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 14px 16px; margin: 0 0 14px 0; font-size: 13px; color: #14532d;">
+                <?php if (!empty($this->jobCreatedHighlight)): ?>
+                    <div style="font-weight: 600; margin-bottom: 10px; color: #166534;">Job order saved. Share the application link below on LinkedIn, your careers page, or anywhere you post jobs.</div>
+                <?php endif; ?>
+                <div style="font-weight: 600; margin-bottom: 6px;">Public application link</div>
+                <p style="margin: 0 0 10px 0; color: #15803d; line-height: 1.45;">Anyone with this link can open the job and apply (same as &ldquo;Online Application&rdquo;). Only works while this job is <strong>public</strong> and the career portal is enabled.</p>
+                <div style="display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px;">
+                    <input type="text" readonly="readonly" id="joPublicApplyUrlInput" value="<?php echo htmlspecialchars($this->publicApplyUrl, ENT_QUOTES, 'UTF-8'); ?>" onclick="this.select();" style="flex: 1; min-width: 240px; padding: 10px 12px; border: 1px solid #bbf7d0; border-radius: 6px; font-size: 12px; background: #fff; color: #166534;" />
+                    <button type="button" id="joPublicApplyUrlCopyBtn" style="padding: 10px 16px; background: #16a34a; color: #fff; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer;">Copy link</button>
+                </div>
+                <span id="joPublicApplyUrlCopied" style="display: none; margin-top: 8px; font-weight: 600; color: #166534;">Copied to clipboard.</span>
+            </div>
+            <script type="text/javascript">
+            (function () {
+                var btn = document.getElementById('joPublicApplyUrlCopyBtn');
+                var input = document.getElementById('joPublicApplyUrlInput');
+                var msg = document.getElementById('joPublicApplyUrlCopied');
+                if (!btn || !input) return;
+                function showCopied() {
+                    if (msg) {
+                        msg.style.display = 'block';
+                        setTimeout(function () { msg.style.display = 'none'; }, 2500);
+                    }
+                }
+                btn.onclick = function () {
+                    input.focus();
+                    input.select();
+                    input.setSelectionRange(0, 99999);
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(input.value).then(showCopied).catch(function () {
+                            try { document.execCommand('copy'); } catch (e) {}
+                            showCopied();
+                        });
+                    } else {
+                        try { document.execCommand('copy'); } catch (e) {}
+                        showCopied();
+                    }
+                };
+            })();
+            </script>
+            <?php endif; ?>
+
             <!-- JOB DETAILS — two-column table with empty-field fallbacks -->
             <table class="detailsOutside" width="100%" height="<?php echo((count($this->extraFieldRS)/2 + 12) * 22); ?>">
                 <tr style="vertical-align:top;">

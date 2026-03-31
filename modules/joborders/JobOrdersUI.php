@@ -422,7 +422,9 @@ class JobOrdersUI extends UserInterface
             $data['titleClass'] = 'jobTitleCold';
         }
 
-        if ($data['public'] == 1)
+        $jobIsPublicFlag = ((int) $data['public'] === 1);
+
+        if ($jobIsPublicFlag)
         {
             $data['public'] = '<img src="images/public.gif" height="16" '
                 . 'width="16" title="This Job Order is marked as Public." />';
@@ -504,7 +506,7 @@ class JobOrdersUI extends UserInterface
             }
         }
 
-        if ($careerPortalEnabled && $data['public'])
+        if ($careerPortalEnabled && $jobIsPublicFlag)
         {
             $isPublic = true;
         }
@@ -516,8 +518,23 @@ class JobOrdersUI extends UserInterface
             $careerPortalURL = CATSUtility::getAbsoluteURI() . 'careers/';
         }
 
+        $publicApplyUrl = '';
+        if ($careerPortalEnabled && $jobIsPublicFlag)
+        {
+            $publicApplyUrl = CATSUtility::getAbsoluteURI() . 'careers/'
+                . CATSUtility::getIndexName() . '?p=showJob&ID=' . (int) $jobOrderID;
+        }
+
+        $jobCreatedHighlight = (
+            $publicApplyUrl !== ''
+            && isset($_GET['jobCreated'])
+            && $_GET['jobCreated'] === '1'
+        );
+
         $this->_template->assign('active', $this);
         $this->_template->assign('isPublic', $isPublic);
+        $this->_template->assign('publicApplyUrl', $publicApplyUrl);
+        $this->_template->assign('jobCreatedHighlight', $jobCreatedHighlight);
         $this->_template->assign('questionnaireID', $questionnaireID);
         $this->_template->assign('questionnaireData', $questionnaireData);
         $this->_template->assign('careerPortalURL', $careerPortalURL);
@@ -808,7 +825,7 @@ class JobOrdersUI extends UserInterface
         if (!eval(Hooks::get('JO_ON_ADD_POST'))) return;
 
         CATSUtility::transferRelativeURI(
-            'm=joborders&a=show&jobOrderID=' . $jobOrderID
+            'm=joborders&a=show&jobOrderID=' . $jobOrderID . '&jobCreated=1'
         );
     }
 

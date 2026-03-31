@@ -4,7 +4,11 @@
 .vscode
 .idea
 docker
+docker-compose*.yml
 *.md
 cats_dev_backup.sql
 CREDENTIALS.txt
 config.php
+vendor
+node_modules
+test

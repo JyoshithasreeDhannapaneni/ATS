@@ -4,8 +4,6 @@
 <head>
     <title>Neutara ATS Tool</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <link rel="icon" href="images/favicon.ico" type="image/x-icon" />
-    <link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon" />
     <link rel="stylesheet" href="modules/wizard/style.css" type="text/css" />
     <script type="text/javascript" src="modules/wizard/wizard.js"></script>
     <?php if ($this->jsInclude != ''): ?>

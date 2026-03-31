@@ -91,17 +91,15 @@ function buttonMouseOver(ename, tf)
     eval('e.src = ' + ename + tag + '.src');
 }
 
+function careerPortalRegistrationEmailId(id)
+{
+    return id === 'email' || id === 'email1';
+}
+
 function onFocusFormField(e)
 {
-    var isNewNo = document.getElementById('isNewNo');
-
-    if (e.id != 'email')
-    {
-        if (!isNewNo.checked)
-        {
-            isNewNo.checked = true;
-        }
-    }
+    /* Single-page registration (e.g. Neutara template) collects name, email, phone for
+     * new applicants; do not force "I've applied before" when they focus those fields. */
 }
 
 function focusFirstField()
@@ -115,7 +113,7 @@ function focusFirstField()
     // Get the tabIndex for the required e-mail field
     for (var i = 0; i < inputs.length; i++)
     {
-        if (inputs[i].id == 'email')
+        if (careerPortalRegistrationEmailId(inputs[i].id))
         {
             emailTabIndex = inputs[i].tabIndex;
         }
@@ -157,7 +155,7 @@ function enableFormFields(tf)
 
     for (var i = 0; i < inputs.length; i++)
     {
-        if (inputs[i].id != 'email' && inputs[i].type == 'text')
+        if (!careerPortalRegistrationEmailId(inputs[i].id) && inputs[i].type == 'text')
         {
             inputs[i].disabled = !tf;
         }
@@ -166,16 +164,12 @@ function enableFormFields(tf)
 
 function isCandidateRegisteredChange()
 {
-    var isNewYes = document.getElementById('isNewYes');
     var isNewNo = document.getElementById('isNewNo');
 
-    if (isNewYes.checked)
+    /* Full registration form: both new and returning applicants need all text fields. */
+    enableFormFields(true);
+    if (isNewNo && isNewNo.checked)
     {
-        enableFormFields(false);
-    }
-    else
-    {
-        enableFormFields(true);
         focusFirstField();
     }
 }
@@ -192,7 +186,8 @@ function validateCandidateRegistration()
     ];
 
     // E-mail address is the only required field regardless of registered/unregistered
-    if (obj = document.getElementById('email'))
+    obj = document.getElementById('email') || document.getElementById('email1');
+    if (obj)
     {
         if (!(obj.value).match(/^[A-Za-z0-9\.\-\_]+\@[A-Za-z0-9\.\-\_]+\.[A-Za-z0-9]{2,6}$/))
         {

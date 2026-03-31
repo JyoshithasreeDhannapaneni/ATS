@@ -4,10 +4,14 @@
  * 
  * This library handles automatic creation of Microsoft Teams meetings
  * when calendar events are scheduled.
+ * 
+ * Supports both config.php and database-based credential storage.
  *
  * @package    CATS
  * @subpackage Library
  */
+
+include_once(LEGACY_ROOT . '/lib/MeetingCredentials.php');
 
 class MicrosoftTeams
 {
@@ -16,6 +20,7 @@ class MicrosoftTeams
     private $_clientId;
     private $_clientSecret;
     private $_tenantId;
+    private $_userId;
     private $_accessToken;
 
     public function __construct($siteID)
@@ -23,10 +28,27 @@ class MicrosoftTeams
         $this->_siteID = $siteID;
         $this->_db = DatabaseConnection::getInstance();
         
-        // Load Microsoft Teams configuration from settings or config
-        $this->_clientId = defined('MS_TEAMS_CLIENT_ID') ? MS_TEAMS_CLIENT_ID : '';
-        $this->_clientSecret = defined('MS_TEAMS_CLIENT_SECRET') ? MS_TEAMS_CLIENT_SECRET : '';
-        $this->_tenantId = defined('MS_TEAMS_TENANT_ID') ? MS_TEAMS_TENANT_ID : '';
+        // Load Microsoft Teams configuration from database or config
+        $this->loadCredentials();
+    }
+
+    /**
+     * Load credentials from database or config.php
+     */
+    private function loadCredentials()
+    {
+        $credentials = new MeetingCredentials($this->_siteID);
+        
+        $this->_clientId = $credentials->getCredential('teams', 'client_id');
+        $this->_clientSecret = $credentials->getCredential('teams', 'client_secret');
+        $this->_tenantId = $credentials->getCredential('teams', 'tenant_id');
+        $this->_userId = $credentials->getCredential('teams', 'user_id');
+        
+        // Ensure we have strings, not null
+        $this->_clientId = $this->_clientId ?: '';
+        $this->_clientSecret = $this->_clientSecret ?: '';
+        $this->_tenantId = $this->_tenantId ?: '';
+        $this->_userId = $this->_userId ?: '';
     }
 
     /**
@@ -114,11 +136,10 @@ class MicrosoftTeams
             return false;
         }
 
-        // If organizer email is provided, use it; otherwise use a default user
+        // If organizer email is provided, use it; otherwise use configured user
         $userId = $organizerEmail;
         if (empty($userId)) {
-            // Try to get default user from config
-            $userId = defined('MS_TEAMS_USER_ID') ? MS_TEAMS_USER_ID : '';
+            $userId = $this->_userId;
             if (empty($userId)) {
                 // Fallback: use client ID as user principal name
                 $userId = $this->_clientId;
