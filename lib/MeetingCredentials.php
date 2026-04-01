@@ -40,16 +40,16 @@ class MeetingCredentials
     public function getCredentialSource()
     {
         $sql = sprintf(
-            "SELECT setting_value FROM settings 
-             WHERE setting_key = 'meeting_credentials_source' 
+            "SELECT value FROM settings 
+             WHERE setting = 'meeting_credentials_source' 
              AND site_id = %s",
             $this->_siteID
         );
         
         $result = @$this->_db->query($sql);
         if ($result && @mysqli_num_rows($result) > 0) {
-            $row = $this->_db->getAssoc($result);
-            return $row['setting_value'];
+            $row = $this->_db->getAssoc();
+            return $row['value'];
         }
         
         // If table doesn't exist, fall back to config
@@ -74,8 +74,8 @@ class MeetingCredentials
         }
         
         $sql = sprintf(
-            "SELECT setting_id FROM settings 
-             WHERE setting_key = 'meeting_credentials_source' 
+            "SELECT settings_id FROM settings 
+             WHERE setting = 'meeting_credentials_source' 
              AND site_id = %s",
             $this->_siteID
         );
@@ -84,15 +84,15 @@ class MeetingCredentials
         
         if ($result && @mysqli_num_rows($result) > 0) {
             $sql = sprintf(
-                "UPDATE settings SET setting_value = %s 
-                 WHERE setting_key = 'meeting_credentials_source' 
+                "UPDATE settings SET value = %s 
+                 WHERE setting = 'meeting_credentials_source' 
                  AND site_id = %s",
                 $this->_db->makeQueryString($source),
                 $this->_siteID
             );
         } else {
             $sql = sprintf(
-                "INSERT INTO settings (setting_key, setting_value, site_id) 
+                "INSERT INTO settings (setting, value, site_id) 
                  VALUES ('meeting_credentials_source', %s, %s)",
                 $this->_db->makeQueryString($source),
                 $this->_siteID
@@ -211,7 +211,7 @@ class MeetingCredentials
         $result = @$this->_db->query($sql);
         
         if ($result && @mysqli_num_rows($result) > 0) {
-            $row = $this->_db->getAssoc($result);
+            $row = $this->_db->getAssoc();
             $value = $row['credential_value'];
             
             // Decrypt if encrypted

@@ -363,6 +363,187 @@ class Mailer
     }
 
     /**
+     * Sends a meeting invitation email to an attendee.
+     * This is used when scheduling interviews, calls, or meetings from the calendar.
+     *
+     * @param string $recipientEmail Attendee's email address
+     * @param string $recipientName Attendee's name (optional)
+     * @param string $meetingTitle Meeting/Interview title
+     * @param mixed $dateTime Meeting date and time (DateTime object or string)
+     * @param integer $duration Meeting duration in minutes
+     * @param string $meetingLink Video meeting URL (Teams/Zoom/Google Meet)
+     * @param string $platformName Platform display name
+     * @param string $description Meeting description (optional)
+     * @param string $organizerName Name of the person scheduling the meeting
+     * @return boolean Was the email sent successfully?
+     */
+    public function sendMeetingInvite($recipientEmail, $recipientName, $meetingTitle, 
+        $dateTime, $duration, $meetingLink, $platformName, $description = '', $organizerName = '')
+    {
+        if (empty($recipientEmail)) {
+            return false;
+        }
+        
+        // Handle DateTime object or string
+        if ($dateTime instanceof DateTime) {
+            $dateTimeObj = $dateTime;
+        } else {
+            $dateTimeObj = new DateTime($dateTime);
+        }
+        
+        // Format the date/time nicely
+        $formattedDate = $dateTimeObj->format('l, F j, Y');
+        $formattedTime = $dateTimeObj->format('g:i A');
+        
+        // Build the HTML email body
+        $body = $this->buildMeetingInviteHtml(
+            $meetingTitle, $formattedDate, $formattedTime, $duration, 
+            $platformName, $meetingLink, $description, $organizerName
+        );
+
+        // Build recipient array
+        $recipient = array($recipientEmail, $recipientName);
+        
+        // Send the email
+        return $this->sendToOne(
+            $recipient,
+            'Meeting Invitation: ' . $meetingTitle,
+            $body,
+            true,   // Is HTML
+            true    // Log message
+        );
+    }
+    
+    /**
+     * Builds the HTML content for a meeting invitation email.
+     *
+     * @param string $meetingTitle Meeting title
+     * @param string $formattedDate Formatted date string
+     * @param string $formattedTime Formatted time string
+     * @param integer $duration Duration in minutes
+     * @param string $platformName Platform name
+     * @param string $meetingLink Meeting URL
+     * @param string $description Description
+     * @param string $organizerName Organizer name
+     * @return string HTML email body
+     */
+    private function buildMeetingInviteHtml($meetingTitle, $formattedDate, $formattedTime, 
+        $duration, $platformName, $meetingLink, $description, $organizerName)
+    {
+        $organizerHtml = '';
+        if (!empty($organizerName)) {
+            $organizerHtml = '
+                <tr>
+                    <td style="padding: 8px 0;">
+                        <span style="color: #6b7280; font-size: 13px; display: inline-block; width: 80px;">Organizer:</span>
+                        <span style="color: #1f2937; font-size: 14px; font-weight: 500;">' . htmlspecialchars($organizerName) . '</span>
+                    </td>
+                </tr>';
+        }
+        
+        $meetingLinkHtml = '';
+        if (!empty($meetingLink)) {
+            $meetingLinkHtml = '
+            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 25px;">
+                <tr>
+                    <td align="center">
+                        <a href="' . htmlspecialchars($meetingLink) . '" 
+                           style="display: inline-block; background-color: #16a34a; color: #ffffff; 
+                                  padding: 14px 32px; text-decoration: none; border-radius: 6px; 
+                                  font-size: 16px; font-weight: 600;">
+                            Join Meeting
+                        </a>
+                    </td>
+                </tr>
+            </table>
+            <p style="color: #6b7280; font-size: 13px; margin: 0 0 5px 0;">Meeting Link:</p>
+            <p style="margin: 0 0 25px 0;">
+                <a href="' . htmlspecialchars($meetingLink) . '" 
+                   style="color: #2563eb; font-size: 13px; word-break: break-all;">' . htmlspecialchars($meetingLink) . '</a>
+            </p>';
+        }
+        
+        $descriptionHtml = '';
+        if (!empty($description)) {
+            $descriptionHtml = '
+            <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 10px;">
+                <p style="color: #6b7280; font-size: 13px; margin: 0 0 8px 0;">Description:</p>
+                <p style="color: #374151; font-size: 14px; margin: 0; line-height: 1.6;">' . nl2br(htmlspecialchars($description)) . '</p>
+            </div>';
+        }
+        
+        return '<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; background-color: #f5f5f5;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 20px 0;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); padding: 30px; border-radius: 8px 8px 0 0;">
+                            <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600;">Meeting Invitation</h1>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 30px;">
+                            <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 20px;">' . htmlspecialchars($meetingTitle) . '</h2>
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; border-radius: 8px; margin-bottom: 25px;">
+                                <tr>
+                                    <td style="padding: 20px;">
+                                        <table width="100%" cellpadding="0" cellspacing="0">
+                                            <tr>
+                                                <td style="padding: 8px 0;">
+                                                    <span style="color: #6b7280; font-size: 13px; display: inline-block; width: 80px;">Date:</span>
+                                                    <span style="color: #1f2937; font-size: 14px; font-weight: 500;">' . $formattedDate . '</span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 8px 0;">
+                                                    <span style="color: #6b7280; font-size: 13px; display: inline-block; width: 80px;">Time:</span>
+                                                    <span style="color: #1f2937; font-size: 14px; font-weight: 500;">' . $formattedTime . '</span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 8px 0;">
+                                                    <span style="color: #6b7280; font-size: 13px; display: inline-block; width: 80px;">Duration:</span>
+                                                    <span style="color: #1f2937; font-size: 14px; font-weight: 500;">' . $duration . ' minutes</span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 8px 0;">
+                                                    <span style="color: #6b7280; font-size: 13px; display: inline-block; width: 80px;">Platform:</span>
+                                                    <span style="color: #1f2937; font-size: 14px; font-weight: 500;">' . htmlspecialchars($platformName) . '</span>
+                                                </td>
+                                            </tr>
+                                            ' . $organizerHtml . '
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            ' . $meetingLinkHtml . '
+                            ' . $descriptionHtml . '
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="background-color: #f9fafb; padding: 20px 30px; border-radius: 0 0 8px 8px; border-top: 1px solid #e5e7eb;">
+                            <p style="color: #9ca3af; font-size: 12px; margin: 0; text-align: center;">
+                                This invitation was sent from Neutara ATS
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>';
+    }
+
+    /**
      * Logs a message to the e-mail history table.
      *
      * @param string E-mail from address.

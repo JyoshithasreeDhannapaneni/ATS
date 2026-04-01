@@ -295,10 +295,25 @@ function calendarViewEvent(entry)
     if (entry.getData('description') != '')
     {
         document.getElementById('viewEventDescription').innerHTML = entry.getData('description');
+        
+        // Show meeting link if present in description
+        if (typeof showMeetingLinkInView === 'function') {
+            showMeetingLinkInView(entry.getData('description'));
+        }
     }
     else
     {
         document.getElementById('viewEventDescription').innerHTML = '<i>(None Set)</i>';
+        
+        // Hide meeting link row if no description
+        var meetingLinkRow = document.getElementById('viewEventMeetingLinkRow');
+        if (meetingLinkRow) {
+            meetingLinkRow.style.display = 'none';
+        }
+        var joinBtn = document.getElementById('joinMeetingBtn');
+        if (joinBtn) {
+            joinBtn.style.display = 'none';
+        }
     }
 
     currentViewedEntry = entry;

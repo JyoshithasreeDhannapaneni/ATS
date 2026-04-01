@@ -81,6 +81,20 @@
 
                                 <input type="submit" class="button" value="Sign In" />
                                 <input type="reset" id="reset" name="reset" class="button" value="Reset" />
+                                
+                                <!-- Microsoft SSO Option -->
+                                <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+                                    <p style="text-align: center; font-size: 12px; color: #9ca3af; margin-bottom: 12px;">Or sign in with</p>
+                                    <a href="<?php echo(CATSUtility::getIndexName()); ?>?m=login&amp;a=microsoftSSO" class="microsoft-sso-btn" style="display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 12px 20px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px; color: #1f2937; font-size: 14px; font-weight: 500; text-decoration: none; cursor: pointer; transition: all 0.2s ease;">
+                                        <svg width="18" height="18" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg">
+                                            <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
+                                            <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
+                                            <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
+                                            <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+                                        </svg>
+                                        Microsoft
+                                    </a>
+                                </div>
                             <?php else: ?>
                                 <br />
                                 <a href="javascript:void(0);" onclick="demoLogin(); return false;">Login to Demo Account</a><br />
@@ -97,8 +111,6 @@
 
             <script type="text/javascript">
                 <?php if ($this->siteNameFull != 'error'): ?>
-                    // Do NOT auto-focus username on page load since role selector shows first
-
                     function demoLogin()
                     {
                         document.getElementById('username').value = '<?php echo(DEMO_LOGIN); ?>';
@@ -108,7 +120,7 @@
                     function defaultLogin()
                     {
                         document.getElementById('username').value = 'admin';
-                        document.getElementById('password').value = 'cats';
+                        document.getElementById('password').value = 'EnggOps2026!';
                         document.getElementById('loginForm').submit();
                     }
                 <?php endif; ?>
@@ -137,6 +149,19 @@
                     if (usernameField) usernameField.focus();
                 });
             </script>
+            
+            <style type="text/css">
+                .microsoft-sso-btn:hover {
+                    background: #f9fafb !important;
+                    border-color: #0078d4 !important;
+                    box-shadow: 0 4px 12px rgba(0, 120, 212, 0.15) !important;
+                    transform: translateY(-1px);
+                }
+                .microsoft-sso-btn:active {
+                    transform: translateY(0);
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+                }
+            </style>
 
             <div id="loginMessage" style="margin-top: 16px; width: 100%; max-width: 520px;">
                 <?php if (!empty($this->message)): ?>

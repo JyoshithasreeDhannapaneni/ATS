@@ -33,6 +33,7 @@ include_once(LEGACY_ROOT . '/lib/Site.php');
 include_once(LEGACY_ROOT . '/lib/NewVersionCheck.php');
 include_once(LEGACY_ROOT . '/lib/Wizard.php');
 include_once(LEGACY_ROOT . '/lib/License.php');
+include_once(LEGACY_ROOT . '/lib/MicrosoftSSO.php');
 
 class LoginUI extends UserInterface
 {
@@ -52,6 +53,10 @@ class LoginUI extends UserInterface
         {
             case 'attemptLogin':
                 $this->attemptLogin();
+                break;
+
+            case 'microsoftSSO':
+                $this->initiateMicrosoftSSO();
                 break;
 
             case 'forgotPassword':
@@ -171,6 +176,21 @@ class LoginUI extends UserInterface
         if (!eval(Hooks::get('NO_COOKIES_MODAL'))) return;
 
         $this->_template->display('./modules/login/NoCookiesModal.tpl');
+    }
+
+    /**
+     * Initiates Microsoft SSO - redirects to Microsoft login
+     */
+    private function initiateMicrosoftSSO()
+    {
+        $sso = new MicrosoftSSO();
+        $state = $sso->generateState();
+        
+        // Get authorization URL and redirect
+        $authUrl = $sso->getAuthorizationUrl($state);
+        
+        header('Location: ' . $authUrl);
+        exit;
     }
 
     /*
@@ -294,8 +314,12 @@ class LoginUI extends UserInterface
         /**
          * Improved setup wizard using the Wizard library. If the user succeeds,
          * all old-style wizards will no longer be shown.
+         * 
+         * DISABLED: Skip wizard and go directly to home page
+         * Uncomment the wizard code below if you need to re-enable setup wizards
          */
 
+        /*
         $wizard = new Wizard(CATSUtility::getIndexName() . '?m=home', './js/wizardIntro.js');
         if ($_SESSION['CATS']->isFirstTimeSetup())
         {
@@ -367,6 +391,7 @@ class LoginUI extends UserInterface
 
         // The wizard will not display if no pages have been added.
         $wizard->doModal();
+        */
 
         /******************************* END NEW WIZARD *******************************************/
 
@@ -388,44 +413,16 @@ class LoginUI extends UserInterface
         /* LOGGED_IN_MESSAGES hooks are only for messages which show up on initial login (warnings, etc) */
         if (!eval(Hooks::get('LOGGED_IN_MESSAGES'))) return;
 
-        /* If logged in for the first time, make user change password. */
-        if (strtolower($username) == 'admin' &&
-            $password === DEFAULT_ADMIN_PASSWORD)
-        {
-            CATSUtility::transferRelativeURI('m=settings&a=newInstallPassword');
-        }
-
-        /* If no site name set, make user set site name. */
-        else if ($accessLevel >= ACCESS_LEVEL_SA &&
-                 $_SESSION['CATS']->getSiteName() === 'default_site')
-        {
-            CATSUtility::transferRelativeURI('m=settings&a=upgradeSiteName');
-        }
-
-        /* If the default email is set in the configuration, complain to the admin. */
-        else if ($accessLevel >= ACCESS_LEVEL_SA &&
-                 $mailerSettingsRS['configured'] == '0')
-        {
-            NewVersionCheck::checkForUpdate();
-
-            $this->_template->assign('inputType', 'conclusion');
-            $this->_template->assign('title', 'E-Mail Disabled');
-            $this->_template->assign('prompt', 'E-mail features are disabled. In order to enable e-mail features (such as e-mail notifications), please configure your e-mail settings by clicking on the Settings tab and then clicking on Administration.');
-            $this->_template->assign('action', $this->getAction());
-            $this->_template->assign('home', 'home');
-            $this->_template->display('./modules/settings/NewInstallWizard.tpl');
-        }
-
-        /* If no E-Mail set for current user, make user set E-Mail address. */
-        else if (trim($_SESSION['CATS']->getEmail()) == '')
-        {
-            CATSUtility::transferRelativeURI('m=settings&a=forceEmail');
-        }
-
-        /* If nothing else has stopped us, just go to the home page. */
-        else
-        {
-            if (!eval(Hooks::get('LOGGED_IN_HOME_PAGE'))) return;
+        /* Go directly to home page - skip all setup wizards and checks */
+        if (!eval(Hooks::get('LOGGED_IN_HOME_PAGE'))) return;
+        
+        /* Check if user is an interviewer and redirect to interviewer portal */
+        include_once(LEGACY_ROOT . '/lib/UserRoles.php');
+        $userID = $_SESSION['CATS']->getUserID();
+        
+        if (UserRoles::roleColumnExists() && UserRoles::isInterviewer($userID)) {
+            CATSUtility::transferRelativeURI('m=interviewer');
+        } else {
             CATSUtility::transferRelativeURI('m=home');
         }
     }

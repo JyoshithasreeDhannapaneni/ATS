@@ -17,6 +17,7 @@ include_once(LEGACY_ROOT . '/lib/MeetingCredentials.php');
 include_once(LEGACY_ROOT . '/lib/MicrosoftTeams.php');
 include_once(LEGACY_ROOT . '/lib/ZoomMeeting.php');
 include_once(LEGACY_ROOT . '/lib/GoogleMeet.php');
+include_once(LEGACY_ROOT . '/lib/JitsiMeet.php');
 
 class MeetingService
 {
@@ -27,6 +28,7 @@ class MeetingService
     const PLATFORM_TEAMS = 'teams';
     const PLATFORM_ZOOM = 'zoom';
     const PLATFORM_GOOGLE_MEET = 'google_meet';
+    const PLATFORM_JITSI = 'jitsi';
 
     public function __construct($siteID)
     {
@@ -42,16 +44,16 @@ class MeetingService
     public function getDefaultPlatform()
     {
         $sql = sprintf(
-            "SELECT setting_value FROM settings 
-             WHERE setting_key = 'meeting_platform' 
+            "SELECT value FROM settings 
+             WHERE setting = 'meeting_platform' 
              AND site_id = %s",
             $this->_siteID
         );
         
         $result = @$this->_db->query($sql);
         if ($result && @mysqli_num_rows($result) > 0) {
-            $row = $this->_db->getAssoc($result);
-            return $row['setting_value'];
+            $row = $this->_db->getAssoc();
+            return $row['value'];
         }
         
         return self::PLATFORM_NONE;
@@ -92,6 +94,10 @@ class MeetingService
             case self::PLATFORM_GOOGLE_MEET:
                 $result = $this->createGoogleMeeting($subject, $startDateTime, $endDateTime, $description, $attendees);
                 break;
+                
+            case self::PLATFORM_JITSI:
+                $result = $this->createJitsiMeeting($subject, $startDateTime, $endDateTime, $description);
+                break;
         }
         
         if ($result) {
@@ -106,6 +112,8 @@ class MeetingService
      */
     private function createTeamsMeeting($subject, $startDateTime, $endDateTime, $description, $attendees)
     {
+        error_log("MeetingService: Creating Teams meeting - Subject: $subject");
+        
         $teams = new MicrosoftTeams($this->_siteID);
         
         if (!$teams->isEnabled()) {
@@ -113,13 +121,40 @@ class MeetingService
             return false;
         }
         
+        error_log("MeetingService: Teams is enabled, calling createOnlineMeeting");
         $meeting = $teams->createOnlineMeeting($subject, $startDateTime, $endDateTime, $description);
+        
+        error_log("MeetingService: Teams meeting result: " . print_r($meeting, true));
         
         if ($meeting && isset($meeting['joinUrl'])) {
             return array(
                 'joinUrl' => $meeting['joinUrl'],
                 'meetingId' => isset($meeting['meetingId']) ? $meeting['meetingId'] : '',
                 'platformName' => 'Microsoft Teams'
+            );
+        }
+        
+        error_log("MeetingService: No joinUrl in Teams meeting result");
+        return false;
+    }
+
+    /**
+     * Create Jitsi Meet meeting (Free, no API keys needed)
+     */
+    private function createJitsiMeeting($subject, $startDateTime, $endDateTime, $description)
+    {
+        error_log("MeetingService: Creating Jitsi meeting - Subject: $subject");
+        
+        $jitsi = new JitsiMeet($this->_siteID);
+        
+        $meeting = $jitsi->createMeeting($subject, $startDateTime, $endDateTime, $description);
+        
+        if ($meeting && isset($meeting['joinUrl'])) {
+            error_log("MeetingService: Jitsi meeting created - URL: " . $meeting['joinUrl']);
+            return array(
+                'joinUrl' => $meeting['joinUrl'],
+                'meetingId' => isset($meeting['meetingId']) ? $meeting['meetingId'] : '',
+                'platformName' => 'Jitsi Meet'
             );
         }
         
@@ -249,7 +284,8 @@ class MeetingService
             self::PLATFORM_NONE => 'None',
             self::PLATFORM_TEAMS => 'Microsoft Teams',
             self::PLATFORM_ZOOM => 'Zoom',
-            self::PLATFORM_GOOGLE_MEET => 'Google Meet'
+            self::PLATFORM_GOOGLE_MEET => 'Google Meet',
+            self::PLATFORM_JITSI => 'Jitsi Meet'
         );
         
         return isset($names[$platform]) ? $names[$platform] : 'Unknown';

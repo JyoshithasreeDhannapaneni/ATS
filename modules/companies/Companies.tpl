@@ -10,35 +10,29 @@
         <?php TemplateUtility::printQuickSearch(); ?>
 
         <div id="contents">
-            <table width="100%">
-                <tr>
-                    <td width="3%">
-                        <img src="images/companies.gif" width="24" height="24" border="0" alt="Companies" style="margin-top: 3px;" />&nbsp;
-                    </td>
-                    <td><h2>Companies: Home</h2></td>
-                    <td align="right">
-                        <form name="companiesViewSelectorForm" id="companiesViewSelectorForm" action="<?php echo(CATSUtility::getIndexName()); ?>" method="get">
-                            <input type="hidden" name="m" value="companies" />
-                            <input type="hidden" name="a" value="listByView" />
-                            <table class="viewSelector">
-                                <tr>
-                                    <td valign="top" align="right" nowrap="nowrap">
-                                        <?php $this->dataGrid->printNavigation(false); ?>
-                                    </td>
-                                    <td valign="top" align="right" nowrap="nowrap">
-                                        <input type="checkbox" name="onlyMyCompanies" id="onlyMyCompanies" <?php if ($this->dataGrid->getFilterValue('OwnerID') ==  $this->userID): ?>checked<?php endif; ?> onclick="<?php echo $this->dataGrid->getJSAddRemoveFilterFromCheckbox('OwnerID', '==',  $this->userID); ?>" />
-                                        <label for="onlyMyCompanies">Only My Companies</label>&nbsp;
-                                    </td>
-                                    <td valign="top" align="right" nowrap="nowrap">
-                                        <input type="checkbox" name="onlyHotCompanies" id="onlyHotCompanies" <?php if ($this->dataGrid->getFilterValue('IsHot') == '1'): ?>checked<?php endif; ?> onclick="<?php echo $this->dataGrid->getJSAddRemoveFilterFromCheckbox('IsHot', '==', '\'1\''); ?>" />
-                                        <label for="onlyHotCompanies">Only Hot Companies</label>&nbsp;
-                                    </td>
-                                </tr>
-                            </table>
-                        </form>
-                    </td>
-                </tr>
-            </table>
+            <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <img src="images/companies.gif" width="24" height="24" border="0" alt="Companies" />
+                    <h2 style="margin: 0;">Companies: Home</h2>
+                </div>
+                <form name="companiesViewSelectorForm" id="companiesViewSelectorForm" action="<?php echo(CATSUtility::getIndexName()); ?>" method="get" style="margin: 0;">
+                    <input type="hidden" name="m" value="companies" />
+                    <input type="hidden" name="a" value="listByView" />
+                    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px;">
+                        <div>
+                            <?php $this->dataGrid->printNavigation(false); ?>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                            <input type="checkbox" name="onlyMyCompanies" id="onlyMyCompanies" <?php if ($this->dataGrid->getFilterValue('OwnerID') ==  $this->userID): ?>checked<?php endif; ?> onclick="<?php echo $this->dataGrid->getJSAddRemoveFilterFromCheckbox('OwnerID', '==',  $this->userID); ?>" />
+                            <label for="onlyMyCompanies">Only My Companies</label>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                            <input type="checkbox" name="onlyHotCompanies" id="onlyHotCompanies" <?php if ($this->dataGrid->getFilterValue('IsHot') == '1'): ?>checked<?php endif; ?> onclick="<?php echo $this->dataGrid->getJSAddRemoveFilterFromCheckbox('IsHot', '==', '\'1\''); ?>" />
+                            <label for="onlyHotCompanies">Only Hot Companies</label>
+                        </div>
+                    </div>
+                </form>
+            </div>
 
             <?php if ($this->errMessage != ''): ?>
             <div id="errorMessage" style="padding: 25px 0px 25px 0px; border-top: 1px solid #800000; border-bottom: 1px solid #800000; background-color: #f7f7f7;margin-bottom: 15px;">
@@ -56,29 +50,31 @@
             </div>
             <?php endif; ?>
 
-            <p class="note">
-                <span style="float:left;">Companies  -
+            <p class="note" style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px;">
+                <span>Companies  -
                     Page <?php echo($this->dataGrid->getCurrentPageHTML()); ?>
                     (<?php echo($this->dataGrid->getNumberOfRows()); ?> Items)
                     <?php if ($this->dataGrid->getFilterValue('OwnerID') ==  $this->userID): ?>(Only My Companies)<?php endif; ?>
                     <?php if ($this->dataGrid->getFilterValue('IsHot') == '1'): ?>(Only Hot Companies)<?php endif; ?>
                 </span>
-                <span style="float:right;">
+                <span style="display: flex; align-items: center; gap: 12px;">
                     <?php $this->dataGrid->drawRowsPerPageSelector(); ?>
                     <?php $this->dataGrid->drawShowFilterControl(); ?>
-                </span>&nbsp;
+                </span>
             </p>
 
             <?php $this->dataGrid->drawFilterArea(); ?>
-            <?php $this->dataGrid->draw();  ?>
+            <div style="width: 100%; overflow-x: auto;">
+                <?php $this->dataGrid->draw();  ?>
+            </div>
 
-            <div style="display:block;">
-                <span style="float:left;">
-                    <?php $this->dataGrid->printActionArea(); ?>&nbsp;
-                </span>
-                <span style="float:right;">
+            <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-top: 12px;">
+                <div>
+                    <?php $this->dataGrid->printActionArea(); ?>
+                </div>
+                <div>
                     <?php $this->dataGrid->printNavigation(true); ?>
-                </span>&nbsp;
+                </div>
             </div>
         </div>
     </div>

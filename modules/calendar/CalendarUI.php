@@ -170,6 +170,9 @@ class CalendarUI extends UserInterface
         {
             $showEvent = null;
         }
+        
+        // Check if there's a new meeting link to display
+        $newMeetingLink = isset($_GET['meetingLink']) ? $_GET['meetingLink'] : null;
 
         $userIsSuperUser = ($this->getUserAccessLevel('calendar.show') < ACCESS_LEVEL_SA ? 0 : 1);
         if ($userIsSuperUser && isset($_GET['superuser']) && $_GET['superuser'] == 1)
@@ -293,6 +296,7 @@ class CalendarUI extends UserInterface
         $this->_template->assign('month', $month);
         $this->_template->assign('year', $year);
         $this->_template->assign('showEvent', $showEvent);
+        $this->_template->assign('newMeetingLink', $newMeetingLink);
         $this->_template->assign('dateString', $dateString);
         $this->_template->assign('isCurrentMonth', $isCurrentMonth);
         $this->_template->assign('eventsString', $eventsString);
@@ -476,8 +480,10 @@ class CalendarUI extends UserInterface
             CommonErrors::fatal(COMMONERROR_RECORDERROR, $this, 'Failed to add calendar event.');
         }
 
-        /* Automatically create Microsoft Teams meeting for scheduled calls/meetings */
-        $this->createTeamsMeetingForEvent($eventID, $type, $date, $duration, $title, $description);
+        /* Automatically create meeting link for scheduled calls/meetings/interviews */
+        $meetingPlatform = isset($_POST['meetingPlatform']) ? $_POST['meetingPlatform'] : 'none';
+        $attendeeEmail = isset($_POST['attendeeEmail']) ? trim($_POST['attendeeEmail']) : '';
+        $meetingLink = $this->createMeetingForEvent($eventID, $type, $date, $duration, $title, $description, $meetingPlatform, $attendeeEmail);
 
         /* Extract the date parts from the specified date. */
         $parsedDate = strtotime($date);
@@ -491,6 +497,11 @@ class CalendarUI extends UserInterface
 
         unset($newGet['a']);
         $newGet['showEvent'] = $eventID;
+        
+        // Pass meeting link to show in popup
+        if (!empty($meetingLink)) {
+            $newGet['meetingLink'] = $meetingLink;
+        }
 
         foreach ($newGet AS $name => $value)
         {
@@ -767,8 +778,9 @@ class CalendarUI extends UserInterface
     }
 
     /**
-     * Create Microsoft Teams meeting for a calendar event
+     * Create meeting link for a calendar event using the selected platform
      * This is automatically called when a calendar event is created
+     * Also sends email invitation to attendee if email is provided
      *
      * @param integer $eventID Calendar event ID
      * @param integer $type Event type ID
@@ -776,55 +788,177 @@ class CalendarUI extends UserInterface
      * @param integer $duration Event duration in minutes
      * @param string $title Event title
      * @param string $description Event description
-     * @return void
+     * @param string $platform Meeting platform (none, teams, zoom, google_meet)
+     * @param string $attendeeEmail Attendee email for invitation
+     * @return string The meeting link or empty string
      */
-    private function createTeamsMeetingForEvent($eventID, $type, $date, $duration, $title, $description)
+    private function createMeetingForEvent($eventID, $type, $date, $duration, $title, $description, $platform = 'none', $attendeeEmail = '')
     {
-        // Check if Teams integration is enabled
-        if (!defined('MS_TEAMS_ENABLED') || !MS_TEAMS_ENABLED) {
-            return;
-        }
-
-        // Only create Teams meetings for Call and Meeting event types
-        // Event types: 100=Call, 200=Email, 300=Meeting, 400=Interview, 500=Personal, 600=Other
-        $callEventTypes = array(100, 300, 400); // Call, Meeting, Interview
+        // Event types that support meetings: Call, Meeting, L1/L2/L3/HR Interview
+        $meetingEventTypes = array(100, 300, 400, 410, 420, 430);
         
-        if (!in_array($type, $callEventTypes)) {
-            return;
+        if (!in_array($type, $meetingEventTypes)) {
+            return '';
         }
+        
+        $meetingLink = '';
+        
+        // Create meeting link if platform is selected
+        if ($platform !== 'none' && !empty($platform)) {
+            try {
+                // Include the MeetingService
+                include_once(LEGACY_ROOT . '/lib/MeetingService.php');
+                
+                $meetingService = new MeetingService($this->_siteID);
 
+                // Calculate end date/time
+                $startDateTime = new DateTime($date);
+                $endDateTime = clone $startDateTime;
+                $endDateTime->modify('+' . $duration . ' minutes');
+
+                // Format dates for API (ISO 8601) with timezone
+                $startDateTimeISO = $startDateTime->format('Y-m-d\TH:i:s');
+                $endDateTimeISO = $endDateTime->format('Y-m-d\TH:i:s');
+                
+                // Log for debugging
+                error_log("Creating meeting: Platform=$platform, Title=$title, Start=$startDateTimeISO, End=$endDateTimeISO");
+
+                // Create meeting on selected platform
+                $meetingResult = $meetingService->createMeeting(
+                    $title,
+                    $startDateTimeISO,
+                    $endDateTimeISO,
+                    $description,
+                    $platform
+                );
+                
+                // Log result
+                error_log("Meeting result: " . print_r($meetingResult, true));
+
+                if ($meetingResult && isset($meetingResult['joinUrl'])) {
+                    $meetingLink = $meetingResult['joinUrl'];
+                    error_log("Meeting link obtained: " . $meetingLink);
+                    // Update calendar event with meeting link
+                    $this->updateEventWithMeetingLink($eventID, $meetingLink, $platform);
+                } else {
+                    error_log("No meeting link returned from API");
+                }
+            } catch (Exception $e) {
+                // Log error but don't fail the calendar event creation
+                error_log("Meeting integration error (" . $platform . "): " . $e->getMessage());
+            }
+        }
+        
+        // Send email invitation to attendee if email is provided
+        if (!empty($attendeeEmail)) {
+            $this->sendMeetingInvitation(
+                $attendeeEmail,
+                $title,
+                $date,
+                $duration,
+                $meetingLink,
+                $platform,
+                $description
+            );
+        }
+        
+        return $meetingLink;
+    }
+
+    /**
+     * Update calendar event with meeting link
+     *
+     * @param integer $eventID Calendar event ID
+     * @param string $meetingLink Meeting URL
+     * @param string $platform Meeting platform
+     * @return boolean
+     */
+    private function updateEventWithMeetingLink($eventID, $meetingLink, $platform)
+    {
+        $db = DatabaseConnection::getInstance();
+        
+        // Try to update using dedicated columns first (if they exist)
+        $sql = sprintf(
+            "UPDATE calendar_event 
+             SET meeting_link = %s, meeting_platform = %s
+             WHERE calendar_event_id = %s 
+             AND site_id = %s",
+            $db->makeQueryString($meetingLink),
+            $db->makeQueryString($platform),
+            $eventID,
+            $this->_siteID
+        );
+        
+        $result = @$db->query($sql);
+        
+        // If the columns don't exist yet, fall back to appending to description
+        if ($result === false) {
+            $sql = sprintf(
+                "UPDATE calendar_event 
+                 SET description = CONCAT(IFNULL(description, ''), '\n\n--- Meeting Link (%s) ---\n', %s)
+                 WHERE calendar_event_id = %s 
+                 AND site_id = %s",
+                $db->makeQueryString($platform),
+                $db->makeQueryString($meetingLink),
+                $eventID,
+                $this->_siteID
+            );
+            return $db->query($sql) !== false;
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Send meeting invitation email to attendee
+     *
+     * @param string $attendeeEmail Attendee's email address
+     * @param string $title Meeting title
+     * @param string $date Meeting date/time
+     * @param integer $duration Meeting duration in minutes
+     * @param string $meetingLink Meeting URL
+     * @param string $platform Meeting platform (teams, zoom, google_meet)
+     * @param string $description Meeting description
+     * @return boolean Was the email sent successfully?
+     */
+    private function sendMeetingInvitation($attendeeEmail, $title, $date, $duration, $meetingLink, $platform, $description = '')
+    {
+        if (empty($attendeeEmail)) {
+            return false;
+        }
+        
+        // Get platform display name
+        $platformNames = array(
+            'teams' => 'Microsoft Teams',
+            'zoom' => 'Zoom',
+            'google_meet' => 'Google Meet',
+            'jitsi' => 'Video Conference',
+            'none' => 'No Platform'
+        );
+        $platformName = isset($platformNames[$platform]) ? $platformNames[$platform] : $platform;
+        
+        // Get current user's name as organizer
+        $organizerName = $_SESSION['CATS']->getFirstName() . ' ' . $_SESSION['CATS']->getLastName();
+        
         try {
-            $teams = new MicrosoftTeams($this->_siteID);
+            include_once(LEGACY_ROOT . '/lib/Mailer.php');
             
-            if (!$teams->isEnabled()) {
-                return;
-            }
-
-            // Calculate end date/time
-            $startDateTime = new DateTime($date);
-            $endDateTime = clone $startDateTime;
-            $endDateTime->modify('+' . $duration . ' minutes');
-
-            // Format dates for Microsoft Graph API (ISO 8601)
-            $startDateTimeISO = $startDateTime->format('Y-m-d\TH:i:s');
-            $endDateTimeISO = $endDateTime->format('Y-m-d\TH:i:s');
-
-            // Get organizer email if available
-            $organizerEmail = '';
-            if (isset($_SESSION['CATS']) && $_SESSION['CATS']->getEmail()) {
-                $organizerEmail = $_SESSION['CATS']->getEmail();
-            }
-
-            // Create Teams meeting
-            $meetingLink = $teams->createMeetingLink($title, $startDateTimeISO, $endDateTimeISO);
-
-            if ($meetingLink) {
-                // Update calendar event with Teams meeting link
-                $teams->updateCalendarEventWithMeetingLink($eventID, $meetingLink);
-            }
+            $mailer = new Mailer($this->_siteID, $_SESSION['CATS']->getUserID());
+            
+            return $mailer->sendMeetingInvite(
+                $attendeeEmail,
+                '',                 // Attendee name (not captured)
+                $title,
+                $date,
+                $duration,
+                $meetingLink,
+                $platformName,
+                $description,
+                $organizerName
+            );
         } catch (Exception $e) {
-            // Log error but don't fail the calendar event creation
-            error_log("Microsoft Teams integration error: " . $e->getMessage());
+            error_log("Failed to send meeting invitation: " . $e->getMessage());
+            return false;
         }
     }
 }

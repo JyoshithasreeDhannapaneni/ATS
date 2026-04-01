@@ -75,6 +75,9 @@ class MicrosoftTeams
         }
 
         if (!$this->isEnabled()) {
+            error_log("MS Teams: Not enabled - ClientID=" . (!empty($this->_clientId) ? 'SET' : 'EMPTY') . 
+                      ", Secret=" . (!empty($this->_clientSecret) ? 'SET' : 'EMPTY') . 
+                      ", TenantID=" . (!empty($this->_tenantId) ? 'SET' : 'EMPTY'));
             return false;
         }
 
@@ -92,16 +95,29 @@ class MicrosoftTeams
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($postData));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        
+        // SSL configuration - try with CA bundle first, fall back to no verification for local dev
+        $caBundle = LEGACY_ROOT . '/cacert.pem';
+        if (file_exists($caBundle)) {
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+            curl_setopt($ch, CURLOPT_CAINFO, $caBundle);
+        } else {
+            // For local development only - disable SSL verification
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+        }
+        
         curl_setopt($ch, CURLOPT_HTTPHEADER, array(
             'Content-Type: application/x-www-form-urlencoded'
         ));
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
         curl_close($ch);
 
         if ($httpCode !== 200) {
+            error_log("MS Teams OAuth Error: HTTP $httpCode - Response: $response - cURL Error: $curlError");
             return false;
         }
 
@@ -109,9 +125,11 @@ class MicrosoftTeams
         
         if (isset($tokenData['access_token'])) {
             $this->_accessToken = $tokenData['access_token'];
+            error_log("MS Teams: Access token obtained successfully");
             return $this->_accessToken;
         }
 
+        error_log("MS Teams: No access token in response: $response");
         return false;
     }
 
@@ -149,31 +167,44 @@ class MicrosoftTeams
         // Microsoft Graph API endpoint for creating online meetings
         $apiUrl = "https://graph.microsoft.com/v1.0/users/{$userId}/onlineMeetings";
 
-        $meetingData = array(
-            'subject' => $subject,
-            'startDateTime' => $startDateTime,
-            'endDateTime' => $endDateTime,
-            'participants' => array(
-                'organizer' => array(
-                    'identity' => array(
-                        'user' => array(
-                            'id' => $userId
-                        )
-                    )
-                )
-            )
-        );
-
-        if (!empty($description)) {
-            $meetingData['participants']['organizer']['upn'] = $organizerEmail;
+        // Ensure datetime has timezone (UTC)
+        $startDateTimeFormatted = $startDateTime;
+        $endDateTimeFormatted = $endDateTime;
+        
+        // Add timezone if not present
+        if (strpos($startDateTime, 'Z') === false && strpos($startDateTime, '+') === false) {
+            $startDateTimeFormatted = $startDateTime . 'Z';
+        }
+        if (strpos($endDateTime, 'Z') === false && strpos($endDateTime, '+') === false) {
+            $endDateTimeFormatted = $endDateTime . 'Z';
         }
 
+        $meetingData = array(
+            'subject' => $subject,
+            'startDateTime' => $startDateTimeFormatted,
+            'endDateTime' => $endDateTimeFormatted
+        );
+
+        error_log("MS Teams: Creating meeting with API URL: $apiUrl");
+        error_log("MS Teams: Meeting data: " . json_encode($meetingData));
+        
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $apiUrl);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($meetingData));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        
+        // SSL configuration - try with CA bundle first, fall back to no verification for local dev
+        $caBundle = LEGACY_ROOT . '/cacert.pem';
+        if (file_exists($caBundle)) {
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+            curl_setopt($ch, CURLOPT_CAINFO, $caBundle);
+        } else {
+            // For local development only - disable SSL verification
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+        }
+        
         curl_setopt($ch, CURLOPT_HTTPHEADER, array(
             'Authorization: Bearer ' . $accessToken,
             'Content-Type: application/json'
@@ -181,17 +212,20 @@ class MicrosoftTeams
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
         curl_close($ch);
 
+        error_log("MS Teams: API Response HTTP $httpCode - $response");
+
         if ($httpCode !== 201 && $httpCode !== 200) {
-            // Log error for debugging
-            error_log("Microsoft Teams API Error: HTTP $httpCode - $response");
+            error_log("Microsoft Teams API Error: HTTP $httpCode - $response - cURL: $curlError");
             return false;
         }
 
         $meetingInfo = json_decode($response, true);
         
         if (isset($meetingInfo['joinWebUrl'])) {
+            error_log("MS Teams: Meeting created successfully - Join URL: " . $meetingInfo['joinWebUrl']);
             return array(
                 'joinUrl' => $meetingInfo['joinWebUrl'],
                 'meetingId' => isset($meetingInfo['id']) ? $meetingInfo['id'] : '',
@@ -199,6 +233,7 @@ class MicrosoftTeams
             );
         }
 
+        error_log("MS Teams: No joinWebUrl in response");
         return false;
     }
 

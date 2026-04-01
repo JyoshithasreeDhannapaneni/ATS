@@ -120,28 +120,62 @@
                                     </td>
                                 </tr>
 
+                                <!-- User Role Selection (Admin/Recruiter/Interviewer) -->
+                                <tr>
+                                    <td class="tdVertical">
+                                        <label>User Role:</label>
+                                    </td>
+                                    <td class="tdData">
+                                        <select name="userRole" id="userRole" onchange="toggleInterviewerTypeAdd();" style="width: 200px; padding: 5px;">
+                                            <option value="recruiter" selected>Recruiter</option>
+                                            <option value="admin">Administrator (Full Access)</option>
+                                            <option value="interviewer">Interviewer</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                                
+                                
+                                <tr>
+                                    <td class="tdVertical">Role Description:</td>
+                                    <td class="tdData">
+                                        <span id="userRoleDescAdd" style="font-size: smaller; color: #666;">
+                                            Access to candidates, job orders, and reports. No access to settings.
+                                        </span>
+                                    </td>
+                                </tr>
+                                
+                                <script type="text/javascript">
+                                    function toggleInterviewerTypeAdd() {
+                                        var role = document.getElementById('userRole').value;
+                                        var interviewerRow = document.getElementById('interviewerTypeRowAdd');
+                                        var descSpan = document.getElementById('userRoleDescAdd');
+                                        
+                                        if (role == 'interviewer') {
+                                            interviewerRow.style.display = '';
+                                            descSpan.innerHTML = 'Limited access - can only view assigned interviews and candidate profiles.';
+                                        } else {
+                                            interviewerRow.style.display = 'none';
+                                            if (role == 'admin') {
+                                                descSpan.innerHTML = 'Full access to all features including settings and user management.';
+                                            } else {
+                                                descSpan.innerHTML = 'Access to candidates, job orders, and reports. No access to settings.';
+                                            }
+                                        }
+                                    }
+                                </script>
+
                                 <?php if (count($this->categories) > 0): ?>
                                     <tr>
                                         <td class="tdVertical">
-                                            <label id="accessLevelLabel" for="accessLevel">Role:</label>
+                                            <label id="accessLevelLabel" for="accessLevel">Category:</label>
                                         </td>
                                         <td class="tdData">
-                                           <input type="radio" name="role" value="none" title="" checked onclick="document.getElementById('userRoleDesc').innerHTML='This user is a normal user.';  document.getElementById('accessLevelsSpan').style.display='';" /> Normal User
+                                           <input type="radio" name="role" value="none" title="" checked /> None
                                            <br />
                                            <?php foreach ($this->categories as $category): ?>
-                                               <?php if (isset($category[4])): ?>
-                                                   <input type="radio" name="role" value="<?php $this->_($category[1]); ?>" onclick="document.getElementById('userRoleDesc').innerHTML='<?php echo(str_replace('\'', '\\\'', $category[2])); ?>'; document.getElementById('access<?php echo($category[4]); ?>').checked=true; document.getElementById('accessLevelsSpan').style.display='none';" /> <?php $this->_($category[0]); ?>
-                                               <?php else: ?>
-                                                   <input type="radio" name="role" value="<?php $this->_($category[1]); ?>" onclick="document.getElementById('userRoleDesc').innerHTML='<?php echo(str_replace('\'', '\\\'', $category[2])); ?>'; document.getElementById('accessLevelsSpan').style.display='';" /> <?php $this->_($category[0]); ?>
-                                               <?php endif; ?>
+                                               <input type="radio" name="role" value="<?php $this->_($category[1]); ?>" /> <?php $this->_($category[0]); ?>
                                                <br />
                                            <?php endforeach; ?>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="tdVertical">Role Description:</td>
-                                        <td class="tdData">
-                                            <span id="userRoleDesc" style="font-size: smaller">This user is a normal user.</span>
                                         </td>
                                     </tr>
                                 <?php else: ?>

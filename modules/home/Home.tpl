@@ -197,19 +197,46 @@
             <!-- Role-Based Welcome Banner -->
             <?php
                 $role = isset($this->userRole) ? $this->userRole : 'admin';
-                $roleName = $role === 'admin' ? 'Administrator' : ($role === 'recruiter' ? 'Recruiter' : 'Interviewer');
-                $roleDesc = $role === 'admin'
-                    ? 'Full system overview and management controls'
-                    : ($role === 'recruiter'
-                        ? 'Manage your candidates, jobs, and hiring pipelines'
-                        : 'View your interview schedule and provide feedback');
+                
+                /* Get interviewer type if user is an interviewer */
+                $interviewerType = '';
+                if ($role === 'interviewer') {
+                    include_once(LEGACY_ROOT . '/lib/UserRoles.php');
+                    if (class_exists('UserRoles') && UserRoles::roleColumnExists()) {
+                        $userID = $_SESSION['CATS']->getUserID();
+                        $interviewerType = UserRoles::getInterviewerType($userID);
+                    }
+                }
+                
+                /* Determine role display name */
+                if ($role === 'admin') {
+                    $roleName = 'Administrator';
+                    $roleDesc = 'Full system overview and management controls';
+                } elseif ($role === 'recruiter') {
+                    $roleName = 'Recruiter';
+                    $roleDesc = 'Manage your candidates, jobs, and hiring pipelines';
+                } else {
+                    /* Interviewer with type */
+                    if ($interviewerType) {
+                        $typeLabels = array(
+                            'L1' => 'L1 Interviewer',
+                            'L2' => 'L2 Interviewer',
+                            'L3' => 'L3 Interviewer',
+                            'HR' => 'HR Interviewer'
+                        );
+                        $roleName = isset($typeLabels[$interviewerType]) ? $typeLabels[$interviewerType] : 'Interviewer';
+                    } else {
+                        $roleName = 'Interviewer';
+                    }
+                    $roleDesc = 'View your interview schedule and provide feedback';
+                }
             ?>
             <div class="role-welcome-banner role-banner-<?php echo $role; ?>">
                 <div class="role-welcome-text">
                     <h2>Welcome, <?php echo htmlspecialchars($this->userFullName ?? 'User'); ?></h2>
                     <p><?php echo $roleDesc; ?></p>
                 </div>
-                <span class="role-badge-lg role-badge-<?php echo $role; ?>"><?php echo $roleName; ?></span>
+                <span class="role-badge-lg role-badge-<?php echo $role; ?>"><?php echo strtoupper($roleName); ?></span>
             </div>
 
             <!-- Quick Stats (Admin & Recruiter) -->

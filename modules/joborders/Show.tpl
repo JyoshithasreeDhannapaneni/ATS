@@ -131,8 +131,8 @@ function jo_display($value, $fallback = '&mdash;') {
                 <?php if (!empty($this->jobCreatedHighlight)): ?>
                     <div style="font-weight: 600; margin-bottom: 10px; color: #166534;">Job order saved. Share the application link below on LinkedIn, your careers page, or anywhere you post jobs.</div>
                 <?php endif; ?>
-                <div style="font-weight: 600; margin-bottom: 6px;">Public application link</div>
-                <p style="margin: 0 0 10px 0; color: #15803d; line-height: 1.45;">Anyone with this link can open the job and apply (same as &ldquo;Online Application&rdquo;). Only works while this job is <strong>public</strong> and the career portal is enabled.</p>
+                <div style="font-weight: 600; margin-bottom: 6px;">Public Application Link &mdash; <?php $this->_($this->data['title']); ?></div>
+                <p style="margin: 0 0 10px 0; color: #15803d; line-height: 1.45;">Share this link on LinkedIn, job boards, or your careers page. Candidates can apply directly.</p>
                 <div style="display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px;">
                     <input type="text" readonly="readonly" id="joPublicApplyUrlInput" value="<?php echo htmlspecialchars($this->publicApplyUrl, ENT_QUOTES, 'UTF-8'); ?>" onclick="this.select();" style="flex: 1; min-width: 240px; padding: 10px 12px; border: 1px solid #bbf7d0; border-radius: 6px; font-size: 12px; background: #fff; color: #166534;" />
                     <button type="button" id="joPublicApplyUrlCopyBtn" style="padding: 10px 16px; background: #16a34a; color: #fff; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer;">Copy link</button>

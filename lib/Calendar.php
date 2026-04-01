@@ -31,12 +31,16 @@
  */
 
 /* Calendar event type flags. */
-define('CALENDAR_EVENT_CALL',      100);
-define('CALENDAR_EVENT_EMAIL',     200);
-define('CALENDAR_EVENT_MEETING',   300);
-define('CALENDAR_EVENT_INTERVIEW', 400);
-define('CALENDAR_EVENT_PERSONAL',  500);
-define('CALENDAR_EVENT_OTHER',     600);
+define('CALENDAR_EVENT_CALL',           100);
+define('CALENDAR_EVENT_EMAIL',          200);
+define('CALENDAR_EVENT_MEETING',        300);
+define('CALENDAR_EVENT_INTERVIEW',      400);
+define('CALENDAR_EVENT_L1_INTERVIEW',   400);
+define('CALENDAR_EVENT_L2_INTERVIEW',   410);
+define('CALENDAR_EVENT_L3_INTERVIEW',   420);
+define('CALENDAR_EVENT_HR_INTERVIEW',   430);
+define('CALENDAR_EVENT_PERSONAL',       500);
+define('CALENDAR_EVENT_OTHER',          600);
 
 
 include_once(LEGACY_ROOT . '/lib/ResultSetUtility.php');

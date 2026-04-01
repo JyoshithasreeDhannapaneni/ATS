@@ -1225,6 +1225,18 @@ class SettingsUI extends UserInterface
             $lastName, $firstName, $email, $username, $password, $accessLevel, $eeoIsVisible
         );
 
+        /* Save user role (admin/recruiter/interviewer) */
+        $userRole = $this->getTrimmedInput('userRole', $_POST);
+        $interviewerType = $this->getTrimmedInput('interviewerType', $_POST);
+        
+        if (!empty($userRole)) {
+            include_once(LEGACY_ROOT . '/lib/UserRoles.php');
+            if (UserRoles::roleColumnExists()) {
+                $userRoles = new UserRoles($this->_siteID);
+                $userRoles->setUserRole($userID, $userRole, ($userRole === 'interviewer' ? $interviewerType : null));
+            }
+        }
+
         /* Check role (category) to make sure that the role is allowed to be set. */
         $modules = ModuleUtility::getModules();
         foreach ($modules as $moduleName => $parameters)
@@ -1251,6 +1263,11 @@ class SettingsUI extends UserInterface
         if ($userID <= 0)
         {
             CommonErrors::fatal(COMMONERROR_RECORDERROR, $this, 'Failed to add user.');
+        }
+
+        /* Send invitation email to the new user */
+        if (!empty($email)) {
+            $this->sendUserInvitationEmail($email, $firstName, $lastName, $username, $password, $userRole);
         }
 
         if (!eval(Hooks::get('SETTINGS_ON_ADD_USER'))) return;
@@ -1334,6 +1351,16 @@ class SettingsUI extends UserInterface
 
         $EEOSettings = new EEOSettings($this->_siteID);
         $EEOSettingsRS = $EEOSettings->getAll();
+
+        /* Get user role data */
+        include_once(LEGACY_ROOT . '/lib/UserRoles.php');
+        if (UserRoles::roleColumnExists()) {
+            $data['role'] = UserRoles::getUserRole($userID);
+            $data['interviewer_type'] = UserRoles::getInterviewerType($userID);
+        } else {
+            $data['role'] = 'recruiter';
+            $data['interviewer_type'] = null;
+        }
 
         $this->_template->assign('active', $this);
         $this->_template->assign('subActive', '');
@@ -1444,6 +1471,18 @@ class SettingsUI extends UserInterface
             }
         }
 
+        /* Save user role (admin/recruiter/interviewer) */
+        $userRole = $this->getTrimmedInput('userRole', $_POST);
+        $interviewerType = $this->getTrimmedInput('interviewerType', $_POST);
+        
+        if (!empty($userRole)) {
+            include_once(LEGACY_ROOT . '/lib/UserRoles.php');
+            if (UserRoles::roleColumnExists()) {
+                $userRoles = new UserRoles($this->_siteID);
+                $userRoles->setUserRole($userID, $userRole, ($userRole === 'interviewer' ? $interviewerType : null));
+            }
+        }
+
         /* Set categories. */
         $modules = ModuleUtility::getModules();
         $users->updateCategories($userID, '');
@@ -1473,6 +1512,143 @@ class SettingsUI extends UserInterface
         );
     }
 
+    /**
+     * Sends an invitation email to a newly created user.
+     *
+     * @param string $email User's email address
+     * @param string $firstName User's first name
+     * @param string $lastName User's last name
+     * @param string $username User's login username
+     * @param string $password User's initial password
+     * @param string $userRole User's role (admin, recruiter, interviewer)
+     * @return boolean True if email sent successfully
+     */
+    private function sendUserInvitationEmail($email, $firstName, $lastName, $username, $password, $userRole = 'recruiter')
+    {
+        include_once(LEGACY_ROOT . '/lib/Mailer.php');
+        
+        $mailer = new Mailer($this->_siteID);
+        
+        /* Get the site URL for the login link */
+        $siteURL = CATSUtility::getAbsoluteURI('');
+        $loginURL = $siteURL . 'index.php?m=login';
+        
+        /* Determine role display name */
+        $roleDisplayName = 'Team Member';
+        if ($userRole === 'admin') {
+            $roleDisplayName = 'Administrator';
+        } elseif ($userRole === 'recruiter') {
+            $roleDisplayName = 'Recruiter';
+        } elseif ($userRole === 'interviewer') {
+            $roleDisplayName = 'Interviewer';
+        }
+        
+        /* Build the HTML email */
+        $subject = 'Welcome to Neutara ATS - Your Account Has Been Created';
+        
+        $body = '
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: \'Segoe UI\', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7fa;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f7fa; padding: 40px 20px;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow: hidden;">
+                    <!-- Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); padding: 32px 40px; text-align: center;">
+                            <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.5px;">Neutara Technologies</h1>
+                            <p style="color: rgba(255,255,255,0.85); margin: 8px 0 0 0; font-size: 14px;">Applicant Tracking System</p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px;">
+                            <!-- Success Badge -->
+                            <div style="text-align: center; margin-bottom: 30px;">
+                                <div style="display: inline-block; background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: #fff; padding: 8px 24px; border-radius: 30px; font-size: 14px; font-weight: 600; letter-spacing: 0.5px;">
+                                    ✓ ACCOUNT ACTIVATED
+                                </div>
+                            </div>
+                            
+                            <h2 style="color: #1e293b; margin: 0 0 20px 0; font-size: 22px; font-weight: 600;">
+                                Welcome, ' . htmlspecialchars($firstName) . '!
+                            </h2>
+                            
+                            <p style="color: #475569; font-size: 15px; line-height: 1.7; margin: 0 0 24px 0;">
+                                Your account has been created on <strong>Neutara ATS</strong>. You can now sign in and start using the system.
+                            </p>
+                            
+                            <!-- Account Details Card -->
+                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 24px; margin-bottom: 28px;">
+                                <h3 style="color: #1e293b; margin: 0 0 16px 0; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                                    Your Login Details
+                                </h3>
+                                <table width="100%" cellpadding="0" cellspacing="0">
+                                    <tr>
+                                        <td style="padding: 8px 0; color: #64748b; font-size: 14px; width: 120px;">Username:</td>
+                                        <td style="padding: 8px 0; color: #1e293b; font-size: 14px; font-weight: 600;">' . htmlspecialchars($username) . '</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Password:</td>
+                                        <td style="padding: 8px 0; color: #1e293b; font-size: 14px; font-weight: 600;">' . htmlspecialchars($password) . '</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Role:</td>
+                                        <td style="padding: 8px 0; color: #1e293b; font-size: 14px; font-weight: 600;">' . htmlspecialchars($roleDisplayName) . '</td>
+                                    </tr>
+                                </table>
+                            </div>
+                            
+                            <!-- CTA Button -->
+                            <div style="text-align: center; margin: 32px 0;">
+                                <a href="' . htmlspecialchars($loginURL) . '" style="display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; text-decoration: none; padding: 14px 40px; border-radius: 8px; font-size: 15px; font-weight: 600; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);">
+                                    Sign In Now
+                                </a>
+                            </div>
+                            
+                            <!-- Security Note -->
+                            <div style="background: #fef3c7; border: 1px solid #fcd34d; border-radius: 8px; padding: 16px; margin-top: 24px;">
+                                <p style="color: #92400e; font-size: 13px; margin: 0; line-height: 1.6;">
+                                    <strong>Security Tip:</strong> For your security, we recommend changing your password after your first login. Go to Settings → My Profile to update your password.
+                                </p>
+                            </div>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background: #f8fafc; padding: 24px 40px; text-align: center; border-top: 1px solid #e2e8f0;">
+                            <p style="color: #64748b; font-size: 13px; margin: 0;">
+                                © ' . date('Y') . ' Neutara Technologies. This is an automated notification.
+                            </p>
+                            <p style="color: #94a3b8; font-size: 12px; margin: 8px 0 0 0;">
+                                If you did not expect this email, please contact your administrator.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>';
+
+        /* Send the email */
+        return $mailer->sendToOne(
+            array($email, $firstName . ' ' . $lastName),
+            $subject,
+            $body,
+            true,  /* isHTML */
+            true   /* logMessage */
+        );
+    }
+
     /*
      * Called by handleRequest() to process deleting a user.
      *
@@ -1487,15 +1663,32 @@ class SettingsUI extends UserInterface
             CommonErrors::fatal(COMMONERROR_BADINDEX, $this, 'Invalid user ID.');
         }
 
-        /* Keep users other than the automated tester from trying this. */
-        if (!$this->isRequiredIDValid('iAmTheAutomatedTester', $_GET))
+        $userID = $_GET['userID'];
+        
+        /* Cannot delete yourself */
+        if ($userID == $this->_userID)
         {
-            CommonErrors::fatal(COMMONERROR_PERMISSION, $this, 'You are not the automated tester.');
+            CommonErrors::fatal(COMMONERROR_PERMISSION, $this, 'You cannot delete your own account.');
+        }
+        
+        /* Get target user's access level */
+        $users = new Users($this->_siteID);
+        $targetUser = $users->get($userID);
+        
+        if (empty($targetUser))
+        {
+            CommonErrors::fatal(COMMONERROR_BADINDEX, $this, 'User not found.');
+        }
+        
+        $currentUserAccessLevel = $_SESSION['CATS']->getAccessLevel(ACL::SECOBJ_ROOT);
+        $targetUserAccessLevel = $targetUser['accessLevel'];
+        
+        /* Cannot delete users with same or higher access level (unless root) */
+        if ($targetUserAccessLevel >= $currentUserAccessLevel && $currentUserAccessLevel < ACCESS_LEVEL_ROOT)
+        {
+            CommonErrors::fatal(COMMONERROR_PERMISSION, $this, 'You cannot delete users with the same or higher access level.');
         }
 
-        $userID = $_GET['userID'];
-
-        $users = new Users($this->_siteID);
         $users->delete($userID);
 
         CATSUtility::transferRelativeURI('m=settings&a=manageUsers');
@@ -2717,6 +2910,10 @@ class SettingsUI extends UserInterface
         $users = new Users($this->_siteID);
         $rs = $users->getAll();
         $license = $users->getLicenseData();
+        
+        /* Load UserRoles for role information */
+        include_once(LEGACY_ROOT . '/lib/UserRoles.php');
+        $roleColumnExists = UserRoles::roleColumnExists();
 
         foreach ($rs as $rowIndex => $row)
         {
@@ -2738,6 +2935,16 @@ class SettingsUI extends UserInterface
                $rs[$rowIndex]['username'] = str_replace(
                    '@' . $_SESSION['CATS']->getSiteID(), '', $row['username']
                );
+            }
+            
+            /* Get user role - infer from access level if role column doesn't exist */
+            if ($roleColumnExists) {
+                $rs[$rowIndex]['role'] = UserRoles::getUserRole($row['userID']);
+                $rs[$rowIndex]['interviewer_type'] = UserRoles::getInterviewerType($row['userID']);
+            } else {
+                // Infer role from access level
+                $rs[$rowIndex]['role'] = ($row['accessLevel'] >= 400) ? 'admin' : 'recruiter';
+                $rs[$rowIndex]['interviewer_type'] = null;
             }
         }
 
@@ -3919,14 +4126,14 @@ class SettingsUI extends UserInterface
         // Get default platform
         $db = DatabaseConnection::getInstance();
         $sql = sprintf(
-            "SELECT setting_value FROM settings WHERE setting_key = 'meeting_platform' AND site_id = %s",
+            "SELECT value FROM settings WHERE setting = 'meeting_platform' AND site_id = %s",
             $this->_siteID
         );
         $result = $db->query($sql);
         $defaultPlatform = 'none';
-        if ($result && $db->getNumRows($result) > 0) {
-            $row = $db->getAssoc($result);
-            $defaultPlatform = $row['setting_value'];
+        if ($result && $db->getNumRows() > 0) {
+            $row = $db->getAssoc();
+            $defaultPlatform = $row['value'];
         }
         
         // Get Teams credentials (masked for display)
@@ -4002,20 +4209,20 @@ class SettingsUI extends UserInterface
                     $db = DatabaseConnection::getInstance();
                     
                     $sql = sprintf(
-                        "SELECT setting_id FROM settings WHERE setting_key = 'meeting_platform' AND site_id = %s",
+                        "SELECT settings_id FROM settings WHERE setting = 'meeting_platform' AND site_id = %s",
                         $this->_siteID
                     );
                     $result = $db->query($sql);
                     
-                    if ($result && $db->getNumRows($result) > 0) {
+                    if ($result && $db->getNumRows() > 0) {
                         $sql = sprintf(
-                            "UPDATE settings SET setting_value = %s WHERE setting_key = 'meeting_platform' AND site_id = %s",
+                            "UPDATE settings SET value = %s WHERE setting = 'meeting_platform' AND site_id = %s",
                             $db->makeQueryString($platform),
                             $this->_siteID
                         );
                     } else {
                         $sql = sprintf(
-                            "INSERT INTO settings (setting_key, setting_value, site_id) VALUES ('meeting_platform', %s, %s)",
+                            "INSERT INTO settings (setting, value, site_id) VALUES ('meeting_platform', %s, %s)",
                             $db->makeQueryString($platform),
                             $this->_siteID
                         );

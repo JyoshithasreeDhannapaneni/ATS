@@ -1283,6 +1283,149 @@ class CATSSession
     }
 
     /**
+     * SSO Login - Logs in a user via Single Sign-On (Microsoft SSO)
+     * 
+     * @param integer $userID User ID to login
+     * @param integer $siteID Site ID
+     * @return void
+     */
+    public function ssoLogin($userID, $siteID)
+    {
+        $db = DatabaseConnection::getInstance();
+        
+        $sql = sprintf(
+            "SELECT
+                user.user_id AS userID,
+                user.user_name AS username,
+                user.password AS password,
+                user.first_name AS firstName,
+                user.last_name AS lastName,
+                user.access_level AS accessLevel,
+                user.site_id AS userSiteID,
+                user.is_demo AS isDemoUser,
+                user.email AS email,
+                user.categories AS categories,
+                user.pipeline_entries_per_page AS pipelineEntriesPerPage,
+                user.column_preferences as columnPreferences,
+                user.can_see_eeo_info as canSeeEEOInfo,
+                site.name AS siteName,
+                site.unix_name AS unixName,
+                site.user_licenses AS userLicenses,
+                site.company_id AS companyID,
+                site.is_demo AS isDemo,
+                site.account_active AS accountActive,
+                site.account_deleted AS accountDeleted,
+                site.time_zone AS timeZone,
+                site.default_phone_country_code AS defaultPhoneCountryCode,
+                site.date_format_ddmmyy AS dateFormatDMY,
+                site.is_free AS isFree,
+                site.is_hr_mode AS isHrMode,
+                site.first_time_setup as isFirstTimeSetup,
+                site.localization_configured as isLocalizationConfigured,
+                site.agreed_to_license as isAgreedToLicense
+            FROM
+                user
+            LEFT JOIN site
+                ON site.site_id = user.site_id
+            WHERE
+                user.user_id = %s
+                AND user.site_id = %s",
+            $userID,
+            $siteID
+        );
+        $rs = $db->getAssoc($sql);
+        
+        if (!$rs || $db->isEOF()) {
+            $this->_isLoggedIn = false;
+            $this->_loginError = 'User not found.';
+            return;
+        }
+        
+        if (isset($_SERVER['REMOTE_ADDR'])) {
+            $ip = $_SERVER['REMOTE_ADDR'];
+        } else {
+            $ip = '';
+        }
+        
+        if (isset($_SERVER['HTTP_USER_AGENT'])) {
+            $userAgent = $_SERVER['HTTP_USER_AGENT'];
+        } else {
+            $userAgent = '';
+        }
+        
+        $this->_username               = $rs['username'];
+        $this->_password               = $rs['password'];
+        $this->_userID                 = $rs['userID'];
+        $this->_siteID                 = $rs['userSiteID'];
+        $this->_firstName              = $rs['firstName'];
+        $this->_lastName               = $rs['lastName'];
+        $this->_siteName               = $rs['siteName'];
+        $this->_unixName               = $rs['unixName'];
+        $this->_userLicenses           = $rs['userLicenses'];
+        $this->_accessLevel            = $rs['accessLevel'];
+        $this->_realAccessLevel        = $rs['accessLevel'];
+        $this->_categories             = explode(',', $rs['categories']);
+        $this->_isASP                  = ($rs['companyID'] != 0 ? true : false);
+        $this->_isHrMode               = ($rs['isHrMode'] != 0 ? true : false);
+        $this->_siteCompanyID          = ($rs['companyID'] != 0 ? $rs['companyID'] : -1);
+        $this->_isFree                 = ($rs['isFree'] == 0 ? false : true);
+        $this->_isFirstTimeSetup       = ($rs['isFirstTimeSetup'] == 0 ? false : true);
+        $this->_isLocalizationConfigured = ($rs['isLocalizationConfigured'] == 0 ? false : true);
+        $this->_isAgreedToLicense      = ($rs['isAgreedToLicense'] == 0 ? false : true);
+        $this->_accountActive          = ($rs['accountActive'] == 0 ? false : true);
+        $this->_accountDeleted         = ($rs['accountDeleted'] == 0 ? false : true);
+        $this->_email                  = $rs['email'];
+        $this->_ip                     = $ip;
+        $this->_userAgent              = $userAgent;
+        $this->_timeZoneOffset         = $rs['timeZone'] - OFFSET_GMT;
+        $this->_timeZone               = $rs['timeZone'];
+        $this->_defaultPhoneCountryCode = $rs['defaultPhoneCountryCode'];
+        $this->_dateDMY                = ($rs['dateFormatDMY'] == 0 ? false : true);
+        $this->_canSeeEEOInfo          = ($rs['canSeeEEOInfo'] == 0 ? false : true);
+        $this->_pipelineEntriesPerPage = $rs['pipelineEntriesPerPage'];
+        $this->_loggedInScript         = CATSUtility::getDirectoryName();
+        
+        if ($this->_accessLevel >= ACCESS_LEVEL_SA) {
+            $this->_canSeeEEOInfo = true;
+        }
+        
+        if (strlen($rs['columnPreferences']) > 0) {
+            $this->_dataGridColumnPreferences = unserialize($rs['columnPreferences']);
+        } else {
+            $this->_dataGridColumnPreferences = array();
+        }
+        
+        $users = new Users($this->_siteID);
+        $userLoginID = $users->addLoginHistory(
+            $this->_userID,
+            $this->_siteID,
+            $this->_ip,
+            $this->_userAgent,
+            true
+        );
+        
+        $this->_userLoginID = $userLoginID;
+        $this->_isLoggedIn = true;
+        
+        $cookie = $this->getCookie();
+        $sql = sprintf(
+            "UPDATE
+                user
+             SET
+                session_cookie = %s,
+                force_logout = 0
+             WHERE
+                user_id = %s
+             AND
+                site_id = %s",
+            $db->makeQueryString($cookie),
+            $this->_userID,
+            $this->_siteID
+        );
+        $db->query($sql);
+    }
+
+    /**
      * Magic method to handle dynamic property assignments.
      * This prevents deprecation warnings for the old $_ property.
      *

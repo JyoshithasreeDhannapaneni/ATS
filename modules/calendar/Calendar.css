@@ -1,256 +1,759 @@
 /*
- *
- *
- * The contents of this file are subject to the CATS Public License
- * Version 1.1a (the "License"); you may not use this file except in
- * compliance with the License. You may obtain a copy of the License at
- * http://www.catsone.com/.
- *
- * Software distributed under the License is distributed on an "AS IS"
- * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
- * License for the specific language governing rights and limitations
- * under the License.
- *
- * The Original Code is "CATS Standard Edition".
- *
- * The Initial Developer of the Original Code is Cognizo Technologies, Inc.
- * Portions created by the Initial Developer are Copyright (C) 2005 - 2007
- * (or from the year in which this file was created to the year 2007) by
- * Cognizo Technologies, Inc. All Rights Reserved.
- *
- *
+ * Neutara ATS Tool - Calendar Module
+ * BambooHR-Inspired Modern UI
  */
-table#calendarMonth
-{
-    border: 1px solid #c0c0c0;
-    border-collapse: collapse;
-    width: 675px;
-    height: 400px;
-    margin-top: 5px;
-    vertical-align: middle
+
+/* ============================================================
+   CALENDAR LAYOUT
+   ============================================================ */
+.calendar-container {
+    display: flex;
+    gap: 24px;
+    width: 100%;
+    min-height: 600px;
 }
 
-table#calendarMonth th
-{
-    border-top: 1px solid #ccc;
-    border-left: 1px solid #ccc;
-    border-right: 1px solid #ccc;
-    border-bottom: 2px solid #ccc;
-    border-collapse: collapse;
-    width: 14%;
-    background-image: url('../../images/calendar1_bg.gif');
-    background-repeat: repeat-x;
+.calendar-sidebar {
+    width: 280px;
+    flex-shrink: 0;
 }
 
-table#calendarMonth td.empty
-{
-    border: 1px solid #ccc;
-    border-collapse: collapse;
-    padding: 5px;
+.calendar-main {
+    flex: 1;
+    min-width: 0;
+}
+
+/* ============================================================
+   CALENDAR NAVIGATION
+   ============================================================ */
+.calendar-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.calendar-nav-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.calendar-nav-btn {
+    padding: 8px 16px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.calendar-nav-btn:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+}
+
+.calendar-nav-btn.active {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #fff;
+}
+
+.calendar-nav-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.calendar-nav-title h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.calendar-nav-arrows {
+    display: flex;
+    gap: 4px;
+}
+
+.calendar-nav-arrows a,
+.calendar-nav-arrows button {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    border-radius: 6px;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-decoration: none;
+    font-size: 14px;
+}
+
+.calendar-nav-arrows a:hover,
+.calendar-nav-arrows button:hover {
+    background: #f3f4f6;
+    color: #2563eb;
+}
+
+/* ============================================================
+   MONTH VIEW CALENDAR
+   ============================================================ */
+table#calendarMonth {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+table#calendarMonth th {
+    padding: 12px 8px;
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #6b7280;
+    text-align: center;
+}
+
+table#calendarMonth td {
+    border: 1px solid #f3f4f6;
+    padding: 8px;
     vertical-align: top;
+    height: 100px;
+    width: 14.28%;
+    transition: background 0.15s ease;
 }
 
-table#calendarMonth td.today
-{
-    border: 1px solid #ccc;
-    border-collapse: collapse;
-    padding: 5px;
-    vertical-align: top;
-    background: #ccc;
+table#calendarMonth td.empty {
+    background: #fff;
+}
+
+table#calendarMonth td.day {
+    background: #fafafa;
+}
+
+table#calendarMonth td.today {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+}
+
+table#calendarMonth td:hover {
+    background: #f0f9ff;
+}
+
+table#calendarMonth td .date-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: 13px;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 4px;
+}
+
+table#calendarMonth td.today .date-number {
+    background: #2563eb;
+    color: #fff;
+}
+
+/* Date link styling */
+a.dateLink:link,
+a.dateLink:visited,
+a.dateLink:active {
+    text-decoration: none;
+    color: #374151;
+    font-weight: 500;
+}
+
+a.dateLink:hover {
+    color: #2563eb;
 }
 
 table#calendarMonth td.today a.dateLink:link,
 table#calendarMonth td.today a.dateLink:active,
-table#calendarMonth td.today a.dateLink:visited
-{
-    font-weight: bold;
+table#calendarMonth td.today a.dateLink:visited {
+    color: #fff;
 }
 
-table#calendarMonth td.day
-{
-    border: 1px solid #ccc;
-    border-collapse: collapse;
-    padding: 5px;
+/* ============================================================
+   WEEK VIEW CALENDAR
+   ============================================================ */
+table#calendarWeek {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+table#calendarWeek th {
+    padding: 16px 12px;
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 12px;
+    font-weight: 600;
+    color: #374151;
+    text-align: left;
+    width: 100px;
+}
+
+table#calendarWeek td {
+    border-bottom: 1px solid #f3f4f6;
+    padding: 12px;
     vertical-align: top;
-    background: #e9e9e9;
+    min-height: 60px;
 }
 
-ul#calendarMonthListing
-{
-    display: inline;
-    padding: 0px;
-    margin: 0px;
+table#calendarWeek td.empty {
+    background: #fff;
 }
 
-ul#calendarMonthListing li
-{
-    display: inline;
+table#calendarWeek td.today {
+    background: #eff6ff;
+}
+
+table#calendarWeek td.day {
+    background: #fafafa;
+}
+
+/* ============================================================
+   DAY VIEW CALENDAR
+   ============================================================ */
+table#calendarDay {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+table#calendarDay th {
+    padding: 12px 16px;
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+    border-right: 1px solid #e5e7eb;
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+    text-align: right;
+    width: 80px;
+}
+
+table#calendarDay td {
+    border-bottom: 1px solid #f3f4f6;
+    padding: 8px 12px;
+    vertical-align: top;
+    min-height: 50px;
+}
+
+table#calendarDay td.empty {
+    background: #fff;
+}
+
+table#calendarDay td.today {
+    background: #eff6ff;
+}
+
+/* ============================================================
+   CALENDAR EVENTS
+   ============================================================ */
+.calendarEntry,
+.calendarEntryMultiple {
+    display: block;
+    padding: 4px 8px;
+    margin: 2px 0;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border-left: 3px solid;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.calendarEntry:hover,
+.calendarEntryMultiple:hover {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transform: translateY(-1px);
+}
+
+/* Event type colors */
+.calendarEntry.event-call,
+.event-type-100 {
+    background: #eff6ff;
+    border-left-color: #2563eb;
+    color: #1e40af;
+}
+
+.calendarEntry.event-email,
+.event-type-200 {
+    background: #fef3c7;
+    border-left-color: #f59e0b;
+    color: #92400e;
+}
+
+.calendarEntry.event-meeting,
+.event-type-300 {
+    background: #f3e8ff;
+    border-left-color: #9333ea;
+    color: #6b21a8;
+}
+
+.calendarEntry.event-interview,
+.event-type-400,
+.event-type-410,
+.event-type-420,
+.event-type-430,
+.event-type-440 {
+    background: #dcfce7;
+    border-left-color: #16a34a;
+    color: #166534;
+}
+
+.calendarEntry.event-personal,
+.event-type-500 {
+    background: #fce7f3;
+    border-left-color: #ec4899;
+    color: #9d174d;
+}
+
+.calendarEntry.event-other,
+.event-type-600 {
+    background: #f3f4f6;
+    border-left-color: #6b7280;
+    color: #374151;
+}
+
+.dayEntry {
+    display: block;
+    padding: 8px 12px;
+    margin: 4px 0;
+    border-radius: 6px;
+    font-size: 12px;
+    background: #fff;
+    border-left: 4px solid #2563eb;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* ============================================================
+   SIDEBAR - UPCOMING EVENTS
+   ============================================================ */
+.upcoming-events-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.upcoming-events-header {
+    padding: 16px;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.upcoming-events-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.upcoming-event-item {
+    padding: 12px 16px;
+    border-bottom: 1px solid #f3f4f6;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.upcoming-event-item:hover {
+    background: #f9fafb;
+}
+
+.upcoming-event-item:last-child {
+    border-bottom: none;
+}
+
+.upcoming-event-time {
+    font-size: 11px;
+    color: #6b7280;
+    margin-bottom: 4px;
+}
+
+.upcoming-event-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: #1f2937;
+}
+
+/* ============================================================
+   ADD/EDIT EVENT FORM
+   ============================================================ */
+.event-form-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    overflow: hidden;
+    margin-bottom: 16px;
+}
+
+.event-form-header {
+    padding: 16px;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1f2937;
+    background: #f9fafb;
+}
+
+.event-form-body {
+    padding: 16px;
+}
+
+.event-form-body .editTableMini {
+    width: 100%;
+}
+
+.event-form-body .editTableMini td {
+    padding: 8px 0;
+}
+
+.event-form-body .tdVertical {
+    font-size: 12px;
+    font-weight: 500;
+    color: #6b7280;
+    padding-right: 12px;
+    width: 70px;
+    vertical-align: top;
+    padding-top: 10px;
+}
+
+.event-form-body .tdData {
+    width: auto;
+}
+
+.event-form-body .inputbox,
+.event-form-body select,
+.event-form-body textarea {
+    width: 100% !important;
+    max-width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 13px;
+    transition: all 0.15s ease;
+    box-sizing: border-box;
+}
+
+.event-form-body .inputbox:focus,
+.event-form-body select:focus,
+.event-form-body textarea:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    outline: none;
+}
+
+.event-form-body textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+/* Time selector row */
+.time-selector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.time-selector select {
+    width: auto !important;
+    min-width: 60px;
+}
+
+.time-selector label {
+    font-size: 12px;
+    color: #6b7280;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Meeting platform selector */
+.meeting-platform-selector {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+.meeting-platform-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    background: #fff;
+}
+
+.meeting-platform-option:hover {
+    border-color: #d1d5db;
+    background: #f9fafb;
+}
+
+.meeting-platform-option.selected {
+    border-color: #2563eb;
+    background: #eff6ff;
+}
+
+.meeting-platform-option input[type="radio"] {
+    display: none;
+}
+
+.meeting-platform-option .platform-icon {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.meeting-platform-option .platform-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: #374151;
+}
+
+/* Platform icons */
+.platform-icon.teams { color: #5059c9; }
+.platform-icon.zoom { color: #2d8cff; }
+.platform-icon.google { color: #00897b; }
+.platform-icon.none { color: #9ca3af; }
+
+/* Event type badges */
+.event-type-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.event-type-badge.l1-interview {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.event-type-badge.l2-interview {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.event-type-badge.l3-interview {
+    background: #f3e8ff;
+    color: #6b21a8;
+}
+
+.event-type-badge.hr-interview {
+    background: #fce7f3;
+    color: #9d174d;
+}
+
+/* ============================================================
+   VIEW EVENT PANEL
+   ============================================================ */
+.view-event-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.view-event-header {
+    padding: 16px;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f9fafb;
+}
+
+.view-event-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 4px;
+}
+
+.view-event-type {
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.view-event-body {
+    padding: 16px;
+}
+
+.view-event-row {
+    display: flex;
+    margin-bottom: 12px;
+}
+
+.view-event-label {
+    width: 80px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #6b7280;
+}
+
+.view-event-value {
+    flex: 1;
+    font-size: 13px;
+    color: #1f2937;
+}
+
+.view-event-actions {
+    padding: 16px;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    gap: 8px;
+}
+
+/* Join meeting button */
+.btn-join-meeting {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: #16a34a;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-decoration: none;
+}
+
+.btn-join-meeting:hover {
+    background: #15803d;
+}
+
+.btn-join-meeting svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* ============================================================
+   RESPONSIVE DESIGN
+   ============================================================ */
+@media (max-width: 900px) {
+    .calendar-container {
+        flex-direction: column;
+    }
+    
+    .calendar-sidebar {
+        width: 100%;
+        order: 2;
+    }
+    
+    .calendar-main {
+        order: 1;
+    }
+    
+    table#calendarMonth td {
+        height: 80px;
+        padding: 4px;
+    }
+    
+    .calendarEntry {
+        font-size: 10px;
+        padding: 2px 4px;
+    }
+}
+
+@media (max-width: 600px) {
+    .calendar-nav {
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .calendar-nav-buttons {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    table#calendarMonth th {
+        font-size: 10px;
+        padding: 8px 4px;
+    }
+    
+    table#calendarMonth td {
+        height: 60px;
+    }
+    
+    table#calendarMonth td .date-number {
+        width: 24px;
+        height: 24px;
+        font-size: 11px;
+    }
+}
+
+/* ============================================================
+   LEGACY COMPATIBILITY
+   ============================================================ */
+ul#calendarMonthListing,
+ul#calendarWeekListing,
+ul#calendarDayListing {
+    display: block;
+    padding: 0;
+    margin: 0;
     list-style: none;
-    padding-right: 4px;
 }
 
-table#calendarWeek
-{
-    border: 1px solid #c0c0c0;
-    border-collapse: collapse;
-    width: 675px;
-    height: 400px;
-    margin-top: 5px;
-    vertical-align: middle
+ul#calendarMonthListing li,
+ul#calendarWeekListing li,
+ul#calendarDayListing li {
+    display: block;
+    margin: 2px 0;
 }
 
-table#calendarWeek th
-{
-    border-top: 1px solid #ccc;
-    border-left: 1px solid #ccc;
-    border-right: 1px solid #ccc;
-    border-bottom: 2px solid #ccc;
-    border-collapse: collapse;
-    /* background-image: url('../../images/calendar1_bg.gif'); */
-    background-repeat: repeat-x;
-    width:100px;
+/* Parent table containers */
+#calendarMonthParent,
+#calendarWeekParent,
+#calendarDayParent {
+    width: 100%;
 }
 
-table#calendarWeek td.empty
-{
-    border: 1px solid #ccc;
-    border-collapse: collapse;
-    padding: 5px;
-    vertical-align: top;
+#calendarMonthParent > tbody > tr > td,
+#calendarWeekParent > tbody > tr > td,
+#calendarDayParent > tbody > tr > td {
+    padding: 0;
 }
-
-table#calendarWeek td.today
-{
-    border: 1px solid #ccc;
-    border-collapse: collapse;
-    padding: 5px;
-    vertical-align: top;
-    background: #ccc;
-}
-
-table#calendarWeek td.today a.dateLink:link,
-table#calendarWeek td.today a.dateLink:active,
-table#calendarWeek td.today a.dateLink:visited
-{
-    font-weight: bold;
-}
-
-table#calendarWeek td.day
-{
-    border: 1px solid #ccc;
-    border-collapse: collapse;
-    padding: 5px;
-    vertical-align: top;
-    background: #e9e9e9;
-}
-
-ul#calendarWeekListing
-{
-    display: inline;
-    padding: 0px;
-    margin: 0px;
-}
-
-ul#calendarWeekListing li
-{
-    display: inline;
-    list-style: none;
-    padding-right: 4px;
-}
-
-.calendarEntry
-{
-    border: 1px solid #000; 
-    background-color: #fff;
-}
-
-table#calendarDay
-{
-    border: 1px solid #c0c0c0;
-    border-collapse: collapse;
-    width: 725px;
-    height: 400px;
-    margin-top: 5px;
-    vertical-align: middle
-}
-
-table#calendarDay th
-{
-    border-top: 1px solid #ccc;
-    border-left: 1px solid #ccc;
-    border-right: 1px solid #ccc;
-    border-bottom: 2px solid #ccc;
-    border-collapse: collapse;
-    /* background-image: url('../../images/calendar1_bg.gif'); */
-    background-repeat: repeat-x;
-    width:100px;
-}
-
-table#calendarDay td.empty
-{
-    border: 1px solid #ccc;
-    border-collapse: collapse;
-    padding: 5px;
-    vertical-align: top;
-}
-
-table#calendarDay td.today
-{
-    border: 1px solid #ccc;
-    border-collapse: collapse;
-    padding: 5px;
-    vertical-align: top;
-    background: #ccc;
-}
-
-table#calendarDay td.today a.dateLink:link,
-table#calendarDay td.today a.dateLink:active,
-table#calendarDay td.today a.dateLink:visited
-{
-    font-weight: bold;
-}
-
-table#calendarDay td.day
-{
-    border: 1px solid #ccc;
-    border-collapse: collapse;
-    padding: 5px;
-    vertical-align: top;
-    background: #e9e9e9;
-}
-
-ul#calendarDayListing
-{
-    display: inline;
-    padding: 0px;
-    margin: 0px;
-}
-
-ul#calendarDayListing li
-{
-    display: inline;
-    list-style: none;
-    padding-right: 4px;
-}
-
-.calendarEntry
-{
-    border: 1px solid #000; 
-    background-color: #fff;
-}
-
-.dayEntry
-{
-    border: 1px solid #000; 
-    z-index: 99; 
-    background-color: #fff;
-}
-
-
-.calendarEntryMultiple
-{
-    border: 1px solid #000;
-    box-shadow: 0.2em 0.2em #ccc;
-    background-color: #fff;
-}
-

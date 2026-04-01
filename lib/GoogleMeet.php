@@ -107,16 +107,16 @@ class GoogleMeet
     private function loadRefreshToken()
     {
         $sql = sprintf(
-            "SELECT setting_value FROM settings 
-             WHERE setting_key = 'google_meet_refresh_token' 
+            "SELECT value FROM settings 
+             WHERE setting = 'google_meet_refresh_token' 
              AND site_id = %s",
             $this->_siteID
         );
         
         $result = @$this->_db->query($sql);
         if ($result && @mysqli_num_rows($result) > 0) {
-            $row = $this->_db->getAssoc($result);
-            $this->_refreshToken = $row['setting_value'];
+            $row = $this->_db->getAssoc();
+            $this->_refreshToken = $row['value'];
         }
     }
 
@@ -131,8 +131,8 @@ class GoogleMeet
         $this->_refreshToken = $refreshToken;
         
         $sql = sprintf(
-            "SELECT setting_id FROM settings 
-             WHERE setting_key = 'google_meet_refresh_token' 
+            "SELECT settings_id FROM settings 
+             WHERE setting = 'google_meet_refresh_token' 
              AND site_id = %s",
             $this->_siteID
         );
@@ -141,15 +141,15 @@ class GoogleMeet
         
         if ($result && @mysqli_num_rows($result) > 0) {
             $sql = sprintf(
-                "UPDATE settings SET setting_value = %s 
-                 WHERE setting_key = 'google_meet_refresh_token' 
+                "UPDATE settings SET value = %s 
+                 WHERE setting = 'google_meet_refresh_token' 
                  AND site_id = %s",
                 $this->_db->makeQueryString($refreshToken),
                 $this->_siteID
             );
         } else {
             $sql = sprintf(
-                "INSERT INTO settings (setting_key, setting_value, site_id) 
+                "INSERT INTO settings (setting, value, site_id) 
                  VALUES ('google_meet_refresh_token', %s, %s)",
                 $this->_db->makeQueryString($refreshToken),
                 $this->_siteID
@@ -465,7 +465,7 @@ class GoogleMeet
         
         $sql = sprintf(
             "DELETE FROM settings 
-             WHERE setting_key = 'google_meet_refresh_token' 
+             WHERE setting = 'google_meet_refresh_token' 
              AND site_id = %s",
             $this->_siteID
         );

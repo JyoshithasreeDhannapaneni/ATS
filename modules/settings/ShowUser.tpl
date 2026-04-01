@@ -97,9 +97,36 @@
                 </tr>
             </table>
             <?php if ($this->privledged): ?>
+                <?php 
+                    $currentUserAccessLevel = $_SESSION['CATS']->getAccessLevel(ACL::SECOBJ_ROOT);
+                    $targetUserAccessLevel = $this->data['accessLevel'];
+                    $isOwnAccount = ($this->data['userID'] == $_SESSION['CATS']->getUserID());
+                    
+                    // Can edit own account, or users with lower access level, or if root
+                    $canEdit = $isOwnAccount || ($targetUserAccessLevel < $currentUserAccessLevel) || ($currentUserAccessLevel >= ACCESS_LEVEL_ROOT);
+                    
+                    // Cannot delete yourself, and cannot delete users with same or higher access (unless root)
+                    $canDelete = !$isOwnAccount && (($targetUserAccessLevel < $currentUserAccessLevel) || ($currentUserAccessLevel >= ACCESS_LEVEL_ROOT));
+                ?>
+                
+                <?php if ($canEdit): ?>
                 <a id="edit_link" href="<?php echo(CATSUtility::getIndexName()); ?>?m=settings&amp;a=editUser&amp;userID=<?php $this->_($this->data['userID']); ?>" title="Edit">
                     <img src="images/actions/edit.gif" width="16" height="16" class="absmiddle" style="border: none;" alt="edit user" />&nbsp;Edit
                 </a>
+                <?php endif; ?>
+                
+                <?php if ($canDelete): ?>
+                &nbsp;&nbsp;
+                <a id="delete_link" href="javascript:void(0);" onclick="if(confirm('Are you sure you want to delete this user? This action cannot be undone.')) { window.location='<?php echo(CATSUtility::getIndexName()); ?>?m=settings&amp;a=deleteUser&amp;userID=<?php $this->_($this->data['userID']); ?>'; }" title="Delete" style="color: #c00;">
+                    <img src="images/actions/delete.gif" width="16" height="16" class="absmiddle" style="border: none;" alt="delete user" />&nbsp;Delete
+                </a>
+                <?php elseif ($isOwnAccount): ?>
+                &nbsp;&nbsp;
+                <span style="color: #999; font-size: 11px;">(Cannot delete your own account)</span>
+                <?php elseif ($targetUserAccessLevel >= $currentUserAccessLevel): ?>
+                &nbsp;&nbsp;
+                <span style="color: #999; font-size: 11px;">(Cannot delete users with same or higher access level)</span>
+                <?php endif; ?>
             <?php else: ?>
                 <input type="button" name="back" class = "button" value="Back" onclick="document.location.href='<?php echo(CATSUtility::getIndexName()); ?>?m=settings';" />
             <?php endif; ?>

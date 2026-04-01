@@ -100,11 +100,14 @@ class TemplateUtility
 
         echo '<div id="headerBlock">', "\n";
 
-        /* Left side — Neutara Logo */
-        echo '<div id="headerLogo" style="display: flex; align-items: center;">', "\n";
-        echo '<a href="', $indexName, '?m=home" style="display: flex; align-items: center; text-decoration: none; gap: 8px;">', "\n";
-        echo '<img src="images/Neutaralogo.jpg" alt="Neutara ATS" style="height: 36px; width: auto; border-radius: 4px;" onerror="this.style.display=\'none\';" />', "\n";
-        echo '<span style="font-size: 18px; font-weight: 600; color: #1e3a5f;">Neutara ATS</span>', "\n";
+        /* Left side — Burger button + Neutara Logo */
+        echo '<div id="headerLogo">', "\n";
+        echo '<button class="sidebar-toggle-btn header-burger" onclick="toggleSidebar()" title="Toggle Sidebar">', "\n";
+        echo '<svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>', "\n";
+        echo '</button>', "\n";
+        echo '<a href="', $indexName, '?m=home" class="header-brand-link">', "\n";
+        echo '<img src="images/Neutaralogo.jpg" alt="Neutara ATS" onerror="this.style.display=\'none\';" />', "\n";
+        echo '<span>Neutara ATS</span>', "\n";
         echo '</a>', "\n";
         echo '</div>', "\n";
 
@@ -574,7 +577,22 @@ class TemplateUtility
                     shouldn't be drawn. */
 
         echo '<div id="header">', "\n";
+        
         echo '<ul id="primary">', "\n";
+        
+        /* Add nav icons for visual enhancement */
+        $navIcons = array(
+            'home' => '🏠',
+            'activity' => '📊',
+            'joborders' => '💼',
+            'candidates' => '👥',
+            'companies' => '🏢',
+            'contacts' => '📇',
+            'lists' => '📋',
+            'calendar' => '📅',
+            'reports' => '📈',
+            'settings' => '⚙️'
+        );
 
         $indexName = CATSUtility::getIndexName();
 
@@ -620,8 +638,9 @@ class TemplateUtility
                 $alPosition = strpos($tabText, "*al=");
                 if ($alPosition === false)
                 {
+                    $icon = isset($navIcons[strtolower($moduleName)]) ? $navIcons[strtolower($moduleName)] . ' ' : '';
                     echo '<li><a class="', $className, '" href="', $indexName,
-                         '?m=', $moduleName, '">', $tabText, '</a></li>', "\n";
+                         '?m=', $moduleName, '" data-tooltip="', htmlspecialchars($tabText), '"><span class="nav-icon">', $icon, '</span>', $tabText, '</a></li>', "\n";
                 }
                 else
                 {
@@ -636,8 +655,10 @@ class TemplateUtility
                      if ($_SESSION['CATS']->getAccessLevel($soName) >= $al ||
                          $_SESSION['CATS']->isDemo())
                      {
-                        echo '<li><a class="', $className, '" href="', $indexName, '?m=', $moduleName, '">',
-                             substr($tabText, 0, $alPosition), '</a></li>', "\n";
+                        $icon = isset($navIcons[strtolower($moduleName)]) ? $navIcons[strtolower($moduleName)] . ' ' : '';
+                        $displayText = substr($tabText, 0, $alPosition);
+                        echo '<li><a class="', $className, '" href="', $indexName, '?m=', $moduleName, '" data-tooltip="', htmlspecialchars($displayText), '"><span class="nav-icon">', $icon, '</span>',
+                             $displayText, '</a></li>', "\n";
                     }
                 }
 
@@ -655,8 +676,9 @@ class TemplateUtility
              * closed after subtabs are printed. */
             echo '<li>';
 
+            $icon = isset($navIcons[strtolower($moduleName)]) ? $navIcons[strtolower($moduleName)] . ' ' : '';
             echo '<a class="active" href="', $indexName, '?m=', $moduleName,
-                 '">', $tabText, '</a>', "\n";
+                 '" data-tooltip="', htmlspecialchars($tabText), '"><span class="nav-icon">', $icon, '</span>', $tabText, '</a>', "\n";
 
             $subTabs = $active->getSubTabs($modules);
             if ($subTabs)
@@ -811,6 +833,9 @@ class TemplateUtility
              http://www.opencats.org/.
        */
 
+        /* Mobile sidebar overlay */
+        echo '<div class="sidebar-overlay"></div>', "\n";
+
         echo '<div class="footerBlock">', "\n";
         echo '<p id="footerText"><span id="toolbarVersion"></span>Powered by <a href="https://www.neutara.com/"><strong>Neutara ATS Tool</strong></a>.</p>', "\n";
         echo '<span id="footerCopyright">', COPYRIGHT_HTML, '</span>', "\n";
@@ -818,6 +843,34 @@ class TemplateUtility
         echo '</div>', "\n";
 
         eval(Hooks::get('TEMPLATE_UTILITY_PRINT_FOOTER'));
+
+        /* Sidebar toggle JavaScript */
+        echo '<script>
+function toggleSidebar() {
+    document.body.classList.toggle("sidebar-collapsed");
+    
+    // Save preference to localStorage
+    var isCollapsed = document.body.classList.contains("sidebar-collapsed");
+    localStorage.setItem("sidebarCollapsed", isCollapsed ? "1" : "0");
+}
+
+// Restore sidebar state on page load
+document.addEventListener("DOMContentLoaded", function() {
+    var isCollapsed = localStorage.getItem("sidebarCollapsed");
+    if (isCollapsed === "1") {
+        document.body.classList.add("sidebar-collapsed");
+    }
+    
+    // Close sidebar overlay on mobile
+    var overlay = document.querySelector(".sidebar-overlay");
+    if (overlay) {
+        overlay.addEventListener("click", function() {
+            document.body.classList.remove("sidebar-collapsed");
+            localStorage.setItem("sidebarCollapsed", "0");
+        });
+    }
+});
+</script>', "\n";
 
         echo '</body>', "\n";
         echo '</html>', "\n";

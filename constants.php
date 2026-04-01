@@ -175,7 +175,7 @@ define(
 );
 
 /* Constants for the login module. */
-define('DEFAULT_ADMIN_PASSWORD', 'cats');
+define('DEFAULT_ADMIN_PASSWORD', 'EnggOps2026!');
 define('DEFAULT_MAIL_FROM_ADDRESS', 'noreply@yourdomain.com');
 
 /* Module data array offsets. */
