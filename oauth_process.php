@@ -132,43 +132,10 @@ if (!empty($user) && isset($user['user_id'])) {
     $db->query($updateSql);
     
 } else {
-    // Create new user
-    $siteID = 1;
-    $username = preg_replace('/[^a-z0-9_]/', '', strtolower(str_replace('@', '_', $email)));
-    $password = md5(uniqid(rand(), true));
-    
-    // Ensure unique username
-    $checkSql = sprintf("SELECT user_id FROM user WHERE user_name = %s", $db->makeQueryString($username));
-    $checkRs = $db->query($checkSql);
-    if ($checkRs && mysqli_num_rows($checkRs) > 0) {
-        $username = $username . '_' . time();
-    }
-    
-    $sql = sprintf(
-        "INSERT INTO user (site_id, user_name, email, password, first_name, last_name, access_level, can_change_password, is_test_user) 
-         VALUES (%d, %s, %s, %s, %s, %s, 400, 1, 0)",
-        $siteID,
-        $db->makeQueryString($username),
-        $db->makeQueryString($email),
-        $db->makeQueryString($password),
-        $db->makeQueryString($firstName),
-        $db->makeQueryString($lastName)
-    );
-    
-    $result = $db->query($sql);
-    
-    if (!$result) {
-        $error = mysqli_error($db->getConnection());
-        header('Location: index.php?m=login&message=' . urlencode('Failed to create account: ' . $error));
-        exit;
-    }
-    
-    $userID = $db->getLastInsertID();
-    
-    if (!$userID) {
-        header('Location: index.php?m=login&message=' . urlencode('Failed to create account'));
-        exit;
-    }
+    // User does not exist in system - deny access
+    // Only admin-approved users can login via Microsoft SSO
+    header('Location: index.php?m=login&message=' . urlencode('Access denied. You are not authorized to use this application. Please contact your administrator to request access.'));
+    exit;
 }
 
 // Create CATS session and login

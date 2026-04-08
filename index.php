@@ -275,4 +275,42 @@ else
     }
 }
 
+/* Handle AJAX request for generating Company Job ID */
+if (isset($_GET['f']) && $_GET['f'] == 'generateCompanyJobID')
+{
+    header('Content-Type: application/json');
+    
+    if (!isset($_SESSION['CATS']) || !$_SESSION['CATS']->isLoggedIn())
+    {
+        echo json_encode(['success' => false, 'error' => 'Not logged in']);
+        exit;
+    }
+    
+    $companyID = isset($_POST['companyID']) ? intval($_POST['companyID']) : 0;
+    
+    $db = DatabaseConnection::getInstance();
+    
+    // Get company name abbreviation
+    $companyAbbr = 'JO';
+    if ($companyID > 0) {
+        $sql = sprintf("SELECT name FROM company WHERE company_id = %d", $companyID);
+        $rs = $db->getAllAssoc($sql);
+        if (!empty($rs)) {
+            $companyAbbr = strtoupper(substr(preg_replace('/[^A-Za-z]/', '', $rs[0]['name']), 0, 3));
+            if (empty($companyAbbr)) $companyAbbr = 'JO';
+        }
+    }
+    
+    // Get next sequential number
+    $sql = "SELECT COALESCE(MAX(joborder_id), 0) + 1 as next_num FROM joborder";
+    $rs = $db->getAllAssoc($sql);
+    $nextNum = str_pad($rs[0]['next_num'], 3, '0', STR_PAD_LEFT);
+    
+    // Generate Job ID: COMPANY-001
+    $jobID = $companyAbbr . '-' . $nextNum;
+    
+    echo json_encode(['success' => true, 'jobID' => $jobID]);
+    exit;
+}
+
 ?>

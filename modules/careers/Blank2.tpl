@@ -3,7 +3,7 @@
 <html>
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=<?php echo(HTML_ENCODING); ?>">
-        <title><?php $this->_($this->siteName); ?> - Careers</title>
+        <title>Neutara ATS Tool - Job Order - <?php if (isset($this->jobOrderData['title'])) { $this->_($this->jobOrderData['title']); } else { echo 'Careers'; } ?></title>
         <?php global $careerPage; if (isset($careerPage) && $careerPage == true): ?>
             <script type="text/javascript" src="../js/lib.js"></script>
             <script type="text/javascript" src="../js/sorttable.js"></script>

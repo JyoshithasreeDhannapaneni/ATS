@@ -100,14 +100,14 @@ class TemplateUtility
 
         echo '<div id="headerBlock">', "\n";
 
-        /* Left side — Burger button + Neutara Logo */
-        echo '<div id="headerLogo">', "\n";
-        echo '<button class="sidebar-toggle-btn header-burger" onclick="toggleSidebar()" title="Toggle Sidebar">', "\n";
-        echo '<svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>', "\n";
-        echo '</button>', "\n";
-        echo '<a href="', $indexName, '?m=home" class="header-brand-link">', "\n";
-        echo '<img src="images/Neutaralogo.jpg" alt="Neutara ATS" onerror="this.style.display=\'none\';" />', "\n";
-        echo '<span>Neutara ATS</span>', "\n";
+        /* Mobile sidebar toggle button */
+        echo '<button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation">☰</button>', "\n";
+
+        /* Left side — Neutara Logo */
+        echo '<div id="headerLogo" style="display: flex; align-items: center;">', "\n";
+        echo '<a href="', $indexName, '?m=home" style="display: flex; align-items: center; text-decoration: none; gap: 8px;">', "\n";
+        echo '<img src="images/Neutaralogo.jpg" alt="Neutara ATS" style="height: 36px; width: auto; border-radius: 4px;" onerror="this.style.display=\'none\';" />', "\n";
+        echo '<span style="font-size: 18px; font-weight: 600; color: #1e3a5f;">Neutara ATS</span>', "\n";
         echo '</a>', "\n";
         echo '</div>', "\n";
 
@@ -577,7 +577,6 @@ class TemplateUtility
                     shouldn't be drawn. */
 
         echo '<div id="header">', "\n";
-        
         echo '<ul id="primary">', "\n";
         
         /* Add nav icons for visual enhancement */
@@ -640,7 +639,7 @@ class TemplateUtility
                 {
                     $icon = isset($navIcons[strtolower($moduleName)]) ? $navIcons[strtolower($moduleName)] . ' ' : '';
                     echo '<li><a class="', $className, '" href="', $indexName,
-                         '?m=', $moduleName, '" data-tooltip="', htmlspecialchars($tabText), '"><span class="nav-icon">', $icon, '</span>', $tabText, '</a></li>', "\n";
+                         '?m=', $moduleName, '"><span class="nav-icon">', $icon, '</span>', $tabText, '</a></li>', "\n";
                 }
                 else
                 {
@@ -656,9 +655,8 @@ class TemplateUtility
                          $_SESSION['CATS']->isDemo())
                      {
                         $icon = isset($navIcons[strtolower($moduleName)]) ? $navIcons[strtolower($moduleName)] . ' ' : '';
-                        $displayText = substr($tabText, 0, $alPosition);
-                        echo '<li><a class="', $className, '" href="', $indexName, '?m=', $moduleName, '" data-tooltip="', htmlspecialchars($displayText), '"><span class="nav-icon">', $icon, '</span>',
-                             $displayText, '</a></li>', "\n";
+                        echo '<li><a class="', $className, '" href="', $indexName, '?m=', $moduleName, '"><span class="nav-icon">', $icon, '</span>',
+                             substr($tabText, 0, $alPosition), '</a></li>', "\n";
                     }
                 }
 
@@ -678,7 +676,7 @@ class TemplateUtility
 
             $icon = isset($navIcons[strtolower($moduleName)]) ? $navIcons[strtolower($moduleName)] . ' ' : '';
             echo '<a class="active" href="', $indexName, '?m=', $moduleName,
-                 '" data-tooltip="', htmlspecialchars($tabText), '"><span class="nav-icon">', $icon, '</span>', $tabText, '</a>', "\n";
+                 '"><span class="nav-icon">', $icon, '</span>', $tabText, '</a>', "\n";
 
             $subTabs = $active->getSubTabs($modules);
             if ($subTabs)
@@ -844,29 +842,24 @@ class TemplateUtility
 
         eval(Hooks::get('TEMPLATE_UTILITY_PRINT_FOOTER'));
 
-        /* Sidebar toggle JavaScript */
+        /* Sidebar toggle JavaScript for mobile */
         echo '<script>
 function toggleSidebar() {
-    document.body.classList.toggle("sidebar-collapsed");
-    
-    // Save preference to localStorage
-    var isCollapsed = document.body.classList.contains("sidebar-collapsed");
-    localStorage.setItem("sidebarCollapsed", isCollapsed ? "1" : "0");
-}
-
-// Restore sidebar state on page load
-document.addEventListener("DOMContentLoaded", function() {
-    var isCollapsed = localStorage.getItem("sidebarCollapsed");
-    if (isCollapsed === "1") {
-        document.body.classList.add("sidebar-collapsed");
+    var sidebar = document.getElementById("header");
+    var overlay = document.querySelector(".sidebar-overlay");
+    if (sidebar) {
+        sidebar.classList.toggle("sidebar-open");
     }
-    
-    // Close sidebar overlay on mobile
+    if (overlay) {
+        overlay.classList.toggle("active");
+    }
+}
+// Close sidebar when clicking overlay
+document.addEventListener("DOMContentLoaded", function() {
     var overlay = document.querySelector(".sidebar-overlay");
     if (overlay) {
         overlay.addEventListener("click", function() {
-            document.body.classList.remove("sidebar-collapsed");
-            localStorage.setItem("sidebarCollapsed", "0");
+            toggleSidebar();
         });
     }
 });
