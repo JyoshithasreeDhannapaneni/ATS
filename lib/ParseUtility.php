@@ -57,7 +57,24 @@ class ParseUtility
 
     public function startClient()
     {
-        $this->_client = new SoapClient($this->_wsdl);
+        // Set a timeout to prevent hanging on unreachable SOAP services
+        $context = stream_context_create([
+            'http' => [
+                'timeout' => 5
+            ],
+            'ssl' => [
+                'verify_peer' => false,
+                'verify_peer_name' => false
+            ]
+        ]);
+        
+        $this->_client = new SoapClient($this->_wsdl, [
+            'stream_context' => $context,
+            'connection_timeout' => 5,
+            'exceptions' => true,
+            'trace' => false,
+            'cache_wsdl' => WSDL_CACHE_NONE
+        ]);
     }
 
     /**
@@ -105,29 +122,32 @@ class ParseUtility
             return false;
         }
 
+        // Temporarily suppress errors during SOAP operations to prevent
+        // network errors from being converted to exceptions by custom error handlers
+        $previousHandler = set_error_handler(function($errno, $errstr) {
+            // Silently ignore SOAP-related warnings/errors
+            return true;
+        });
+
         try
         {
             if (!$this->_client) $this->startClient();
+            
+            $res = $this->_client->DocumentParse(LICENSE_KEY, $name, $size, $mimeType, self::cleanText($contents));
+            
+            // Restore previous error handler
+            restore_error_handler();
         }
-        catch (\Exception $e)
+        catch (\Throwable $e)
         {
+            // Restore previous error handler before returning
+            restore_error_handler();
             return false;
         }
 
-        if (!defined('CATS_TEST_MODE') || !CATS_TEST_MODE)
+        if (!isset($res) || !is_object($res) || !isset($res->message))
         {
-            try
-            {
-                $res = $this->_client->DocumentParse(LICENSE_KEY, $name, $size, $mimeType, self::cleanText($contents));
-            }
-            catch (SoapFault $exception)
-            {
-                return false;
-            }
-        }
-        else
-        {
-            $res = $this->_client->DocumentParse(LICENSE_KEY, $name, $size, $mimeType, self::cleanText($contents));
+            return false;
         }
 
         switch($res->message)
@@ -179,21 +199,28 @@ class ParseUtility
     public function status($key)
     {
         if (!CATSUtility::isSOAPEnabled()) return false;
-        $client = new SoapClient('wsdl/status.wsdl');
-        if (!defined('CATS_TEST_MODE') || !CATS_TEST_MODE)
+        
+        // Temporarily suppress errors during SOAP operations
+        $previousHandler = set_error_handler(function($errno, $errstr) {
+            return true;
+        });
+        
+        try
         {
-            try
-            {
-                $res = $client->Status($key);
-            }
-            catch (SoapFault $exception)
-            {
-                return false;
-            }
-        }
-        else
-        {
+            $client = new SoapClient('wsdl/status.wsdl');
             $res = $client->Status($key);
+            
+            restore_error_handler();
+        }
+        catch (\Throwable $e)
+        {
+            restore_error_handler();
+            return false;
+        }
+
+        if (!isset($res) || !is_object($res) || !isset($res->message))
+        {
+            return false;
         }
 
         switch($res->message)

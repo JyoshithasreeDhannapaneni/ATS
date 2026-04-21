@@ -22,12 +22,12 @@ class MicrosoftSSO
     
     public function __construct()
     {
-        // Azure AD Configuration - loaded from config.php (which is gitignored)
-        // This prevents secrets from being committed to version control
+        // Azure AD Configuration - Set these in config.php or environment variables
+        // IMPORTANT: Never commit actual secrets to version control!
         $this->_clientId = defined('MICROSOFT_SSO_CLIENT_ID') ? MICROSOFT_SSO_CLIENT_ID : '';
         $this->_clientSecret = defined('MICROSOFT_SSO_CLIENT_SECRET') ? MICROSOFT_SSO_CLIENT_SECRET : '';
         $this->_tenantId = defined('MICROSOFT_SSO_TENANT_ID') ? MICROSOFT_SSO_TENANT_ID : 'common';
-        $this->_redirectUri = defined('MICROSOFT_SSO_REDIRECT_URI') ? MICROSOFT_SSO_REDIRECT_URI : 'http://localhost:8000/oauth_callback.php';
+        $this->_redirectUri = defined('MICROSOFT_SSO_REDIRECT_URI') ? MICROSOFT_SSO_REDIRECT_URI : '';
         
         // Allowed email domains for login
         $this->_allowedDomains = array(

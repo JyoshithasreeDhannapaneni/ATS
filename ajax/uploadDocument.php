@@ -1,8 +1,12 @@
 <?php
-include_once('../constants.php');
-include_once('../config.php');
-include_once('../lib/DatabaseConnection.php');
-include_once('../lib/CandidateDocuments.php');
+// Define LEGACY_ROOT for ajax folder context
+if (!defined('LEGACY_ROOT')) {
+    define('LEGACY_ROOT', realpath(dirname(__FILE__) . '/..'));
+}
+include_once(LEGACY_ROOT . '/constants.php');
+include_once(LEGACY_ROOT . '/config.php');
+include_once(LEGACY_ROOT . '/lib/DatabaseConnection.php');
+include_once(LEGACY_ROOT . '/lib/CandidateDocuments.php');
 
 header('Content-Type: application/json');
 
@@ -15,14 +19,19 @@ if (empty($token))
     exit;
 }
 
-$docs = new CandidateDocuments(1);
-$tokenData = $docs->validateToken($token);
+// First validate token with a temporary instance (site doesn't matter for token lookup)
+$tempDocs = new CandidateDocuments(1);
+$tokenData = $tempDocs->validateToken($token);
 
 if (!$tokenData)
 {
     echo json_encode(array('success' => false, 'error' => 'Invalid or expired upload link'));
     exit;
 }
+
+// Now create the proper instance with the correct site_id from the token
+$siteID = intval($tokenData['site_id']);
+$docs = new CandidateDocuments($siteID);
 
 if (!isset($_FILES['document']) || $_FILES['document']['error'] !== UPLOAD_ERR_OK)
 {

@@ -195,19 +195,231 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                 setTimeout(function() { btn.textContent = 'Copy'; }, 2000);
             }
 
+            // ==================== PIPELINE DROPDOWN FUNCTIONS ====================
+            var pipelineJobOrders = [];
+            var selectedJobOrderID = null;
+            var pipelineDropdownOpen = false;
+
+            function togglePipelineDropdown(event) {
+                event.stopPropagation();
+                var menu = document.getElementById('pipelineDropdownMenu');
+                if (menu.classList.contains('show')) {
+                    closePipelineDropdown();
+                } else {
+                    openPipelineDropdown();
+                }
+            }
+
+            function openPipelineDropdown() {
+                var menu = document.getElementById('pipelineDropdownMenu');
+                var badge = document.getElementById('pipelineBadge');
+                
+                if (!badge || !menu) {
+                    console.error('Pipeline badge or menu not found');
+                    return;
+                }
+                
+                var rect = badge.getBoundingClientRect();
+                var menuWidth = 320;
+                var menuHeight = 400;
+                
+                // Position below the badge
+                var top = rect.bottom + 8;
+                var left = rect.left;
+                
+                // Ensure dropdown doesn't go off-screen to the right
+                if (left + menuWidth > window.innerWidth) {
+                    left = window.innerWidth - menuWidth - 20;
+                }
+                
+                // Ensure dropdown doesn't go off-screen at the bottom
+                if (top + menuHeight > window.innerHeight) {
+                    top = rect.top - menuHeight - 8; // Show above the badge
+                }
+                
+                // Ensure left is not negative
+                if (left < 10) left = 10;
+                
+                menu.style.top = top + 'px';
+                menu.style.left = left + 'px';
+                
+                menu.classList.add('show');
+                pipelineDropdownOpen = true;
+                loadJobOrders();
+                showJobOrderStep();
+            }
+
+            function closePipelineDropdown() {
+                var menu = document.getElementById('pipelineDropdownMenu');
+                if (menu) {
+                    menu.classList.remove('show');
+                }
+                pipelineDropdownOpen = false;
+                selectedJobOrderID = null;
+            }
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(event) {
+                var container = document.getElementById('pipelineBadgeContainer');
+                var menu = document.getElementById('pipelineDropdownMenu');
+                if (container && menu && !container.contains(event.target) && !menu.contains(event.target)) {
+                    closePipelineDropdown();
+                }
+            });
+
+            // Close dropdown on scroll or resize
+            window.addEventListener('scroll', function() {
+                if (pipelineDropdownOpen) {
+                    closePipelineDropdown();
+                }
+            }, true);
+            
+            window.addEventListener('resize', function() {
+                if (pipelineDropdownOpen) {
+                    closePipelineDropdown();
+                }
+            });
+
+            function loadJobOrders() {
+                var container = document.getElementById('jobOrdersList');
+                if (!container) {
+                    console.error('jobOrdersList container not found');
+                    return;
+                }
+                container.innerHTML = '<div class="pipeline-dropdown-empty"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite; margin-bottom: 8px;"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg><br>Loading job orders...</div>';
+
+                var xhr = new XMLHttpRequest();
+                xhr.open('GET', 'ajax.php?f=getJobOrdersList', true);
+                xhr.onload = function() {
+                    try {
+                        var resp = JSON.parse(xhr.responseText);
+                        if (resp.error === 0 && resp.jobOrders && resp.jobOrders.length > 0) {
+                            pipelineJobOrders = resp.jobOrders;
+                            renderJobOrdersList(pipelineJobOrders);
+                        } else if (resp.jobOrders && resp.jobOrders.length === 0) {
+                            container.innerHTML = '<div class="pipeline-dropdown-empty"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 8px; opacity: 0.5;"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg><br>No job orders available.<br><small style="opacity: 0.6; font-size: 11px;">Create a job order first.</small></div>';
+                        } else {
+                            container.innerHTML = '<div class="pipeline-dropdown-empty">Error loading job orders</div>';
+                        }
+                    } catch(e) {
+                        console.error('Parse error:', e, xhr.responseText);
+                        container.innerHTML = '<div class="pipeline-dropdown-empty">Failed to parse response</div>';
+                    }
+                };
+                xhr.onerror = function() {
+                    container.innerHTML = '<div class="pipeline-dropdown-empty">Network error</div>';
+                };
+                xhr.send();
+            }
+
+            function renderJobOrdersList(jobOrders) {
+                var container = document.getElementById('jobOrdersList');
+                if (jobOrders.length === 0) {
+                    container.innerHTML = '<div class="pipeline-dropdown-empty">No matching job orders found.</div>';
+                    return;
+                }
+
+                var html = '';
+                for (var i = 0; i < jobOrders.length; i++) {
+                    var jo = jobOrders[i];
+                    html += '<div class="pipeline-dropdown-item" onclick="selectJobOrder(' + jo.jobOrderID + ')">';
+                    html += '<div class="pipeline-dropdown-item-icon">';
+                    html += '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>';
+                    html += '</div>';
+                    html += '<div>';
+                    html += '<div class="pipeline-dropdown-item-title">' + escapeHtml(jo.title) + '</div>';
+                    html += '<div class="pipeline-dropdown-item-subtitle">' + escapeHtml(jo.companyName || 'No company') + '</div>';
+                    html += '</div>';
+                    html += '</div>';
+                }
+                container.innerHTML = html;
+            }
+
+            function filterJobOrders(query) {
+                query = query.toLowerCase().trim();
+                if (query === '') {
+                    renderJobOrdersList(pipelineJobOrders);
+                    return;
+                }
+
+                var filtered = pipelineJobOrders.filter(function(jo) {
+                    return (jo.title && jo.title.toLowerCase().indexOf(query) !== -1) ||
+                           (jo.companyName && jo.companyName.toLowerCase().indexOf(query) !== -1);
+                });
+                renderJobOrdersList(filtered);
+            }
+
+            function selectJobOrder(jobOrderID) {
+                selectedJobOrderID = jobOrderID;
+                showStatusStep();
+            }
+
+            function showJobOrderStep() {
+                document.getElementById('pipelineStepJobOrder').style.display = 'block';
+                document.getElementById('pipelineStepStatus').style.display = 'none';
+                selectedJobOrderID = null;
+            }
+
+            function showStatusStep() {
+                document.getElementById('pipelineStepJobOrder').style.display = 'none';
+                document.getElementById('pipelineStepStatus').style.display = 'block';
+            }
+
+            function addToPipelineWithStatus(statusID) {
+                if (!selectedJobOrderID) {
+                    alert('Please select a job order first.');
+                    return;
+                }
+
+                var candidateID = <?php echo (int)$this->candidateID; ?>;
+                var url = 'ajax.php?f=addToPipeline&candidateID=' + candidateID + 
+                          '&jobOrderID=' + selectedJobOrderID + 
+                          '&statusID=' + statusID;
+
+                var xhr = new XMLHttpRequest();
+                xhr.open('GET', url, true);
+                xhr.onload = function() {
+                    if (xhr.responseText.indexOf('<errorcode>0</errorcode>') !== -1) {
+                        closePipelineDropdown();
+                        // Refresh the page to show updated pipeline
+                        window.location.reload();
+                    } else {
+                        var errorMatch = xhr.responseText.match(/<errormessage>(.*?)<\/errormessage>/);
+                        var errorMsg = errorMatch ? errorMatch[1] : 'Failed to add to pipeline.';
+                        alert(errorMsg);
+                    }
+                };
+                xhr.onerror = function() {
+                    alert('Network error. Please try again.');
+                };
+                xhr.send();
+            }
+
+            function escapeHtml(text) {
+                if (!text) return '';
+                var div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+            // ==================== END PIPELINE DROPDOWN FUNCTIONS ====================
+
             var documentsLoaded = false;
-            function loadCandidateDocuments() {
-                if (documentsLoaded) return;
+            function loadCandidateDocuments(forceRefresh) {
+                if (documentsLoaded && !forceRefresh) return;
                 var candidateID = <?php echo (int)$this->candidateID; ?>;
                 var container = document.getElementById('documentsListContainer');
+
+                // Show loading state
+                container.innerHTML = '<div style="text-align: center; padding: 40px; color: #9ca3af; font-size: 13px;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite; margin-bottom: 8px;"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg><br>Loading documents...</div>';
 
                 var xhr = new XMLHttpRequest();
                 xhr.open('GET', 'ajax/getCandidateDocuments.php?candidateID=' + candidateID, true);
                 xhr.onload = function() {
                     try {
                         var resp = JSON.parse(xhr.responseText);
-                        if (resp.success && resp.documents.length > 0) {
-                            var html = '<table style="width: 100%; border-collapse: collapse; font-size: 13px;">';
+                        if (resp.success && resp.documents && resp.documents.length > 0) {
+                            var html = '<div style="display: flex; justify-content: flex-end; margin-bottom: 12px;"><button onclick="loadCandidateDocuments(true);" style="padding: 6px 12px; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 12px; color: #4b5563; cursor: pointer; display: flex; align-items: center; gap: 6px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>Refresh</button></div>';
+                            html += '<table style="width: 100%; border-collapse: collapse; font-size: 13px;">';
                             html += '<tr style="background: #f9fafb; border-bottom: 2px solid #e5e7eb;">';
                             html += '<th style="padding: 10px 14px; text-align: left; font-weight: 600; color: #374151;">Document</th>';
                             html += '<th style="padding: 10px 14px; text-align: left; font-weight: 600; color: #374151;">Type</th>';
@@ -222,27 +434,52 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                                 var statusColor = d.status === 'approved' ? '#059669' : (d.status === 'rejected' ? '#dc2626' : '#d97706');
                                 var statusBg = d.status === 'approved' ? '#ecfdf5' : (d.status === 'rejected' ? '#fef2f2' : '#fffbeb');
                                 html += '<tr style="border-bottom: 1px solid #f3f4f6;">';
-                                html += '<td style="padding: 10px 14px;"><div style="font-weight: 600; color: #1f2937;">' + d.original_filename + '</div></td>';
-                                html += '<td style="padding: 10px 14px; color: #6b7280;">' + d.typeLabel + '</td>';
+                                html += '<td style="padding: 10px 14px;"><div style="font-weight: 600; color: #1f2937;">' + escapeHtml(d.original_filename) + '</div></td>';
+                                html += '<td style="padding: 10px 14px; color: #6b7280;">' + escapeHtml(d.typeLabel) + '</td>';
                                 html += '<td style="padding: 10px 14px; color: #6b7280;">' + d.file_size_kb + ' KB</td>';
-                                html += '<td style="padding: 10px 14px; color: #6b7280;">' + d.uploadedDateFormatted + '</td>';
+                                html += '<td style="padding: 10px 14px; color: #6b7280;">' + escapeHtml(d.uploadedDateFormatted) + '</td>';
                                 html += '<td style="padding: 10px 14px;"><span style="padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; background: ' + statusBg + '; color: ' + statusColor + ';">' + d.status + '</span></td>';
                                 html += '<td style="padding: 10px 14px; text-align: center;"><a href="ajax/downloadDocument.php?id=' + d.document_id + '" target="_blank" style="color: #2563eb; font-weight: 600; text-decoration: none;">View</a></td>';
                                 html += '</tr>';
                             }
                             html += '</table>';
                             container.innerHTML = html;
-                        } else {
+                        } else if (resp.success) {
                             container.innerHTML = '<div style="text-align: center; padding: 40px; color: #9ca3af; font-size: 13px;">' +
                                 '<svg width="36" height="36" fill="none" stroke="#d1d5db" stroke-width="1.5" viewBox="0 0 24 24" style="margin: 0 auto 10px; display: block;"><path d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>' +
-                                'No documents uploaded yet.<br><span style="font-size: 11px; color: #b0b7c3; margin-top: 4px; display: inline-block;">Generate an upload link and share it with the candidate.</span></div>';
+                                'No documents uploaded yet.<br><span style="font-size: 11px; color: #b0b7c3; margin-top: 4px; display: inline-block;">Generate an upload link and share it with the candidate.</span>' +
+                                '<br><button onclick="loadCandidateDocuments(true);" style="margin-top: 16px; padding: 8px 16px; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 12px; color: #4b5563; cursor: pointer;">Refresh</button></div>';
+                        } else {
+                            container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ef4444; font-size: 13px;">Error: ' + (resp.error || 'Unknown error') + '</div>';
                         }
                         documentsLoaded = true;
                     } catch(e) {
-                        container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ef4444; font-size: 13px;">Failed to load documents.</div>';
+                        console.error('Documents parse error:', e, xhr.responseText);
+                        container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ef4444; font-size: 13px;">Failed to load documents.<br><button onclick="loadCandidateDocuments(true);" style="margin-top: 16px; padding: 8px 16px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; font-size: 12px; color: #dc2626; cursor: pointer;">Try Again</button></div>';
                     }
                 };
+                xhr.onerror = function() {
+                    container.innerHTML = '<div style="text-align: center; padding: 40px; color: #ef4444; font-size: 13px;">Network error loading documents.<br><button onclick="loadCandidateDocuments(true);" style="margin-top: 16px; padding: 8px 16px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; font-size: 12px; color: #dc2626; cursor: pointer;">Try Again</button></div>';
+                };
                 xhr.send();
+            }
+
+            // Delete candidate confirmation
+            function confirmDeleteCandidate(candidateID, candidateName) {
+                var modal = document.getElementById('deleteConfirmModal');
+                var nameSpan = document.getElementById('deleteCandidateName');
+                var confirmBtn = document.getElementById('confirmDeleteBtn');
+                
+                nameSpan.textContent = candidateName;
+                confirmBtn.onclick = function() {
+                    window.location.href = '<?php echo CATSUtility::getIndexName(); ?>?m=candidates&a=delete&candidateID=' + candidateID;
+                };
+                
+                modal.classList.add('active');
+            }
+
+            function closeDeleteModal() {
+                document.getElementById('deleteConfirmModal').classList.remove('active');
             }
         </script>
 
@@ -283,23 +520,39 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
 
             /* ===================== PAGE OVERRIDES ===================== */
             body { padding: 0 !important; font-family: 'Inter', system-ui, -apple-system, sans-serif !important; }
-            #main { margin: 0 16px !important; padding-top: 1.8em !important; }
+            
+            /* Keep sidebar layout intact - don't override margin-left */
+            #main { 
+                padding-top: var(--topbar-height, 56px) !important;
+                /* margin-left is controlled by main.css for sidebar */
+            }
+            
             #contents {
                 position: relative;
                 background: var(--gray-50, #f8fafc) !important;
-                min-height: 100vh;
+                min-height: calc(100vh - var(--topbar-height, 56px));
                 width: 100% !important;
+                max-width: 100% !important;
                 padding: 0 !important;
                 box-shadow: none !important;
-                border-radius: 0 0 8px 8px !important;
+                border-radius: 0 !important;
+                overflow-x: hidden !important;
             }
 
             .candidate-page-wrapper {
                 background: var(--gray-50, #f8fafc);
-                min-height: 100vh;
+                min-height: calc(100vh - var(--topbar-height, 56px));
                 padding: 0;
                 position: relative;
                 width: 100%;
+                max-width: 100%;
+                overflow-x: hidden;
+            }
+            
+            .candidate-main-panel {
+                width: 100%;
+                max-width: 100%;
+                overflow-x: hidden;
             }
 
             /* ===================== HERO PROFILE HEADER ===================== */
@@ -307,8 +560,10 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                 background: linear-gradient(135deg, #2563eb 0%, #1e40af 60%, #1e3a8a 100%);
                 padding: 0;
                 position: relative;
-                overflow: hidden;
+                overflow: visible;
                 border-radius: 0;
+                width: 100%;
+                max-width: 100%;
             }
             .profile-hero::before {
                 content: '';
@@ -333,10 +588,13 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
             .profile-hero-inner {
                 display: flex;
                 align-items: center;
-                gap: 28px;
-                padding: 36px 36px 28px 36px;
+                gap: 24px;
+                padding: 32px 24px 24px 24px;
                 position: relative;
                 z-index: 1;
+                flex-wrap: wrap;
+                width: 100%;
+                max-width: 100%;
             }
             .profile-avatar {
                 width: 88px;
@@ -354,7 +612,7 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                 border: 3px solid rgba(255,255,255,0.3);
                 letter-spacing: -0.02em;
             }
-            .profile-info { flex: 1; min-width: 0; }
+            .profile-info { flex: 1; min-width: 0; overflow: visible; }
             .profile-name {
                 font-size: 28px;
                 font-weight: 800;
@@ -370,6 +628,8 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                 gap: 16px;
                 flex-wrap: wrap;
                 margin-bottom: 14px;
+                overflow: visible;
+                position: relative;
             }
 
             .profile-status-badge {
@@ -388,6 +648,206 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
             .profile-status-badge.qualifying, .profile-status-badge.submitted { background: rgba(124, 58, 237, 0.2); color: #ddd6fe; }
             .profile-status-badge.contacted, .profile-status-badge.candidate-responded { background: rgba(217, 119, 6, 0.2); color: #fde68a; }
             .profile-status-badge.none, .profile-status-badge.no-contact { background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); }
+            /* Custom Status Badge Colors */
+            .profile-status-badge.screen-select { background: rgba(34, 197, 94, 0.2); color: #86efac; }
+            .profile-status-badge.screen-reject { background: rgba(239, 68, 68, 0.2); color: #fca5a5; }
+            .profile-status-badge.l1-select { background: rgba(59, 130, 246, 0.2); color: #93c5fd; }
+            .profile-status-badge.l2-select { background: rgba(139, 92, 246, 0.2); color: #c4b5fd; }
+            .profile-status-badge.l3-select { background: rgba(236, 72, 153, 0.2); color: #f9a8d4; }
+            .profile-status-badge.offer-release { background: rgba(251, 191, 36, 0.2); color: #fde68a; }
+            .profile-status-badge.onboarded { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; }
+            .profile-status-badge.no-show { background: rgba(107, 114, 128, 0.2); color: #d1d5db; }
+
+            /* Clickable Pipeline Badge Styles */
+            .pipeline-badge-container {
+                position: relative;
+                display: inline-block;
+                z-index: 100;
+            }
+            .profile-status-badge.clickable {
+                cursor: pointer;
+                transition: all 0.2s ease;
+                user-select: none;
+            }
+            .profile-status-badge.clickable:hover {
+                background: rgba(255,255,255,0.25);
+                transform: translateY(-1px);
+            }
+            .profile-status-badge.clickable:active {
+                transform: scale(0.98);
+            }
+            .pipeline-dropdown-menu {
+                position: fixed;
+                min-width: 320px;
+                max-height: 450px;
+                overflow-y: auto;
+                overflow-x: hidden;
+                background: #1e293b;
+                border: 1px solid rgba(255,255,255,0.2);
+                border-radius: 12px;
+                box-shadow: 0 25px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.1);
+                z-index: 99999;
+                display: none;
+                animation: dropdownFadeIn 0.2s ease;
+            }
+            .pipeline-dropdown-menu.show {
+                display: block !important;
+            }
+            @keyframes dropdownFadeIn {
+                from { opacity: 0; transform: translateY(-8px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }
+            .pipeline-dropdown-header {
+                padding: 14px 16px 10px;
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+                font-size: 11px;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.08em;
+                color: rgba(255,255,255,0.6);
+                background: rgba(0,0,0,0.2);
+            }
+            .pipeline-dropdown-search {
+                padding: 12px;
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+                background: rgba(0,0,0,0.1);
+            }
+            .pipeline-dropdown-search input {
+                width: 100%;
+                padding: 10px 14px;
+                border: 1px solid rgba(255,255,255,0.2);
+                border-radius: 8px;
+                background: rgba(255,255,255,0.08);
+                color: #fff;
+                font-size: 13px;
+                outline: none;
+                transition: all 0.2s ease;
+            }
+            .pipeline-dropdown-search input:focus {
+                border-color: #3b82f6;
+                background: rgba(255,255,255,0.12);
+                box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
+            }
+            .pipeline-dropdown-search input::placeholder {
+                color: rgba(255,255,255,0.4);
+            }
+            .pipeline-dropdown-item {
+                padding: 12px 16px;
+                cursor: pointer;
+                transition: all 0.15s ease;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                border-bottom: 1px solid rgba(255,255,255,0.05);
+            }
+            .pipeline-dropdown-item:last-child {
+                border-bottom: none;
+            }
+            .pipeline-dropdown-item:hover {
+                background: rgba(59, 130, 246, 0.15);
+            }
+            .pipeline-dropdown-item.selected {
+                background: rgba(59, 130, 246, 0.3);
+            }
+            .pipeline-dropdown-item-title {
+                font-size: 14px;
+                font-weight: 600;
+                color: #fff;
+                line-height: 1.3;
+            }
+            .pipeline-dropdown-item-subtitle {
+                font-size: 12px;
+                color: rgba(255,255,255,0.5);
+                margin-top: 2px;
+            }
+            .pipeline-dropdown-item-icon {
+                width: 36px;
+                height: 36px;
+                border-radius: 8px;
+                background: linear-gradient(135deg, rgba(59,130,246,0.3) 0%, rgba(139,92,246,0.3) 100%);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+            }
+            .pipeline-dropdown-item-icon svg {
+                opacity: 0.9;
+                color: #fff;
+            }
+            .pipeline-dropdown-divider {
+                height: 1px;
+                background: rgba(255,255,255,0.1);
+                margin: 4px 0;
+            }
+            .pipeline-dropdown-section {
+                max-height: 250px;
+                overflow-y: auto;
+                padding: 0;
+            }
+            .pipeline-dropdown-empty {
+                padding: 30px 20px;
+                text-align: center;
+                color: rgba(255,255,255,0.6);
+                font-size: 13px;
+                background: rgba(0,0,0,0.1);
+            }
+            .pipeline-status-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+                padding: 12px;
+            }
+            .pipeline-status-item {
+                padding: 14px 12px;
+                border-radius: 10px;
+                cursor: pointer;
+                transition: all 0.15s ease;
+                text-align: center;
+                border: 1px solid transparent;
+            }
+            .pipeline-status-item:hover {
+                transform: scale(1.03);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            }
+            .pipeline-status-item.screen-select { background: rgba(34, 197, 94, 0.2); color: #86efac; }
+            .pipeline-status-item.screen-reject { background: rgba(239, 68, 68, 0.2); color: #fca5a5; }
+            .pipeline-status-item.l1-select { background: rgba(59, 130, 246, 0.2); color: #93c5fd; }
+            .pipeline-status-item.l2-select { background: rgba(139, 92, 246, 0.2); color: #c4b5fd; }
+            .pipeline-status-item.l3-select { background: rgba(236, 72, 153, 0.2); color: #f9a8d4; }
+            .pipeline-status-item.offer-release { background: rgba(251, 191, 36, 0.2); color: #fde68a; }
+            .pipeline-status-item.onboarded { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; }
+            .pipeline-status-item.no-show { background: rgba(107, 114, 128, 0.2); color: #d1d5db; }
+            .pipeline-status-item span {
+                font-size: 12px;
+                font-weight: 600;
+            }
+            .pipeline-back-btn {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 12px 16px;
+                cursor: pointer;
+                transition: all 0.15s ease;
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+                color: rgba(255,255,255,0.7);
+                font-size: 13px;
+                font-weight: 500;
+                background: rgba(0,0,0,0.2);
+            }
+            .pipeline-back-btn:hover {
+                background: rgba(59, 130, 246, 0.2);
+                color: #fff;
+            }
+            .pipeline-back-btn svg {
+                opacity: 0.7;
+            }
+            .pipeline-back-btn:hover svg {
+                opacity: 1;
+            }
 
             .profile-status-dropdown {
                 appearance: none;
@@ -446,6 +906,7 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                 gap: 10px;
                 flex-shrink: 0;
                 align-items: flex-start;
+                flex-wrap: wrap;
             }
             .profile-action-btn {
                 display: inline-flex;
@@ -481,14 +942,115 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                 background: rgba(255,255,255,0.22);
                 transform: translateY(-1px);
             }
+            .profile-action-btn.btn-danger {
+                background: rgba(220, 38, 38, 0.15);
+                color: #fff;
+                border: 1px solid rgba(220, 38, 38, 0.4);
+            }
+            .profile-action-btn.btn-danger:hover {
+                background: #dc2626;
+                border-color: #dc2626;
+                transform: translateY(-1px);
+            }
+
+            /* Delete Confirmation Modal */
+            .delete-modal-overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 10000;
+                align-items: center;
+                justify-content: center;
+            }
+            .delete-modal-overlay.active {
+                display: flex;
+            }
+            .delete-modal {
+                background: #fff;
+                border-radius: 16px;
+                padding: 32px;
+                max-width: 420px;
+                width: 90%;
+                text-align: center;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                animation: modalSlideIn 0.3s ease;
+            }
+            @keyframes modalSlideIn {
+                from { opacity: 0; transform: scale(0.9) translateY(-20px); }
+                to { opacity: 1; transform: scale(1) translateY(0); }
+            }
+            .delete-modal-icon {
+                width: 64px;
+                height: 64px;
+                background: #fee2e2;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin: 0 auto 20px;
+            }
+            .delete-modal-icon svg {
+                width: 32px;
+                height: 32px;
+                color: #dc2626;
+            }
+            .delete-modal h3 {
+                font-size: 20px;
+                font-weight: 700;
+                color: #1f2937;
+                margin: 0 0 12px;
+            }
+            .delete-modal p {
+                font-size: 14px;
+                color: #6b7280;
+                margin: 0 0 24px;
+                line-height: 1.5;
+            }
+            .delete-modal p strong {
+                color: #1f2937;
+            }
+            .delete-modal-actions {
+                display: flex;
+                gap: 12px;
+                justify-content: center;
+            }
+            .delete-modal-btn {
+                padding: 12px 24px;
+                border-radius: 8px;
+                font-size: 14px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s;
+                border: none;
+            }
+            .delete-modal-btn.cancel {
+                background: #f3f4f6;
+                color: #374151;
+            }
+            .delete-modal-btn.cancel:hover {
+                background: #e5e7eb;
+            }
+            .delete-modal-btn.confirm {
+                background: #dc2626;
+                color: #fff;
+            }
+            .delete-modal-btn.confirm:hover {
+                background: #b91c1c;
+            }
 
             /* ===================== INFO CARDS ROW ===================== */
             .info-cards-row {
                 display: grid;
-                grid-template-columns: repeat(3, 1fr);
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
                 gap: 20px;
-                padding: 24px 36px;
+                padding: 24px;
                 background: var(--gray-50, #f8fafc);
+                width: 100%;
+                max-width: 100%;
             }
             .info-card {
                 background: #fff;
@@ -589,9 +1151,12 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                 display: flex;
                 align-items: center;
                 background: #fff;
-                padding: 0 36px;
+                padding: 0 24px;
                 border-bottom: 2px solid var(--gray-200, #e5e7eb);
                 position: relative;
+                width: 100%;
+                max-width: 100%;
+                overflow-x: auto;
             }
             .cand-tabs-list {
                 display: flex;
@@ -692,31 +1257,31 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
             }
 
             .tab-left-panel {
-                flex: 0 0 100% !important;
+                flex: 1 1 auto !important;
                 width: 100% !important;
                 max-width: 100% !important;
-                min-width: 100% !important;
-                padding: 28px 32px;
+                min-width: 0 !important;
+                padding: 24px;
                 border-right: 1px solid var(--gray-200, #e5e7eb);
                 background: var(--gray-50, #f8fafc);
                 overflow-y: auto;
                 max-height: calc(100vh - 200px);
-                min-height: 550px;
+                min-height: 450px;
                 margin: 0 !important;
                 float: none !important;
                 box-sizing: border-box !important;
             }
 
             .tab-right-panel {
-                flex: 0 0 35% !important;
-                width: 35% !important;
-                max-width: 35% !important;
-                min-width: 35% !important;
-                padding: 24px 28px;
+                flex: 0 0 320px !important;
+                width: 320px !important;
+                max-width: 320px !important;
+                min-width: 280px !important;
+                padding: 20px;
                 background: #fff !important;
                 overflow-y: auto;
                 max-height: calc(100vh - 200px);
-                min-height: 550px;
+                min-height: 450px;
                 position: sticky;
                 top: 0;
                 align-self: flex-start;
@@ -793,11 +1358,24 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                 flex-direction: column;
             }
             .resume-viewer-text {
-                padding: 28px;
+                padding: 28px 32px;
                 white-space: pre-wrap;
                 overflow-y: auto;
                 max-height: 70vh;
                 min-height: 400px;
+                font: normal 13px/1.8 'Inter', -apple-system, sans-serif;
+                color: #1f2937;
+                background: #fff;
+            }
+            .resume-viewer-text.resume-document {
+                background: #fff;
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+                padding: 32px 36px;
+                font: normal 13.5px/1.9 'Inter', 'Georgia', serif;
+                color: #111827;
+                letter-spacing: 0.01em;
             }
             .resume-viewer iframe,
             .resume-viewer embed {
@@ -1048,9 +1626,10 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                 border-radius: 12px;
                 border: 1px solid var(--gray-200, #e5e7eb);
                 box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-                margin: 0 36px 24px 36px;
+                margin: 0 20px 20px 20px;
                 overflow: hidden;
                 transition: box-shadow 0.25s;
+                max-width: calc(100% - 40px);
             }
             .section-card:hover {
                 box-shadow: 0 4px 16px rgba(0,0,0,0.06);
@@ -1212,20 +1791,46 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
             #activityTable { display: none; }
 
             /* ===================== RESPONSIVE ===================== */
+            
+            /* Ensure content works with sidebar */
+            @media (min-width: 1025px) {
+                .candidate-page-wrapper {
+                    width: 100%;
+                    max-width: 100%;
+                    overflow-x: hidden;
+                }
+                .profile-hero {
+                    width: 100%;
+                    max-width: 100%;
+                }
+                .info-cards-row {
+                    max-width: 100%;
+                }
+            }
+            
+            @media (max-width: 1200px) {
+                .tab-right-panel {
+                    flex: 0 0 280px !important;
+                    width: 280px !important;
+                    max-width: 280px !important;
+                    min-width: 250px !important;
+                }
+            }
+            
             @media (max-width: 1024px) {
                 .info-cards-row {
                     grid-template-columns: 1fr;
                     padding: 16px 20px;
                 }
                 .profile-hero-inner {
-                    padding: 24px 20px;
+                    padding: 20px 16px;
                     flex-wrap: wrap;
                 }
                 .profile-actions {
                     width: 100%;
                     flex-wrap: wrap;
                 }
-                .section-card { margin: 0 16px 16px; }
+                .section-card { margin: 0 12px 16px; }
                 .tab-left-panel {
                     flex: 0 0 100% !important;
                     width: 100% !important;
@@ -1233,7 +1838,7 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                     min-width: 100% !important;
                 }
                 .tab-right-panel { display: none !important; }
-                .cand-tabs-bar { padding: 0 20px; }
+                .cand-tabs-bar { padding: 0 16px; }
             }
 
             @media (max-width: 768px) {
@@ -1249,6 +1854,7 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                 .email-two-column {
                     flex-direction: column;
                 }
+                .section-card { margin: 0 8px 12px; }
             }
 
             /* ===================== TAB SECTION HEADERS ===================== */
@@ -1294,7 +1900,15 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                                                     700 => 'Client Declined',
                                                     800 => 'Placed',
                                                     900 => 'Selected',
-                                                    950 => 'Rejected'
+                                                    950 => 'Rejected',
+                                                    1000 => 'Screen Select',
+                                                    1010 => 'Screen Reject',
+                                                    1020 => 'L1 Select',
+                                                    1030 => 'L2 Select',
+                                                    1040 => 'L3 Select',
+                                                    1050 => 'Offer Release',
+                                                    1060 => 'Onboarded',
+                                                    1070 => 'No Show'
                                                 );
                                                 foreach ($statusOptions as $statusVal => $statusLabel):
                                             ?>
@@ -1304,10 +1918,13 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                                             <?php endforeach; ?>
                                         </select>
                                     <?php else: ?>
-                                        <span class="profile-status-badge none">
-                                            <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><circle cx="4" cy="4" r="4"/></svg>
-                                            No Pipeline
-                                        </span>
+                                        <div class="pipeline-badge-container" id="pipelineBadgeContainer">
+                                            <span class="profile-status-badge none clickable" id="pipelineBadge" onclick="togglePipelineDropdown(event)">
+                                                <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><circle cx="4" cy="4" r="4"/></svg>
+                                                No Pipeline
+                                                <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor" style="margin-left: 4px;"><path d="M8 11L3 6h10z"/></svg>
+                                            </span>
+                                        </div>
                                     <?php endif; ?>
                                     <?php if (!empty($this->data['currentEmployer'])): ?>
                                         <span style="color: rgba(255,255,255,0.7); font-size: 13px;">at <?php $this->_($this->data['currentEmployer']); ?></span>
@@ -1353,6 +1970,12 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                                 <button class="profile-action-btn btn-outline" onclick="showPopWin('<?php echo(CATSUtility::getIndexName()); ?>?m=candidates&amp;a=addActivityChangeStatus&amp;candidateID=<?php echo($this->candidateID); ?>&amp;jobOrderID=-1&amp;onlyScheduleEvent=true', 600, 350, null); return false;">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
                                     Schedule Interview
+                                </button>
+                                <?php endif; ?>
+                                <?php if ($this->getUserAccessLevel('candidates.delete') >= ACCESS_LEVEL_DELETE): ?>
+                                <button class="profile-action-btn btn-danger" onclick="confirmDeleteCandidate(<?php echo($this->candidateID); ?>, '<?php echo addslashes($this->data['firstName'] . ' ' . $this->data['lastName']); ?>');">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                                    Delete
                                 </button>
                                 <?php endif; ?>
                             </div>
@@ -1421,22 +2044,32 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                                             </div>
                                         <?php endif; ?>
 
-                                        <?php if ($isPDF && $hasResumeText): ?>
-                                            <iframe src="<?php echo $resumeDownloadURL; ?>" title="Resume" id="resumeFileView"></iframe>
-                                            <div class="resume-viewer-text" id="resumeTextView" style="display: none;">
-                                                <?php echo nl2br(htmlspecialchars($this->resumeText)); ?>
+                                        <?php if ($isPDF): ?>
+                                            <!-- PDF: embed with object tag + fallback -->
+                                            <div id="resumeFileView">
+                                                <object data="<?php echo $resumeDownloadURL; ?>" type="application/pdf" width="100%" style="min-height:550px; border-radius:0 0 8px 8px;">
+                                                    <div style="text-align:center; padding:40px 20px;">
+                                                        <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="1.5" style="display:block; margin:0 auto 16px;"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                                                        <p style="font-weight:600; color:#1f2937; margin:0 0 6px;">PDF Resume</p>
+                                                        <p style="color:#6b7280; font-size:13px; margin:0 0 16px;"><?php echo htmlspecialchars($this->resumeFileName); ?></p>
+                                                        <a href="<?php echo $resumeDownloadURL; ?>" target="_blank" style="display:inline-block; padding:10px 28px; background:#2563eb; color:#fff; border-radius:8px; text-decoration:none; font-weight:600; font-size:14px;">Open PDF</a>
+                                                    </div>
+                                                </object>
                                             </div>
-                                        <?php elseif ($isPDF): ?>
-                                            <iframe src="<?php echo $resumeDownloadURL; ?>" title="Resume"></iframe>
-                                        <?php elseif ($hasResumeText): ?>
-                                            <div class="resume-viewer-text" id="resumeTextView">
-                                                <?php echo nl2br(htmlspecialchars($this->resumeText)); ?>
-                                            </div>
-                                            <?php if ($hasResumeFile): ?>
-                                                <iframe src="<?php echo $resumeDownloadURL; ?>" title="Resume" id="resumeFileView" style="display: none;"></iframe>
+                                            <?php if ($hasResumeText): ?>
+                                                <div class="resume-viewer-text resume-document" id="resumeTextView" style="display:none;"><?php echo nl2br(htmlspecialchars($this->resumeText)); ?></div>
                                             <?php endif; ?>
+                                        <?php elseif ($hasResumeText): ?>
+                                            <!-- Non-PDF: show extracted text as formatted resume document -->
+                                            <div class="resume-viewer-text resume-document" id="resumeTextView"><?php echo nl2br(htmlspecialchars($this->resumeText)); ?></div>
                                         <?php elseif ($hasResumeFile): ?>
-                                            <iframe src="<?php echo $resumeDownloadURL; ?>" title="Resume"></iframe>
+                                            <!-- File exists but no text extracted -->
+                                            <div style="text-align:center; padding:50px 20px;">
+                                                <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5" style="display:block; margin:0 auto 16px;"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                                <p style="font-weight:600; color:#374151; margin:0 0 6px;"><?php echo htmlspecialchars($this->resumeFileName); ?></p>
+                                                <p style="color:#6b7280; font-size:13px; margin:0 0 16px;">Preview not available for this file type</p>
+                                                <a href="<?php echo $resumeDownloadURL; ?>" target="_blank" style="display:inline-block; padding:10px 28px; background:#2563eb; color:#fff; border-radius:8px; text-decoration:none; font-weight:600;">Download File</a>
+                                            </div>
                                         <?php endif; ?>
                                     </div>
                                 <?php else: ?>
@@ -1972,6 +2605,77 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
         </div>
     </div>
 
+<?php endif; ?>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteConfirmModal" class="delete-modal-overlay" onclick="if(event.target === this) closeDeleteModal();">
+    <div class="delete-modal">
+        <div class="delete-modal-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 6h18"/>
+                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                <line x1="10" x2="10" y1="11" y2="17"/>
+                <line x1="14" x2="14" y1="11" y2="17"/>
+            </svg>
+        </div>
+        <h3>Delete Candidate?</h3>
+        <p>Are you sure you want to delete <strong id="deleteCandidateName"></strong>? This action cannot be undone and will remove all associated data including resumes, activities, and pipeline entries.</p>
+        <div class="delete-modal-actions">
+            <button class="delete-modal-btn cancel" onclick="closeDeleteModal();">Cancel</button>
+            <button class="delete-modal-btn confirm" id="confirmDeleteBtn">Delete Candidate</button>
+        </div>
+    </div>
+</div>
+
+<!-- Pipeline Dropdown (positioned fixed, outside all containers) -->
+<?php if (empty($this->pipelinesRS)): ?>
+<div class="pipeline-dropdown-menu" id="pipelineDropdownMenu">
+    <!-- Step 1: Select Job Order -->
+    <div id="pipelineStepJobOrder">
+        <div class="pipeline-dropdown-header">Select Job Order</div>
+        <div class="pipeline-dropdown-search">
+            <input type="text" id="jobOrderSearchInput" placeholder="Search job orders..." oninput="filterJobOrders(this.value)">
+        </div>
+        <div class="pipeline-dropdown-section" id="jobOrdersList">
+            <div class="pipeline-dropdown-empty">Loading job orders...</div>
+        </div>
+    </div>
+    <!-- Step 2: Select Status -->
+    <div id="pipelineStepStatus" style="display: none;">
+        <div class="pipeline-back-btn" onclick="showJobOrderStep()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+            Back to Job Orders
+        </div>
+        <div class="pipeline-dropdown-header">Select Status</div>
+        <div class="pipeline-status-grid">
+            <div class="pipeline-status-item screen-select" onclick="addToPipelineWithStatus(1000)">
+                <span>Screen Select</span>
+            </div>
+            <div class="pipeline-status-item screen-reject" onclick="addToPipelineWithStatus(1010)">
+                <span>Screen Reject</span>
+            </div>
+            <div class="pipeline-status-item l1-select" onclick="addToPipelineWithStatus(1020)">
+                <span>L1 Select</span>
+            </div>
+            <div class="pipeline-status-item l2-select" onclick="addToPipelineWithStatus(1030)">
+                <span>L2 Select</span>
+            </div>
+            <div class="pipeline-status-item l3-select" onclick="addToPipelineWithStatus(1040)">
+                <span>L3 Select</span>
+            </div>
+            <div class="pipeline-status-item offer-release" onclick="addToPipelineWithStatus(1050)">
+                <span>Offer Release</span>
+            </div>
+            <div class="pipeline-status-item onboarded" onclick="addToPipelineWithStatus(1060)">
+                <span>Onboarded</span>
+            </div>
+            <div class="pipeline-status-item no-show" onclick="addToPipelineWithStatus(1070)">
+                <span>No Show</span>
+            </div>
+        </div>
+    </div>
+</div>
 <?php endif; ?>
 
 <?php TemplateUtility::printFooter(); ?>

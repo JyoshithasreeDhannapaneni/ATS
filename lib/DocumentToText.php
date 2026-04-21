@@ -470,18 +470,56 @@ class DocumentToText
                 $data = $zip->getFromIndex($index);
                 // Close archive file
                 $zip->close();
-                // Load XML from a string
-                // Skip errors and warnings
-                libxml_disable_entity_loader(true);
+
+                // Use DOMDocument + XPath to extract ONLY text from <w:t> nodes
+                // This avoids the strip_tags() problem that produced garbage like "Tx Ct"
                 $xml = new DOMDocument();
+                libxml_use_internal_errors(true);
                 $xml->loadXML($data, LIBXML_NOENT | LIBXML_XINCLUDE | LIBXML_NOERROR | LIBXML_NOWARNING);
-                $raw_text = $xml->saveXML();
-                // We need to add a space where end-of-line and end-of-paragraphs present 
-                $raw_text_patched = str_replace(
+                libxml_clear_errors();
+
+                $xpath = new DOMXPath($xml);
+                $xpath->registerNamespace('w', 'http://schemas.openxmlformats.org/wordprocessingml/2006/main');
+
+                // Extract text paragraph by paragraph for proper line breaks
+                $paraNodes = $xpath->query('//w:p');
+                $paragraphs = array();
+
+                if ($paraNodes->length > 0) {
+                    foreach ($paraNodes as $para) {
+                        $paraText = '';
+                        $textNodes = $xpath->query('.//w:t', $para);
+                        foreach ($textNodes as $tNode) {
+                            $paraText .= $tNode->textContent;
+                        }
+                        $paraText = trim($paraText);
+                        if (!empty($paraText)) {
+                            $paragraphs[] = $paraText;
+                        }
+                    }
+                }
+
+                $text = implode("\n", $paragraphs);
+
+                // Fallback: if XPath found nothing, try regex on raw XML
+                if (empty(trim($text))) {
+                    if (preg_match_all('/<w:t[^>]*>([^<]*)<\/w:t>/i', $data, $matches)) {
+                        $text = implode(' ', $matches[1]);
+                    }
+                }
+
+                // Last fallback: strip_tags with paragraph markers
+                if (empty(trim($text))) {
+                    $patched = str_replace(
                         array('<w:br/>', '</w:p>', '<text:line-break', '<text:p'),
-                        array("\n<w:br/>", "\n</w:p>", "\n<text:line-break", "\n<text:p"), $raw_text);
-                // Return data without XML formatting tags
-                return utf8_encode(strip_tags($raw_text_patched));
+                        array("\n", "\n", "\n", "\n"), $data);
+                    $text = strip_tags($patched);
+                }
+
+                if (function_exists('mb_convert_encoding')) {
+                    return mb_convert_encoding(trim($text), 'UTF-8', 'UTF-8');
+                }
+                return trim($text);
             }
             $zip->close();
         }
@@ -572,7 +610,10 @@ class DocumentToText
         }
         $ansa = str_replace('{', '', $ansa);
         $ansa = str_replace('}', '', $ansa);
-        return utf8_encode($ansa);
+        if (function_exists('mb_convert_encoding')) {
+            return mb_convert_encoding($ansa, 'UTF-8', 'ISO-8859-1');
+        }
+        return $ansa;
     }
 
     private function getpgraph()

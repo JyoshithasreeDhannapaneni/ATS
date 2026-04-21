@@ -1015,8 +1015,13 @@ class AttachmentCreator
     public function createFromFile($dataItemType, $dataItemID, $filePath,
         $title, $contentType, $extractText, $fileExists)
     {
-        $filePathParts = explode('/', $filePath);
-        $originalFilename = end($filePathParts);
+        // Handle both Unix and Windows path separators
+        $originalFilename = basename($filePath);
+        
+        // If title is provided and looks like a filename, use it as the original filename
+        if (!empty($title) && strpos($title, '.') !== false && strpos($title, DIRECTORY_SEPARATOR) === false && strpos($title, '/') === false) {
+            $originalFilename = $title;
+        }
 
         return $this->createGeneric(
             $dataItemType, $dataItemID, false, $extractText, $title,

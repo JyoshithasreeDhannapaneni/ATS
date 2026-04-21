@@ -1,8 +1,17 @@
 <?php
-include_once('../constants.php');
-include_once('../config.php');
-include_once('../lib/DatabaseConnection.php');
-include_once('../lib/CandidateDocuments.php');
+// Define LEGACY_ROOT for ajax folder context
+if (!defined('LEGACY_ROOT')) {
+    define('LEGACY_ROOT', realpath(dirname(__FILE__) . '/..'));
+}
+include_once(LEGACY_ROOT . '/constants.php');
+include_once(LEGACY_ROOT . '/config.php');
+include_once(LEGACY_ROOT . '/lib/DatabaseConnection.php');
+include_once(LEGACY_ROOT . '/lib/Session.php');
+include_once(LEGACY_ROOT . '/lib/CandidateDocuments.php');
+
+// Start session with the correct name (Session class must be loaded first)
+@session_name(CATS_SESSION_NAME);
+@session_start();
 
 if (!isset($_SESSION['CATS']) || !$_SESSION['CATS']->isLoggedIn())
 {
@@ -30,7 +39,8 @@ if (!$doc)
     exit;
 }
 
-$filePath = './uploads/documents/' . $doc['directory_name'] . '/' . $doc['stored_filename'];
+// Use LEGACY_ROOT for consistent path resolution
+$filePath = LEGACY_ROOT . '/uploads/documents/' . $doc['directory_name'] . '/' . $doc['stored_filename'];
 
 if (!file_exists($filePath))
 {

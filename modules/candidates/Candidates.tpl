@@ -90,6 +90,25 @@
             </div>
             <?php endif; ?>
 
+            <?php if (isset($_SESSION['bulkDeleteMessage']) && !empty($_SESSION['bulkDeleteMessage'])): ?>
+            <div id="successMessage" style="padding: 16px 20px; border-left: 4px solid #16a34a; background-color: #f0fdf4; margin-bottom: 16px; border-radius: 0 6px 6px 0; display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" style="flex-shrink: 0;">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                        <polyline points="22 4 12 14.01 9 11.01"/>
+                    </svg>
+                    <div style="font-size: 14px; font-weight: 500; color: #166534;"><?php echo htmlspecialchars($_SESSION['bulkDeleteMessage']); ?></div>
+                </div>
+                <button onclick="this.parentElement.style.display='none';" style="background: none; border: none; cursor: pointer; padding: 4px; color: #16a34a;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <?php unset($_SESSION['bulkDeleteMessage']); ?>
+            <?php endif; ?>
+
             <?php if ($this->errMessage != ''): ?>
             <div id="errorMessage" style="padding: 16px 20px; border-left: 4px solid #dc2626; background-color: #fef2f2; margin-bottom: 16px; border-radius: 0 6px 6px 0; display: flex; align-items: flex-start; gap: 12px;">
                 <img src="images/large_error.gif" style="flex-shrink: 0; margin-top: 2px;" alt="Error">
@@ -112,8 +131,19 @@
             <?php $this->dataGrid->draw();  ?>
 
             <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 16px;">
-                <div>
+                <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
                     <?php $this->dataGrid->printActionArea(); ?>
+                    
+                    <?php if ($this->getUserAccessLevel('candidates.delete') >= ACCESS_LEVEL_DELETE): ?>
+                    <button type="button" id="bulkDeleteBtn" onclick="confirmBulkDelete<?php echo $md5InstanceName; ?>();" style="padding: 8px 16px; background: #dc2626; color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 6h18"/>
+                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                        </svg>
+                        Delete Selected
+                    </button>
+                    <?php endif; ?>
                 </div>
                 <div>
                     <?php $this->dataGrid->printNavigation(true); ?>
@@ -144,7 +174,7 @@
                                 </a>
                             </td>
                             <td>
-                                <a href="<?php echo CATSUtility::getIndexName(); ?>?m=import&amp;a=massImport">
+                                <a href="<?php echo CATSUtility::getIndexName(); ?>?m=import&amp;a=bulkImport">
                                 <div class="addMassImportButton">&nbsp;</div>
                                 </a>
                             </td>
@@ -159,4 +189,85 @@
             <?php endif; ?>
         </div>
     </div>
+
+<!-- Bulk Delete Confirmation Modal -->
+<div id="bulkDeleteModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 12px; padding: 24px; max-width: 420px; width: 90%; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);">
+        <div style="text-align: center; margin-bottom: 16px;">
+            <div style="width: 56px; height: 56px; background: #fef2f2; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2">
+                    <path d="M3 6h18"/>
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                    <line x1="10" x2="10" y1="11" y2="17"/>
+                    <line x1="14" x2="14" y1="11" y2="17"/>
+                </svg>
+            </div>
+            <h3 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 600; color: #111827;">Delete Selected Candidates?</h3>
+            <p style="margin: 0; color: #6b7280; font-size: 14px;">
+                You are about to delete <strong id="bulkDeleteCount" style="color: #dc2626;">0</strong> candidate(s). 
+                This action cannot be undone and will remove all associated data including resumes, activities, and pipeline entries.
+            </p>
+        </div>
+        <div style="display: flex; gap: 12px; justify-content: center;">
+            <button onclick="closeBulkDeleteModal();" style="padding: 10px 20px; border: 1px solid #d1d5db; background: white; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; color: #374151;">
+                Cancel
+            </button>
+            <button id="confirmBulkDeleteBtn" style="padding: 10px 20px; border: none; background: #dc2626; color: white; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer;">
+                Delete Candidates
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden form for bulk delete submission -->
+<form id="bulkDeleteForm" method="post" action="<?php echo(CATSUtility::getIndexName()); ?>?m=candidates&a=bulkDelete" style="display: none;">
+    <input type="hidden" name="candidateIDs" id="bulkDeleteCandidateIDs" value="" />
+</form>
+
+<script type="text/javascript">
+function confirmBulkDelete<?php echo $md5InstanceName; ?>() {
+    // Get all checked checkboxes
+    var checkboxes = document.querySelectorAll('input[type="checkbox"][name^="checked_"]:checked');
+    var candidateIDs = [];
+    
+    checkboxes.forEach(function(checkbox) {
+        var name = checkbox.name;
+        var id = name.replace('checked_', '');
+        if (id && !isNaN(id)) {
+            candidateIDs.push(id);
+        }
+    });
+    
+    if (candidateIDs.length === 0) {
+        alert('Please select at least one candidate to delete.');
+        return;
+    }
+    
+    // Update modal with count
+    document.getElementById('bulkDeleteCount').textContent = candidateIDs.length;
+    document.getElementById('bulkDeleteCandidateIDs').value = candidateIDs.join(',');
+    
+    // Show modal
+    var modal = document.getElementById('bulkDeleteModal');
+    modal.style.display = 'flex';
+    
+    // Set up confirm button
+    document.getElementById('confirmBulkDeleteBtn').onclick = function() {
+        document.getElementById('bulkDeleteForm').submit();
+    };
+}
+
+function closeBulkDeleteModal() {
+    document.getElementById('bulkDeleteModal').style.display = 'none';
+}
+
+// Close modal when clicking outside
+document.getElementById('bulkDeleteModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeBulkDeleteModal();
+    }
+});
+</script>
+
 <?php TemplateUtility::printFooter(); ?>

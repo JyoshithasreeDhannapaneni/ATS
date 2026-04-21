@@ -47,6 +47,49 @@ class Pipelines
     {
         $this->_siteID = $siteID;
         $this->_db = DatabaseConnection::getInstance();
+        $this->_ensureCustomStatusesExist();
+    }
+
+    /**
+     * Ensures custom pipeline statuses exist in the database.
+     * Called once per instantiation to auto-create missing statuses.
+     */
+    private function _ensureCustomStatusesExist()
+    {
+        static $checked = false;
+        if ($checked) return;
+        $checked = true;
+
+        $customStatuses = array(
+            1000 => 'Screen Select',
+            1010 => 'Screen Reject',
+            1020 => 'L1 Select',
+            1030 => 'L2 Select',
+            1040 => 'L3 Select',
+            1050 => 'Offer Release',
+            1060 => 'Onboarded',
+            1070 => 'No Show'
+        );
+
+        foreach ($customStatuses as $statusID => $description) {
+            $sql = sprintf(
+                "SELECT candidate_joborder_status_id FROM candidate_joborder_status 
+                 WHERE candidate_joborder_status_id = %d",
+                $statusID
+            );
+            $rs = @$this->_db->getAssoc($sql);
+            
+            if (empty($rs)) {
+                $insertSQL = sprintf(
+                    "INSERT INTO candidate_joborder_status 
+                     (candidate_joborder_status_id, short_description, can_be_scheduled, triggers_email, is_enabled) 
+                     VALUES (%d, '%s', 0, 0, 1)",
+                    $statusID,
+                    $this->_db->escapeString($description)
+                );
+                @$this->_db->query($insertSQL);
+            }
+        }
     }
 
 

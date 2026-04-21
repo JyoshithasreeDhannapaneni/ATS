@@ -66,8 +66,32 @@ class candidatesListByViewDataGrid extends CandidatesDataGrid
         }
         $html .= $this->getInnerActionAreaItem('Export', CATSUtility::getIndexName().'?m=export&amp;a=exportByDataGrid');
 
+        if($_SESSION['CATS']->getAccessLevel('candidates.delete') >= ACCESS_LEVEL_DELETE) 
+        {
+            $html .= $this->getInnerActionAreaItemBulkDelete('Delete Selected', CATSUtility::getIndexName().'?m=candidates&amp;a=bulkDelete');
+        }
+
         $html .= parent::getInnerActionArea();
 
+        return $html;
+    }
+    
+    /**
+     * Returns HTML for a bulk delete action with confirmation.
+     *
+     * @param string action title
+     * @param string action URL
+     * @return string generated HTML
+     */
+    public function getInnerActionAreaItemBulkDelete($actionTitle, $actionURL)
+    {
+        $md5InstanceName = md5($this->_instanceName);
+        
+        $html = '<a href="javascript:void(0);" onclick="confirmBulkDelete' . $md5InstanceName . '();" style="color: #dc2626; display: flex; align-items: center; gap: 4px;">';
+        $html .= '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>';
+        $html .= $actionTitle;
+        $html .= '</a><br />';
+        
         return $html;
     }
 }

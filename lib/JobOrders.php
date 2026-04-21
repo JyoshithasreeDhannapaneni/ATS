@@ -39,6 +39,7 @@ use OpenCATS\Entity\JobOrderRepositoryException;
 
 define('JOBORDERS_STATUS_SHARE',         100);
 define('JOBORDERS_STATUS_ALL',           10100);
+define('JOBORDERS_STATUS_ACTIVE',        102);
 
 include_once(LEGACY_ROOT . '/lib/Pipelines.php');
 include_once(LEGACY_ROOT . '/lib/Calendar.php');
@@ -615,6 +616,10 @@ class JobOrders
         {
             case JOBORDERS_STATUS_SHARE:
                 $statusCriterion = "AND joborder.status IN ".JobOrderStatuses::getShareStatusSQL();
+                break;
+
+            case JOBORDERS_STATUS_ACTIVE:
+                $statusCriterion = "AND joborder.status = 'Active'";
                 break;
 
             case JOBORDERS_STATUS_ALL:

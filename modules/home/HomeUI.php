@@ -177,6 +177,23 @@ class HomeUI extends UserInterface
 
     private function _getUserRole($accessLevel)
     {
+        /* First check the database role if UserRoles is available */
+        include_once(LEGACY_ROOT . '/lib/UserRoles.php');
+        
+        if (UserRoles::roleColumnExists()) {
+            $userID = $_SESSION['CATS']->getUserID();
+            $dbRole = UserRoles::getUserRole($userID);
+            
+            if ($dbRole === UserRoles::ROLE_ADMIN) {
+                return 'admin';
+            } elseif ($dbRole === UserRoles::ROLE_INTERVIEWER) {
+                return 'interviewer';
+            } elseif ($dbRole === UserRoles::ROLE_RECRUITER) {
+                return 'recruiter';
+            }
+        }
+        
+        /* Fallback to access level based role */
         if ($accessLevel >= ACCESS_LEVEL_SA) return 'admin';
         if ($accessLevel >= ACCESS_LEVEL_DELETE) return 'recruiter';
         if ($accessLevel >= ACCESS_LEVEL_EDIT) return 'recruiter';

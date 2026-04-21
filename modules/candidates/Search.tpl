@@ -210,10 +210,108 @@
                     </table>
                     <?php echo($this->exportForm['footer']); ?>
                     <?php echo($this->exportForm['menu']); ?>
+                    
+                    <?php if ($this->getUserAccessLevel('candidates.delete') >= ACCESS_LEVEL_DELETE): ?>
+                    <div style="margin-top: 16px; padding: 12px 16px; background: #f8fafc; border-radius: 8px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                        <input type="checkbox" id="selectAllSearch" onclick="toggleAllSearchCheckboxes(this.checked);" />
+                        <label for="selectAllSearch" style="margin: 0; font-size: 13px; color: #374151;">Select All</label>
+                        <button type="button" onclick="confirmBulkDeleteSearch();" style="padding: 8px 16px; background: #dc2626; color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 6h18"/>
+                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                            </svg>
+                            Delete Selected
+                        </button>
+                    </div>
+                    <?php endif; ?>
                 <?php else: ?>
                     <p>No matching entries found.</p>
                 <?php endif; ?>
             <?php endif; ?>
         </div>
     </div>
+
+<!-- Bulk Delete Confirmation Modal for Search Results -->
+<div id="bulkDeleteModalSearch" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 12px; padding: 24px; max-width: 420px; width: 90%; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);">
+        <div style="text-align: center; margin-bottom: 16px;">
+            <div style="width: 56px; height: 56px; background: #fef2f2; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2">
+                    <path d="M3 6h18"/>
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                    <line x1="10" x2="10" y1="11" y2="17"/>
+                    <line x1="14" x2="14" y1="11" y2="17"/>
+                </svg>
+            </div>
+            <h3 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 600; color: #111827;">Delete Selected Candidates?</h3>
+            <p style="margin: 0; color: #6b7280; font-size: 14px;">
+                You are about to delete <strong id="bulkDeleteCountSearch" style="color: #dc2626;">0</strong> candidate(s). 
+                This action cannot be undone and will remove all associated data including resumes, activities, and pipeline entries.
+            </p>
+        </div>
+        <div style="display: flex; gap: 12px; justify-content: center;">
+            <button onclick="closeBulkDeleteModalSearch();" style="padding: 10px 20px; border: 1px solid #d1d5db; background: white; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; color: #374151;">
+                Cancel
+            </button>
+            <button id="confirmBulkDeleteBtnSearch" style="padding: 10px 20px; border: none; background: #dc2626; color: white; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer;">
+                Delete Candidates
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden form for bulk delete submission -->
+<form id="bulkDeleteFormSearch" method="post" action="<?php echo(CATSUtility::getIndexName()); ?>?m=candidates&a=bulkDelete" style="display: none;">
+    <input type="hidden" name="candidateIDs" id="bulkDeleteCandidateIDsSearch" value="" />
+</form>
+
+<script type="text/javascript">
+function toggleAllSearchCheckboxes(checked) {
+    var checkboxes = document.querySelectorAll('input[type="checkbox"][name^="checked_"]');
+    checkboxes.forEach(function(checkbox) {
+        checkbox.checked = checked;
+    });
+}
+
+function confirmBulkDeleteSearch() {
+    var checkboxes = document.querySelectorAll('input[type="checkbox"][name^="checked_"]:checked');
+    var candidateIDs = [];
+    
+    checkboxes.forEach(function(checkbox) {
+        var name = checkbox.name;
+        var id = name.replace('checked_', '');
+        if (id && !isNaN(id)) {
+            candidateIDs.push(id);
+        }
+    });
+    
+    if (candidateIDs.length === 0) {
+        alert('Please select at least one candidate to delete.');
+        return;
+    }
+    
+    document.getElementById('bulkDeleteCountSearch').textContent = candidateIDs.length;
+    document.getElementById('bulkDeleteCandidateIDsSearch').value = candidateIDs.join(',');
+    
+    var modal = document.getElementById('bulkDeleteModalSearch');
+    modal.style.display = 'flex';
+    
+    document.getElementById('confirmBulkDeleteBtnSearch').onclick = function() {
+        document.getElementById('bulkDeleteFormSearch').submit();
+    };
+}
+
+function closeBulkDeleteModalSearch() {
+    document.getElementById('bulkDeleteModalSearch').style.display = 'none';
+}
+
+document.getElementById('bulkDeleteModalSearch').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeBulkDeleteModalSearch();
+    }
+});
+</script>
+
 <?php TemplateUtility::printFooter(); ?>

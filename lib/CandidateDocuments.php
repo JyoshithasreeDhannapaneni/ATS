@@ -15,10 +15,14 @@ class CandidateDocuments
     {
         $this->_db = DatabaseConnection::getInstance();
         $this->_siteID = $siteID;
+        
+        // Ensure tables exist on first use
+        $this->_ensureTablesExist();
     }
 
     public function generateToken($candidateID, $createdBy, $expiryDays = 7)
     {
+        
         $token = bin2hex(random_bytes(32));
         $expiresDate = date('Y-m-d H:i:s', strtotime("+{$expiryDays} days"));
 
@@ -30,20 +34,79 @@ class CandidateDocuments
         $this->_db->query($sql);
         return $token;
     }
+    
+    private function _ensureTablesExist()
+    {
+        try {
+            // Create candidate_upload_token table if not exists
+            $sql = "CREATE TABLE IF NOT EXISTS candidate_upload_token (
+                token_id INT(11) NOT NULL AUTO_INCREMENT,
+                candidate_id INT(11) NOT NULL,
+                site_id INT(11) NOT NULL DEFAULT 1,
+                token VARCHAR(64) NOT NULL,
+                created_by INT(11) NOT NULL,
+                created_date DATETIME NOT NULL,
+                expires_date DATETIME NOT NULL,
+                is_active TINYINT(1) NOT NULL DEFAULT 1,
+                max_uploads INT(11) NOT NULL DEFAULT 20,
+                upload_count INT(11) NOT NULL DEFAULT 0,
+                PRIMARY KEY (token_id),
+                UNIQUE KEY idx_token (token),
+                KEY idx_candidate (candidate_id),
+                KEY idx_active_expires (is_active, expires_date)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+            @$this->_db->query($sql);
+            
+            // Create candidate_document table if not exists
+            $sql = "CREATE TABLE IF NOT EXISTS candidate_document (
+                document_id INT(11) NOT NULL AUTO_INCREMENT,
+                candidate_id INT(11) NOT NULL,
+                site_id INT(11) NOT NULL DEFAULT 1,
+                token_id INT(11) DEFAULT NULL,
+                document_type VARCHAR(50) NOT NULL DEFAULT 'other',
+                original_filename VARCHAR(255) NOT NULL,
+                stored_filename VARCHAR(255) NOT NULL,
+                directory_name VARCHAR(255) NOT NULL,
+                file_size_kb INT(11) NOT NULL DEFAULT 0,
+                content_type VARCHAR(100) NOT NULL DEFAULT 'application/octet-stream',
+                uploaded_date DATETIME NOT NULL,
+                status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+                notes TEXT,
+                PRIMARY KEY (document_id),
+                KEY idx_candidate (candidate_id),
+                KEY idx_token (token_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+            @$this->_db->query($sql);
+        } catch (Exception $e) {
+            // Silently fail - tables might already exist or user lacks CREATE permission
+        }
+    }
 
     public function validateToken($token)
     {
-        $token = $this->_db->makeQueryString($token);
+        // Use mysqli_real_escape_string directly for safety
+        $tokenEscaped = mysqli_real_escape_string($this->_db->getConnection(), $token);
+        
+        // First, just find the token without the candidate join to debug
         $sql = "SELECT t.*, c.first_name AS firstName, c.last_name AS lastName,
                        c.email1, c.email2
                 FROM candidate_upload_token t
-                JOIN candidate c ON c.candidate_id = t.candidate_id AND c.site_id = t.site_id
-                WHERE t.token = '{$token}'
+                LEFT JOIN candidate c ON c.candidate_id = t.candidate_id
+                WHERE t.token = '{$tokenEscaped}'
                   AND t.is_active = 1
                   AND t.expires_date > NOW()
                   AND t.upload_count < t.max_uploads";
 
-        return $this->_db->getAssoc($sql);
+        try {
+            $queryResult = $this->_db->query($sql);
+            if ($queryResult === false) {
+                return null;
+            }
+            $row = @mysqli_fetch_assoc($queryResult);
+            return (!empty($row)) ? $row : null;
+        } catch (Exception $e) {
+            return null;
+        }
     }
 
     public function deactivateToken($tokenID)
@@ -67,7 +130,19 @@ class CandidateDocuments
                   AND t.site_id = {$this->_siteID}
                 ORDER BY t.created_date DESC";
 
-        return $this->_db->getAllAssoc($sql);
+        try {
+            $queryResult = $this->_db->query($sql);
+            if ($queryResult === false) {
+                return array();
+            }
+            $results = array();
+            while ($row = @mysqli_fetch_assoc($queryResult)) {
+                $results[] = $row;
+            }
+            return $results;
+        } catch (Exception $e) {
+            return array();
+        }
     }
 
     public function getActiveTokenForCandidate($candidateID)
@@ -81,8 +156,16 @@ class CandidateDocuments
                 ORDER BY created_date DESC
                 LIMIT 1";
 
-        $row = $this->_db->getAssoc($sql);
-        return $row ? $row['token'] : null;
+        try {
+            $queryResult = $this->_db->query($sql);
+            if ($queryResult === false) {
+                return null;
+            }
+            $row = @mysqli_fetch_assoc($queryResult);
+            return (!empty($row) && isset($row['token'])) ? $row['token'] : null;
+        } catch (Exception $e) {
+            return null;
+        }
     }
 
     public function saveDocument($candidateID, $tokenID, $docType, $originalFilename,
@@ -108,23 +191,45 @@ class CandidateDocuments
 
     public function getDocumentsForCandidate($candidateID)
     {
+        // Don't filter by site_id - documents belong to a candidate regardless of site
+        // This ensures documents uploaded via public link are visible to all site users
         $sql = "SELECT d.*,
                        DATE_FORMAT(d.uploaded_date, '%b %d, %Y %h:%i %p') AS uploadedDateFormatted
                 FROM candidate_document d
-                WHERE d.candidate_id = {$candidateID}
-                  AND d.site_id = {$this->_siteID}
+                WHERE d.candidate_id = " . intval($candidateID) . "
                 ORDER BY d.uploaded_date DESC";
 
-        return $this->_db->getAllAssoc($sql);
+        try {
+            $queryResult = $this->_db->query($sql);
+            if ($queryResult === false) {
+                return array();
+            }
+            $results = array();
+            while ($row = @mysqli_fetch_assoc($queryResult)) {
+                $results[] = $row;
+            }
+            return $results;
+        } catch (Exception $e) {
+            return array();
+        }
     }
 
     public function getDocument($documentID)
     {
+        // Don't filter by site_id - allow access if document exists
         $sql = "SELECT * FROM candidate_document
-                WHERE document_id = {$documentID}
-                  AND site_id = {$this->_siteID}";
+                WHERE document_id = " . intval($documentID);
 
-        return $this->_db->getAssoc($sql);
+        try {
+            $queryResult = $this->_db->query($sql);
+            if ($queryResult === false) {
+                return null;
+            }
+            $row = @mysqli_fetch_assoc($queryResult);
+            return (!empty($row)) ? $row : null;
+        } catch (Exception $e) {
+            return null;
+        }
     }
 
     public function updateDocumentStatus($documentID, $status, $notes = '')
@@ -134,8 +239,7 @@ class CandidateDocuments
 
         $sql = "UPDATE candidate_document
                 SET status = '{$status}', notes = '{$notes}'
-                WHERE document_id = {$documentID}
-                  AND site_id = {$this->_siteID}";
+                WHERE document_id = " . intval($documentID);
 
         $this->_db->query($sql);
     }
@@ -145,10 +249,11 @@ class CandidateDocuments
         $doc = $this->getDocument($documentID);
         if (!$doc) return false;
 
-        $filePath = './uploads/documents/' . $doc['directory_name'] . '/' . $doc['stored_filename'];
+        // Use LEGACY_ROOT for consistent path resolution
+        $filePath = self::getUploadDirectory($doc['candidate_id']) . '/' . $doc['stored_filename'];
         if (file_exists($filePath))
         {
-            unlink($filePath);
+            @unlink($filePath);
         }
 
         $sql = "DELETE FROM candidate_document WHERE document_id = {$documentID}";
@@ -175,7 +280,9 @@ class CandidateDocuments
 
     public static function getUploadDirectory($candidateID)
     {
-        $dir = './uploads/documents/' . $candidateID;
+        // Use LEGACY_ROOT for consistent path resolution from any location
+        $baseDir = defined('LEGACY_ROOT') ? LEGACY_ROOT : '.';
+        $dir = $baseDir . '/uploads/documents/' . $candidateID;
         if (!is_dir($dir))
         {
             mkdir($dir, 0755, true);

@@ -100,14 +100,14 @@ class TemplateUtility
 
         echo '<div id="headerBlock">', "\n";
 
-        /* Mobile sidebar toggle button */
-        echo '<button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Toggle navigation">☰</button>', "\n";
-
-        /* Left side — Neutara Logo */
-        echo '<div id="headerLogo" style="display: flex; align-items: center;">', "\n";
-        echo '<a href="', $indexName, '?m=home" style="display: flex; align-items: center; text-decoration: none; gap: 8px;">', "\n";
-        echo '<img src="images/Neutaralogo.jpg" alt="Neutara ATS" style="height: 36px; width: auto; border-radius: 4px;" onerror="this.style.display=\'none\';" />', "\n";
-        echo '<span style="font-size: 18px; font-weight: 600; color: #1e3a5f;">Neutara ATS</span>', "\n";
+        /* Left side — Burger button + Neutara Logo */
+        echo '<div id="headerLogo">', "\n";
+        echo '<button class="sidebar-toggle-btn header-burger" onclick="toggleSidebar()" title="Toggle Sidebar">', "\n";
+        echo '<svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>', "\n";
+        echo '</button>', "\n";
+        echo '<a href="', $indexName, '?m=home" class="header-brand-link">', "\n";
+        echo '<img src="images/Neutaralogo.jpg" alt="Neutara ATS" onerror="this.style.display=\'none\';" />', "\n";
+        echo '<span>Neutara ATS</span>', "\n";
         echo '</a>', "\n";
         echo '</div>', "\n";
 
@@ -178,7 +178,7 @@ class TemplateUtility
                 echo '<span style="font-weight: 500; color: #2563eb; padding: 3px 10px; background: #eff6ff; border-radius: 20px; font-size: 11px; border: 1px solid #dbeafe;">Admin</span>', "\n";
             }
 
-            echo '<a href="', $indexName, '?m=logout" style="font-size: 13px; padding: 5px 14px; background: #fef2f2; color: #dc2626; border-radius: 6px; text-decoration: none; border: 1px solid #fecaca; font-weight: 500;">Logout</a>', "\n";
+            /* Logout moved to sidebar bottom */
 
             echo '</div>', "\n";
 
@@ -577,6 +577,7 @@ class TemplateUtility
                     shouldn't be drawn. */
 
         echo '<div id="header">', "\n";
+        
         echo '<ul id="primary">', "\n";
         
         /* Add nav icons for visual enhancement */
@@ -639,7 +640,7 @@ class TemplateUtility
                 {
                     $icon = isset($navIcons[strtolower($moduleName)]) ? $navIcons[strtolower($moduleName)] . ' ' : '';
                     echo '<li><a class="', $className, '" href="', $indexName,
-                         '?m=', $moduleName, '"><span class="nav-icon">', $icon, '</span>', $tabText, '</a></li>', "\n";
+                         '?m=', $moduleName, '" data-tooltip="', htmlspecialchars($tabText), '"><span class="nav-icon">', $icon, '</span>', $tabText, '</a></li>', "\n";
                 }
                 else
                 {
@@ -655,8 +656,9 @@ class TemplateUtility
                          $_SESSION['CATS']->isDemo())
                      {
                         $icon = isset($navIcons[strtolower($moduleName)]) ? $navIcons[strtolower($moduleName)] . ' ' : '';
-                        echo '<li><a class="', $className, '" href="', $indexName, '?m=', $moduleName, '"><span class="nav-icon">', $icon, '</span>',
-                             substr($tabText, 0, $alPosition), '</a></li>', "\n";
+                        $displayText = substr($tabText, 0, $alPosition);
+                        echo '<li><a class="', $className, '" href="', $indexName, '?m=', $moduleName, '" data-tooltip="', htmlspecialchars($displayText), '"><span class="nav-icon">', $icon, '</span>',
+                             $displayText, '</a></li>', "\n";
                     }
                 }
 
@@ -676,7 +678,7 @@ class TemplateUtility
 
             $icon = isset($navIcons[strtolower($moduleName)]) ? $navIcons[strtolower($moduleName)] . ' ' : '';
             echo '<a class="active" href="', $indexName, '?m=', $moduleName,
-                 '"><span class="nav-icon">', $icon, '</span>', $tabText, '</a>', "\n";
+                 '" data-tooltip="', htmlspecialchars($tabText), '"><span class="nav-icon">', $icon, '</span>', $tabText, '</a>', "\n";
 
             $subTabs = $active->getSubTabs($modules);
             if ($subTabs)
@@ -796,6 +798,16 @@ class TemplateUtility
             echo '</li>';
         }
         echo '</ul>', "\n";
+
+        /* Logout button at bottom of sidebar */
+        $indexName = CATSUtility::getIndexName();
+        echo '<div class="sidebar-logout">';
+        echo '<a href="', $indexName, '?m=logout" class="sidebar-logout-btn">';
+        echo '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>';
+        echo ' Logout';
+        echo '</a>';
+        echo '</div>', "\n";
+
         echo '</div>', "\n";
     }
 
@@ -842,24 +854,29 @@ class TemplateUtility
 
         eval(Hooks::get('TEMPLATE_UTILITY_PRINT_FOOTER'));
 
-        /* Sidebar toggle JavaScript for mobile */
+        /* Sidebar toggle JavaScript */
         echo '<script>
 function toggleSidebar() {
-    var sidebar = document.getElementById("header");
-    var overlay = document.querySelector(".sidebar-overlay");
-    if (sidebar) {
-        sidebar.classList.toggle("sidebar-open");
-    }
-    if (overlay) {
-        overlay.classList.toggle("active");
-    }
+    document.body.classList.toggle("sidebar-collapsed");
+    
+    // Save preference to localStorage
+    var isCollapsed = document.body.classList.contains("sidebar-collapsed");
+    localStorage.setItem("sidebarCollapsed", isCollapsed ? "1" : "0");
 }
-// Close sidebar when clicking overlay
+
+// Restore sidebar state on page load
 document.addEventListener("DOMContentLoaded", function() {
+    var isCollapsed = localStorage.getItem("sidebarCollapsed");
+    if (isCollapsed === "1") {
+        document.body.classList.add("sidebar-collapsed");
+    }
+    
+    // Close sidebar overlay on mobile
     var overlay = document.querySelector(".sidebar-overlay");
     if (overlay) {
         overlay.addEventListener("click", function() {
-            toggleSidebar();
+            document.body.classList.remove("sidebar-collapsed");
+            localStorage.setItem("sidebarCollapsed", "0");
         });
     }
 });

@@ -43,6 +43,8 @@ include_once(LEGACY_ROOT . '/lib/ImportUtility.php');
 include_once(LEGACY_ROOT . '/lib/CandidatesImport.php');
 include_once(LEGACY_ROOT . '/lib/CompaniesImport.php');
 include_once(LEGACY_ROOT . '/lib/ContactsImport.php');
+include_once(LEGACY_ROOT . '/lib/Pipelines.php');
+include_once(LEGACY_ROOT . '/lib/ActivityEntries.php');
 
 
 class ImportUI extends UserInterface
@@ -112,6 +114,18 @@ class ImportUI extends UserInterface
 
             case 'deleteBulkResumes':
                 $this->deleteBulkResumes();
+                break;
+
+            case 'bulkImport':
+                $this->showBulkImport();
+                break;
+
+            case 'bulkImportCandidate':
+                $this->bulkImportCandidate();
+                break;
+
+            case 'bulkImportResume':
+                $this->bulkImportResume();
                 break;
 
             case 'import':
@@ -2099,6 +2113,1227 @@ class ImportUI extends UserInterface
         }
 
         CATSUtility::transferRelativeURI('m=import&a=massImport&step=2');
+    }
+
+    /**
+     * Shows the modern bulk import page
+     */
+    private function showBulkImport()
+    {
+        if (!isset($_SESSION['CATS']) || empty($_SESSION['CATS']))
+        {
+            CommonErrors::fatal(COMMONERROR_NOTLOGGEDIN, $this);
+        }
+
+        $jobOrders = new JobOrders($this->_siteID);
+        $jobOrdersRS = $jobOrders->getAll(JOBORDERS_STATUS_ACTIVE);
+        $this->_template->assign('jobOrders', $jobOrdersRS);
+
+        $this->_template->assign('active', $this);
+        $this->_template->display('./modules/import/BulkImport.tpl');
+    }
+
+    /**
+     * AJAX handler for bulk importing a single candidate from CSV data
+     */
+    private function bulkImportCandidate()
+    {
+        header('Content-Type: application/json');
+
+        if (!isset($_SESSION['CATS']) || empty($_SESSION['CATS']))
+        {
+            echo json_encode(['success' => false, 'error' => 'Not logged in']);
+            return;
+        }
+
+        $firstName = isset($_POST['firstName']) ? trim($_POST['firstName']) : '';
+        $lastName = isset($_POST['lastName']) ? trim($_POST['lastName']) : '';
+        $email = isset($_POST['email']) ? trim($_POST['email']) : '';
+        $phone = isset($_POST['phone']) ? trim($_POST['phone']) : '';
+        $city = isset($_POST['city']) ? trim($_POST['city']) : '';
+        $state = isset($_POST['state']) ? trim($_POST['state']) : '';
+        $keySkills = isset($_POST['keySkills']) ? trim($_POST['keySkills']) : '';
+        $currentEmployer = isset($_POST['currentEmployer']) ? trim($_POST['currentEmployer']) : '';
+        $notes = isset($_POST['notes']) ? trim($_POST['notes']) : '';
+        $source = isset($_POST['source']) ? trim($_POST['source']) : 'Bulk Import';
+        $jobOrderID = isset($_POST['jobOrderID']) ? (int)$_POST['jobOrderID'] : 0;
+
+        // Validate required fields
+        if (empty($firstName) && empty($lastName))
+        {
+            echo json_encode(['success' => false, 'error' => 'First name or last name is required']);
+            return;
+        }
+
+        // Check for duplicates by email
+        if (!empty($email))
+        {
+            $db = DatabaseConnection::getInstance();
+            $sql = sprintf(
+                "SELECT candidate_id FROM candidate WHERE email1 = %s AND site_id = %s LIMIT 1",
+                $db->makeQueryString($email),
+                $this->_siteID
+            );
+            $rs = $db->query($sql);
+            if ($rs && $db->getNumRows($rs) > 0)
+            {
+                echo json_encode(['success' => false, 'duplicate' => true, 'error' => 'Duplicate email']);
+                return;
+            }
+        }
+
+        // Create the candidate
+        $candidates = new Candidates($this->_siteID);
+        
+        $candidateID = $candidates->add(
+            $firstName,
+            '',  // middleName
+            $lastName,
+            $email,
+            '',  // email2
+            '',  // phoneHome
+            $phone,  // phoneCell
+            '',  // phoneWork
+            '',  // address
+            $city,
+            $state,
+            '',  // zip
+            $source,
+            $keySkills,
+            '',  // dateAvailable
+            $currentEmployer,
+            0,   // canRelocate
+            '',  // currentPay
+            '',  // desiredPay
+            $notes,
+            '',  // webSite
+            '',  // bestTimeToCall
+            $_SESSION['CATS']->getUserID(),
+            $_SESSION['CATS']->getUserID()
+        );
+
+        if ($candidateID > 0)
+        {
+            // Add to pipeline if job order selected
+            if ($jobOrderID > 0) {
+                $pipelines = new Pipelines($this->_siteID);
+                $pipelines->add($candidateID, $jobOrderID, $_SESSION['CATS']->getUserID());
+                
+                $activityEntries = new ActivityEntries($this->_siteID);
+                $activityEntries->add(
+                    $candidateID,
+                    DATA_ITEM_CANDIDATE,
+                    400,
+                    'Added candidate to job order.',
+                    $_SESSION['CATS']->getUserID(),
+                    $jobOrderID
+                );
+            }
+            
+            echo json_encode(['success' => true, 'candidateID' => $candidateID]);
+        }
+        else
+        {
+            echo json_encode(['success' => false, 'error' => 'Failed to create candidate']);
+        }
+    }
+
+    /**
+     * AJAX handler for bulk importing a resume file
+     * Parses the resume to extract candidate data and attaches the file
+     */
+    private function bulkImportResume()
+    {
+        // Suppress ALL PHP warnings/notices/deprecations — they break JSON output
+        $oldErrorReporting = error_reporting(0);
+        @ini_set('display_errors', '0');
+
+        // Prevent any output before JSON
+        while (ob_get_level()) { ob_end_clean(); }
+        ob_start();
+        header('Content-Type: application/json');
+        header('Cache-Control: no-cache, must-revalidate');
+
+        // Set error handler to catch PHP errors and convert to exceptions
+        set_error_handler(function($errno, $errstr, $errfile, $errline) {
+            throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
+        });
+
+        try {
+            if (!isset($_SESSION['CATS']) || empty($_SESSION['CATS']))
+            {
+                echo json_encode(['success' => false, 'error' => 'Not logged in. Session may have expired.']);
+                return;
+            }
+
+            if (!isset($_FILES['resumeFile']))
+            {
+                echo json_encode(['success' => false, 'error' => 'No file in request']);
+                return;
+            }
+            
+            if ($_FILES['resumeFile']['error'] !== UPLOAD_ERR_OK)
+            {
+                $uploadErrors = [
+                    UPLOAD_ERR_INI_SIZE => 'File exceeds upload_max_filesize',
+                    UPLOAD_ERR_FORM_SIZE => 'File exceeds MAX_FILE_SIZE',
+                    UPLOAD_ERR_PARTIAL => 'File was only partially uploaded',
+                    UPLOAD_ERR_NO_FILE => 'No file was uploaded',
+                    UPLOAD_ERR_NO_TMP_DIR => 'Missing temp folder',
+                    UPLOAD_ERR_CANT_WRITE => 'Failed to write to disk',
+                    UPLOAD_ERR_EXTENSION => 'Upload stopped by extension'
+                ];
+                $errorCode = $_FILES['resumeFile']['error'];
+                $errorMsg = isset($uploadErrors[$errorCode]) ? $uploadErrors[$errorCode] : 'Unknown error';
+                echo json_encode(['success' => false, 'error' => $errorMsg]);
+                return;
+            }
+
+            $file = $_FILES['resumeFile'];
+            $fileName = $file['name'];
+            $tmpPath = $file['tmp_name'];
+            
+            $jobOrderID = isset($_POST['jobOrderID']) ? (int)$_POST['jobOrderID'] : 0;
+            $jobOrderID = isset($_POST['jobOrderID']) ? (int)$_POST['jobOrderID'] : 0;
+            
+            // Verify the temp file exists and is readable
+            if (!file_exists($tmpPath) || !is_readable($tmpPath)) {
+                echo json_encode(['success' => false, 'error' => 'Uploaded file is not accessible']);
+                return;
+            }
+
+            // Determine content type and document type
+            $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+            $contentTypes = [
+                'pdf' => 'application/pdf',
+                'doc' => 'application/msword',
+                'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'txt' => 'text/plain',
+                'rtf' => 'application/rtf'
+            ];
+            $contentType = isset($contentTypes[$ext]) ? $contentTypes[$ext] : 'application/octet-stream';
+
+            // Initialize parsed data - only from resume content, not filename
+            $firstName = '';
+            $lastName = '';
+            $email = '';
+            $phone = '';
+            $city = '';
+            $state = '';
+            $zip = '';
+            $address = '';
+            $keySkills = '';
+            $notes = '';
+            $extractedText = '';
+            $currentEmployer = '';
+            $linkedin = '';
+            $github = '';
+            $website = '';
+
+            // Try multiple methods to extract text from the resume
+            $documentToText = new DocumentToText();
+            $documentType = $documentToText->getDocumentType($fileName, $contentType);
+            
+            $extractionMethod = 'none';
+            
+            // Temporarily restore default error handler for text extraction
+            // (some functions like gzuncompress may throw warnings we want to suppress)
+            restore_error_handler();
+            
+            // Method 1: Try DocumentToText (external tools like pdftotext, antiword)
+            if ($documentType !== false && $documentToText->convert($tmpPath, $documentType))
+            {
+                $extractedText = $documentToText->getString();
+                if (!empty($extractedText)) {
+                    $extractionMethod = 'DocumentToText';
+                }
+            }
+            
+            // Method 2: For DOCX files, try PHP-based extraction
+            if (empty($extractedText) && $ext === 'docx')
+            {
+                $extractedText = $this->extractTextFromDocx($tmpPath);
+                if (!empty($extractedText)) {
+                    $extractionMethod = 'PHP-DOCX';
+                }
+            }
+            
+            // Method 3: For PDF files, try PHP-based extraction
+            if (empty($extractedText) && $ext === 'pdf')
+            {
+                $extractedText = $this->extractTextFromPdf($tmpPath);
+                if (!empty($extractedText)) {
+                    $extractionMethod = 'PHP-PDF';
+                }
+            }
+            
+            // Method 4: For TXT files, just read the content
+            if (empty($extractedText) && $ext === 'txt')
+            {
+                $extractedText = @file_get_contents($tmpPath);
+                if (!empty($extractedText)) {
+                    $extractionMethod = 'TXT-Read';
+                }
+            }
+            
+            // Method 5: For DOC files, try reading as text (some DOC files have readable text)
+            if (empty($extractedText) && $ext === 'doc')
+            {
+                $extractedText = $this->extractTextFromDoc($tmpPath);
+                if (!empty($extractedText)) {
+                    $extractionMethod = 'PHP-DOC';
+                }
+            }
+            
+            // Re-enable custom error handler
+            set_error_handler(function($errno, $errstr, $errfile, $errline) {
+                throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
+            });
+            
+            // Clean the extracted text to remove garbage
+            $extractedText = $this->cleanExtractedText($extractedText);
+
+            // Parse the extracted text to get structured data
+            if (!empty($extractedText))
+            {
+                // Wrap ParseUtility in try-catch to handle any SOAP/network errors gracefully
+                try {
+                    $parseUtility = new ParseUtility();
+                    $parsedData = $parseUtility->documentParse(
+                        $fileName,
+                        filesize($tmpPath),
+                        $contentType,
+                        $extractedText
+                    );
+                } catch (\Throwable $parseException) {
+                    // If ParseUtility fails (e.g., SOAP network error), fall back to local parsing
+                    $parsedData = false;
+                    error_log('ParseUtility failed for ' . $fileName . ': ' . $parseException->getMessage());
+                }
+                
+                if ($parsedData && is_array($parsedData))
+                {
+                    if (!empty($parsedData['first_name'])) {
+                        $firstName = $parsedData['first_name'];
+                    }
+                    if (!empty($parsedData['last_name'])) {
+                        $lastName = $parsedData['last_name'];
+                    }
+                    if (!empty($parsedData['email_address'])) {
+                        $email = $parsedData['email_address'];
+                    }
+                    if (!empty($parsedData['phone_number'])) {
+                        $phone = $parsedData['phone_number'];
+                    }
+                    if (!empty($parsedData['city'])) {
+                        $city = $parsedData['city'];
+                    }
+                    if (!empty($parsedData['state'])) {
+                        $state = $parsedData['state'];
+                    }
+                    if (!empty($parsedData['zip_code'])) {
+                        $zip = $parsedData['zip_code'];
+                    }
+                    if (!empty($parsedData['us_address'])) {
+                        $address = $parsedData['us_address'];
+                    }
+                    if (!empty($parsedData['skills'])) {
+                        $keySkills = $parsedData['skills'];
+                    }
+                    if (!empty($parsedData['current_employer'])) {
+                        $currentEmployer = $parsedData['current_employer'];
+                    }
+                    if (!empty($parsedData['linkedin'])) {
+                        $linkedin = $parsedData['linkedin'];
+                    }
+                    if (!empty($parsedData['github'])) {
+                        $github = $parsedData['github'];
+                    }
+                    if (!empty($parsedData['website'])) {
+                        $website = $parsedData['website'];
+                    }
+                    
+                    // Build comprehensive notes
+                    $noteParts = [];
+                    if (!empty($parsedData['education'])) {
+                        $noteParts[] = "EDUCATION:\n" . $parsedData['education'];
+                    }
+                    if (!empty($parsedData['experience'])) {
+                        $noteParts[] = "EXPERIENCE:\n" . $parsedData['experience'];
+                    }
+                    if (!empty($parsedData['years_experience']) && $parsedData['years_experience'] > 0) {
+                        $noteParts[] = "Estimated Years of Experience: " . $parsedData['years_experience'];
+                    }
+                    if (!empty($noteParts)) {
+                        $notes = implode("\n\n", $noteParts);
+                    }
+                }
+                
+                // If ParseUtility didn't find a name (or failed), try direct extraction from text
+                if (empty($firstName) && empty($lastName)) {
+                    $directName = $this->extractNameDirectly($extractedText);
+                    if (!empty($directName['first'])) {
+                        $firstName = $directName['first'];
+                    }
+                    if (!empty($directName['last'])) {
+                        $lastName = $directName['last'];
+                    }
+                }
+                
+                // If still no email, try direct extraction
+                if (empty($email)) {
+                    if (preg_match('/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/', $extractedText, $emailMatch)) {
+                        $email = strtolower(trim($emailMatch[0]));
+                    }
+                }
+                
+                // If still no phone, try direct extraction
+                if (empty($phone)) {
+                    $phonePatterns = array(
+                        '/(?:\+\d{1,3}[\s\-]?)?\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}/',
+                        '/\+91[\s\-]?\d{5}[\s\-]?\d{5}/',
+                        '/\b\d{10}\b/'
+                    );
+                    foreach ($phonePatterns as $pattern) {
+                        if (preg_match($pattern, $extractedText, $phoneMatch)) {
+                            $phone = trim($phoneMatch[0]);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Quality gate: reject garbage names (too short, like "Tx Ct")
+            // A real first name should be at least 3 chars
+            if (!empty($firstName) && strlen($firstName) <= 2) {
+                $firstName = '';
+            }
+            if (!empty($lastName) && strlen($lastName) <= 2) {
+                $lastName = '';
+            }
+
+            // If no valid name was extracted, try to derive from email address
+            if (empty($firstName) && empty($lastName) && !empty($email)) {
+                $emailName = $this->extractNameFromEmail($email);
+                if (!empty($emailName['first'])) {
+                    $firstName = $emailName['first'];
+                }
+                if (!empty($emailName['last'])) {
+                    $lastName = $emailName['last'];
+                }
+            }
+
+            // Last resort: try filename, then email prefix, then "Unknown"
+            if (empty($firstName) && empty($lastName)) {
+                // Try filename first (e.g., "John_Doe_Resume.pdf")
+                $fileBaseName = pathinfo($fileName, PATHINFO_FILENAME);
+                $fileBaseName = preg_replace('/[_\-]+/', ' ', $fileBaseName);
+                $fileBaseName = preg_replace('/\b(resume|cv|curriculum|vitae|updated|final|new|copy|\d+)\b/i', '', $fileBaseName);
+                $fileWords = preg_split('/\s+/', trim($fileBaseName));
+                $fileWords = array_filter($fileWords, function($w) { return strlen($w) >= 3 && preg_match('/^[A-Za-z]+$/', $w); });
+                $fileWords = array_values($fileWords);
+
+                if (count($fileWords) >= 2) {
+                    $firstName = ucfirst(strtolower($fileWords[0]));
+                    $lastName = ucfirst(strtolower($fileWords[1]));
+                } elseif (count($fileWords) == 1) {
+                    $firstName = ucfirst(strtolower($fileWords[0]));
+                } elseif (!empty($email)) {
+                    // Use email prefix as name
+                    $emailPrefix = strtolower(explode('@', $email)[0]);
+                    $emailPrefix = preg_replace('/\d+$/', '', $emailPrefix);
+                    if (strlen($emailPrefix) >= 3) {
+                        $firstName = ucfirst($emailPrefix);
+                    } else {
+                        $firstName = 'Candidate';
+                    }
+                } else {
+                    $firstName = 'Candidate';
+                }
+            }
+            // If only first name is missing but last is set, derive from email
+            if (empty($firstName) && !empty($lastName)) {
+                $firstName = 'Candidate';
+            }
+            // If only last name is missing, that's OK — leave it empty
+
+            // Build website field with LinkedIn/GitHub if available
+            $webSiteField = '';
+            if (!empty($linkedin)) {
+                $webSiteField = $linkedin;
+            } elseif (!empty($github)) {
+                $webSiteField = $github;
+            } elseif (!empty($website)) {
+                $webSiteField = $website;
+            }
+            
+            // Append social links to notes if multiple exist
+            $socialLinks = [];
+            if (!empty($linkedin)) $socialLinks[] = "LinkedIn: " . $linkedin;
+            if (!empty($github)) $socialLinks[] = "GitHub: " . $github;
+            if (!empty($website)) $socialLinks[] = "Website: " . $website;
+            if (count($socialLinks) > 1 || (!empty($webSiteField) && count($socialLinks) > 0)) {
+                $notes = (!empty($notes) ? $notes . "\n\n" : '') . "SOCIAL PROFILES:\n" . implode("\n", $socialLinks);
+            }
+            
+            // Create the candidate with parsed data
+            $candidates = new Candidates($this->_siteID);
+            
+            $candidateID = $candidates->add(
+                $firstName,
+                '',  // middleName
+                $lastName,
+                $email,
+                '',  // email2
+                '',  // phoneHome
+                $phone,  // phoneCell
+                '',  // phoneWork
+                $address,  // address
+                $city,
+                $state,
+                $zip,  // zip
+                'Bulk Resume Upload',  // source
+                $keySkills,
+                '',  // dateAvailable
+                $currentEmployer,  // currentEmployer
+                0,   // canRelocate
+                '',  // currentPay
+                '',  // desiredPay
+                $notes ?: 'Imported via bulk resume upload. Original file: ' . $fileName,
+                $webSiteField,  // webSite (LinkedIn/GitHub/Portfolio)
+                '',  // bestTimeToCall
+                $_SESSION['CATS']->getUserID(),
+                $_SESSION['CATS']->getUserID()
+            );
+
+            if ($candidateID <= 0)
+            {
+                echo json_encode(['success' => false, 'error' => 'Failed to create candidate record']);
+                return;
+            }
+
+            // Add to pipeline if job order selected
+            if ($jobOrderID > 0) {
+                $pipelines = new Pipelines($this->_siteID);
+                $pipelines->add($candidateID, $jobOrderID, $_SESSION['CATS']->getUserID());
+                
+                $activityEntries = new ActivityEntries($this->_siteID);
+                $activityEntries->add(
+                    $candidateID,
+                    DATA_ITEM_CANDIDATE,
+                    400,
+                    'Added candidate to job order.',
+                    $_SESSION['CATS']->getUserID(),
+                    $jobOrderID
+                );
+            }
+
+            // Use AttachmentCreator to properly handle the file attachment
+            $attachmentCreator = new AttachmentCreator($this->_siteID);
+            
+            $attachSuccess = $attachmentCreator->createFromFile(
+                DATA_ITEM_CANDIDATE,
+                $candidateID,
+                $tmpPath,
+                $fileName,
+                $contentType,
+                false,  // extractText - we already extracted it
+                true    // fileExists
+            );
+
+            $attachmentID = 0;
+            $warning = '';
+            $attachmentPath = '';
+            
+            if ($attachSuccess) {
+                $attachmentID = $attachmentCreator->getAttachmentID();
+                $attachmentPath = $attachmentCreator->getContainingDirectory();
+                
+                // Mark this attachment as a resume
+                $this->markAttachmentAsResume($attachmentID, $extractedText);
+            } else {
+                // Try alternative method - manual file copy and database insert
+                $altResult = $this->attachResumeManually($candidateID, $tmpPath, $fileName, $contentType, $extractedText);
+                if ($altResult['success']) {
+                    $attachmentID = $altResult['attachmentID'];
+                    $warning = 'Used alternative attachment method';
+                } else {
+                    $warning = 'Resume file could not be attached: ' . $attachmentCreator->getError() . '. Alt: ' . $altResult['error'];
+                    error_log('Bulk import attachment error for ' . $fileName . ': ' . $attachmentCreator->getError());
+                }
+            }
+
+            echo json_encode([
+                'success' => true, 
+                'candidateID' => $candidateID,
+                'attachmentID' => $attachmentID,
+                'name' => trim($firstName . ' ' . $lastName),
+                'email' => $email,
+                'phone' => $phone,
+                'city' => $city,
+                'state' => $state,
+                'zip' => $zip,
+                'address' => $address,
+                'currentEmployer' => $currentEmployer,
+                'linkedin' => $linkedin,
+                'github' => $github,
+                'website' => $website,
+                'skills' => $keySkills ? substr($keySkills, 0, 150) . (strlen($keySkills) > 150 ? '...' : '') : '',
+                'warning' => $warning,
+                'debug' => [
+                    'parsed' => !empty($extractedText),
+                    'textLength' => strlen($extractedText),
+                    'extractionMethod' => $extractionMethod,
+                    'textPreview' => substr($extractedText, 0, 300),
+                    'attachmentPath' => $attachmentPath
+                ]
+            ]);
+            
+        } catch (Exception $e) {
+            restore_error_handler();
+            echo json_encode([
+                'success' => false, 
+                'error' => 'Exception: ' . $e->getMessage(),
+                'file' => basename($e->getFile()),
+                'line' => $e->getLine()
+            ]);
+            return;
+        } catch (Error $e) {
+            restore_error_handler();
+            echo json_encode([
+                'success' => false, 
+                'error' => 'PHP Error: ' . $e->getMessage(),
+                'file' => basename($e->getFile()),
+                'line' => $e->getLine()
+            ]);
+            return;
+        }
+        
+        restore_error_handler();
+
+        // Flush output buffer, strip any PHP warnings that leaked before JSON
+        $output = ob_get_clean();
+        if ($output && strpos($output, '{') !== false) {
+            $output = substr($output, strpos($output, '{'));
+        }
+        echo $output;
+        error_reporting($oldErrorReporting);
+    }
+
+    /**
+     * Extract text from DOCX file using PHP ZipArchive
+     */
+    private function extractTextFromDocx($filePath)
+    {
+        if (!class_exists('ZipArchive')) {
+            error_log('ZipArchive class not available for DOCX extraction');
+            return '';
+        }
+        
+        $zip = new ZipArchive();
+        $openResult = $zip->open($filePath);
+        if ($openResult !== true) {
+            error_log('Failed to open DOCX file: ' . $filePath . ' - Error code: ' . $openResult);
+            return '';
+        }
+        
+        $text = '';
+        
+        // Try to get document.xml
+        $content = $zip->getFromName('word/document.xml');
+        
+        if (empty($content)) {
+            // Try alternative paths
+            for ($i = 0; $i < $zip->numFiles; $i++) {
+                $name = $zip->getNameIndex($i);
+                if (stripos($name, 'document.xml') !== false) {
+                    $content = $zip->getFromIndex($i);
+                    break;
+                }
+            }
+        }
+        
+        $zip->close();
+        
+        if (empty($content)) {
+            error_log('No document.xml found in DOCX file: ' . $filePath);
+            return '';
+        }
+        
+        // Method 1: Use DOMDocument for proper XML parsing (paragraph-aware)
+        $dom = new DOMDocument();
+        libxml_use_internal_errors(true);
+        $dom->loadXML($content);
+        libxml_clear_errors();
+
+        $xpath = new DOMXPath($dom);
+        $xpath->registerNamespace('w', 'http://schemas.openxmlformats.org/wordprocessingml/2006/main');
+
+        // Extract text paragraph by paragraph to preserve structure
+        $paraNodes = $xpath->query('//w:p');
+        $paragraphTexts = array();
+
+        if ($paraNodes->length > 0) {
+            foreach ($paraNodes as $para) {
+                $paraText = '';
+                $textInPara = $xpath->query('.//w:t', $para);
+                foreach ($textInPara as $tNode) {
+                    $paraText .= $tNode->textContent;
+                }
+                $paraText = trim($paraText);
+                if (!empty($paraText)) {
+                    $paragraphTexts[] = $paraText;
+                }
+            }
+            $text = implode("\n", $paragraphTexts);
+        }
+
+        // Fallback: try flat extraction if paragraph method got nothing
+        if (empty(trim($text))) {
+            $textNodes = $xpath->query('//w:t');
+            if ($textNodes->length > 0) {
+                $parts = array();
+                foreach ($textNodes as $node) {
+                    $parts[] = $node->textContent;
+                }
+                $text = implode(' ', $parts);
+            }
+        }
+        
+        // Method 2: Fallback to regex if DOMDocument didn't work
+        if (empty(trim($text))) {
+            // Use regex to extract text from w:t tags
+            if (preg_match_all('/<w:t[^>]*>([^<]*)<\/w:t>/i', $content, $matches)) {
+                $text = implode(' ', $matches[1]);
+            }
+        }
+        
+        // Method 3: Strip all tags as last resort
+        if (empty(trim($text))) {
+            $content = str_replace('</w:p>', "\n", $content);
+            $content = str_replace('</w:r>', ' ', $content);
+            $text = strip_tags($content);
+        }
+        
+        // Clean up
+        $text = html_entity_decode($text, ENT_QUOTES, 'UTF-8');
+        $text = preg_replace('/\s+/', ' ', $text);
+        $text = preg_replace('/\n\s+/', "\n", $text);
+        
+        return trim($text);
+    }
+    
+    /**
+     * Extract name directly from resume text using multiple strategies
+     */
+    /**
+     * Extract a likely first/last name from an email address
+     * e.g., anushreddydasari@gmail.com → Anushreddy Dasari
+     *        john.doe@company.com → John Doe
+     *        sanjayvemula15@gmail.com → Sanjay Vemula
+     */
+    private function extractNameFromEmail($email)
+    {
+        $result = array('first' => '', 'last' => '');
+        if (empty($email)) return $result;
+
+        // Get the part before @
+        $prefix = strtolower(explode('@', $email)[0]);
+
+        // Remove trailing numbers (sanjay15 → sanjay)
+        $prefix = preg_replace('/\d+$/', '', $prefix);
+
+        // Remove common prefixes/suffixes
+        $prefix = preg_replace('/^(mr|ms|mrs|dr)[\.\-_]?/', '', $prefix);
+
+        if (empty($prefix)) return $result;
+
+        // Strategy 1: Split on dots, underscores, or hyphens (john.doe, john_doe, john-doe)
+        if (preg_match('/^([a-z]+)[._\-]([a-z]+)$/', $prefix, $m)) {
+            $result['first'] = ucfirst($m[1]);
+            $result['last'] = ucfirst($m[2]);
+            return $result;
+        }
+
+        // Strategy 2: Split on camelCase boundary (unlikely in emails, but check)
+        if (preg_match('/^([a-z]+)([A-Z][a-z]+)$/', explode('@', $email)[0], $m)) {
+            $result['first'] = ucfirst(strtolower($m[1]));
+            $result['last'] = ucfirst(strtolower($m[2]));
+            return $result;
+        }
+
+        // Strategy 3: Try to split a run of lowercase letters into first+last name
+        // by matching against common Indian/Western last name endings
+        $lastNamePatterns = array(
+            'kumar', 'reddy', 'sharma', 'gupta', 'singh', 'verma', 'patel', 'das',
+            'nair', 'menon', 'iyer', 'rao', 'naidu', 'chandra', 'prasad', 'murthy',
+            'varma', 'pillai', 'sethi', 'mehta', 'shah', 'jain', 'mishra', 'pandey',
+            'tiwari', 'chauhan', 'yadav', 'thakur', 'saxena', 'agarwal', 'bansal',
+            'dasari', 'vemula', 'chimita', 'oggu', 'sri', 'dhannapaneni',
+            'smith', 'jones', 'brown', 'wilson', 'taylor', 'anderson', 'thomas',
+            'jackson', 'white', 'harris', 'martin', 'thompson', 'garcia', 'martinez',
+            'robinson', 'clark', 'rodriguez', 'lewis', 'lee', 'walker', 'hall', 'allen',
+            'young', 'king', 'wright', 'lopez', 'hill', 'scott', 'green', 'adams',
+            'baker', 'nelson', 'carter', 'mitchell', 'perez', 'roberts', 'turner',
+            'phillips', 'campbell', 'parker', 'evans', 'edwards', 'collins', 'stewart',
+            'morris', 'murphy', 'cook', 'rogers', 'morgan', 'cooper', 'reed', 'bailey',
+            'bell', 'howard', 'ward', 'cox', 'james', 'watson', 'brooks', 'kelly'
+        );
+
+        foreach ($lastNamePatterns as $last) {
+            if (strlen($prefix) > strlen($last) && substr($prefix, -strlen($last)) === $last) {
+                $first = substr($prefix, 0, -strlen($last));
+                if (strlen($first) >= 2) {
+                    $result['first'] = ucfirst($first);
+                    $result['last'] = ucfirst($last);
+                    return $result;
+                }
+            }
+        }
+
+        // Strategy 4: If prefix is long enough, try splitting roughly in half
+        // looking for vowel-consonant boundaries (min 3 chars each side)
+        if (strlen($prefix) >= 6) {
+            $mid = intval(strlen($prefix) / 2);
+            // Look for a good split point near the middle (consonant after vowel)
+            // Ensure both parts are at least 3 chars
+            $bestSplit = $mid;
+            for ($i = max(3, $mid - 3); $i <= min(strlen($prefix) - 3, $mid + 3); $i++) {
+                if (preg_match('/[aeiou]/i', $prefix[$i-1]) && preg_match('/[^aeiou]/i', $prefix[$i])) {
+                    $bestSplit = $i;
+                    break;
+                }
+            }
+            $result['first'] = ucfirst(substr($prefix, 0, $bestSplit));
+            $result['last'] = ucfirst(substr($prefix, $bestSplit));
+            return $result;
+        }
+
+        // Strategy 5: Just use the whole prefix as first name
+        $result['first'] = ucfirst($prefix);
+        return $result;
+    }
+
+    private function extractNameDirectly($text)
+    {
+        $result = array('first' => '', 'last' => '');
+        
+        if (empty($text)) {
+            return $result;
+        }
+        
+        // Strategy 1: Look for ALL CAPS name at the beginning (common in resumes)
+        // Require 3+ chars per word to avoid garbage like "TX CT" from PDF
+        if (preg_match('/^[\s]*([A-Z]{3,}(?:\s+[A-Z]{3,})+)/m', $text, $matches)) {
+            $nameParts = preg_split('/\s+/', trim($matches[1]));
+            if (count($nameParts) >= 2 && strlen($nameParts[0]) >= 3 && strlen(end($nameParts)) >= 3) {
+                $result['first'] = ucfirst(strtolower($nameParts[0]));
+                $result['last'] = ucfirst(strtolower(end($nameParts)));
+                return $result;
+            }
+        }
+        
+        // Strategy 2: Look for "Name: Firstname Lastname" pattern
+        if (preg_match('/(?:name|candidate)\s*[:]\s*([A-Za-z]+)\s+([A-Za-z]+)/i', $text, $matches)) {
+            $result['first'] = ucfirst(strtolower($matches[1]));
+            $result['last'] = ucfirst(strtolower($matches[2]));
+            return $result;
+        }
+        
+        // Strategy 3: Find name near email - look for "Name email@domain.com" pattern
+        if (preg_match('/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\s*[\|\-]?\s*[a-zA-Z0-9._%+\-]+@/i', $text, $matches)) {
+            $nameParts = preg_split('/\s+/', trim($matches[1]));
+            if (count($nameParts) >= 2) {
+                $result['first'] = ucfirst(strtolower($nameParts[0]));
+                $result['last'] = ucfirst(strtolower(end($nameParts)));
+                return $result;
+            }
+        }
+        
+        // Strategy 4: Look for capitalized words in the first 200 characters
+        $firstPart = substr($text, 0, 200);
+        $lines = preg_split('/[\n\r]+/', $firstPart);
+        
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if (empty($line) || strlen($line) > 60) continue;
+            
+            // Skip lines with common non-name content
+            if (preg_match('/@|http|www\.|phone|email|address|resume|cv|curriculum|objective|summary|profile|experience|education|skills/i', $line)) {
+                continue;
+            }
+            
+            // Skip lines with too many numbers
+            if (preg_match('/\d{3,}/', $line)) continue;
+            
+            // Clean the line
+            $cleanLine = preg_replace('/[^A-Za-z\s]/', '', $line);
+            $words = preg_split('/\s+/', trim($cleanLine));
+            $words = array_filter($words, function($w) { return strlen($w) >= 2; });
+            $words = array_values($words);
+            
+            if (count($words) >= 2 && count($words) <= 4) {
+                // Check if words look like names (capitalized)
+                $allCapitalized = true;
+                foreach ($words as $word) {
+                    if (!preg_match('/^[A-Z]/', $word)) {
+                        $allCapitalized = false;
+                        break;
+                    }
+                }
+                
+                if ($allCapitalized) {
+                    $result['first'] = ucfirst(strtolower($words[0]));
+                    $result['last'] = ucfirst(strtolower(end($words)));
+                    return $result;
+                }
+            }
+        }
+        
+        // Strategy 5: Just take the first two capitalized words
+        if (preg_match('/([A-Z][a-z]{1,15})\s+([A-Z][a-z]{1,15})/', $text, $matches)) {
+            // Make sure these aren't common words
+            $commonWords = array('the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'her', 'was', 'one', 'our', 'out', 'Resume', 'Profile', 'Summary', 'Objective', 'Education', 'Experience', 'Skills', 'Contact', 'Address', 'Phone', 'Email', 'Bachelor', 'Master', 'University', 'College', 'School', 'Company', 'Manager', 'Developer', 'Engineer', 'Designer', 'Analyst');
+            
+            if (!in_array($matches[1], $commonWords) && !in_array($matches[2], $commonWords)) {
+                $result['first'] = $matches[1];
+                $result['last'] = $matches[2];
+                return $result;
+            }
+        }
+        
+        return $result;
+    }
+    
+    /**
+     * Extract text from PDF file using basic PHP methods
+     */
+    private function extractTextFromPdf($filePath)
+    {
+        $content = @file_get_contents($filePath);
+        if (empty($content)) {
+            return '';
+        }
+        
+        $text = '';
+        $allTextParts = array();
+        
+        // Try to extract text from PDF streams
+        if (preg_match_all('/stream\s*(.+?)\s*endstream/s', $content, $matches)) {
+            foreach ($matches[1] as $stream) {
+                // Try to decompress - use try/catch to handle errors gracefully
+                $decompressedStream = $stream;
+                try {
+                    $decompressed = @gzuncompress($stream);
+                    if ($decompressed !== false) {
+                        $decompressedStream = $decompressed;
+                    }
+                } catch (Exception $e) {
+                    // gzuncompress failed, try gzinflate
+                    try {
+                        $decompressed = @gzinflate($stream);
+                        if ($decompressed !== false) {
+                            $decompressedStream = $decompressed;
+                        }
+                    } catch (Exception $e2) {
+                        // Both failed, use original stream
+                    }
+                }
+                
+                // Extract text between parentheses (PDF text objects)
+                if (preg_match_all('/\(([^)]+)\)/', $decompressedStream, $textMatches)) {
+                    foreach ($textMatches[1] as $match) {
+                        // Skip metadata markers
+                        if (strpos($match, 'en-US') !== false || 
+                            strpos($match, 'en-GB') !== false ||
+                            preg_match('/^[A-Z]{2,3}$/', $match)) {
+                            continue;
+                        }
+                        // Decode PDF escape sequences
+                        $match = $this->decodePdfString($match);
+                        if (strlen(trim($match)) > 0) {
+                            $allTextParts[] = $match;
+                        }
+                    }
+                }
+                
+                // Extract text from Tj/TJ operators
+                if (preg_match_all('/\[([^\]]+)\]\s*TJ/i', $decompressedStream, $tjMatches)) {
+                    foreach ($tjMatches[1] as $tj) {
+                        if (preg_match_all('/\(([^)]+)\)/', $tj, $innerMatches)) {
+                            $decoded = array_map(array($this, 'decodePdfString'), $innerMatches[1]);
+                            $allTextParts[] = implode('', $decoded);
+                        }
+                    }
+                }
+                
+                // Also try BT...ET text blocks
+                if (preg_match_all('/BT\s*(.+?)\s*ET/s', $decompressedStream, $btMatches)) {
+                    foreach ($btMatches[1] as $btContent) {
+                        if (preg_match_all('/\(([^)]+)\)\s*Tj/i', $btContent, $tjMatches2)) {
+                            $decoded = array_map(array($this, 'decodePdfString'), $tjMatches2[1]);
+                            $allTextParts[] = implode(' ', $decoded);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Join all text parts
+        $text = implode(' ', $allTextParts);
+        
+        // If we didn't get much text, try a simpler approach - look for readable strings
+        if (strlen($text) < 100) {
+            // Look for sequences of printable characters
+            if (preg_match_all('/[\x20-\x7E]{4,}/', $content, $readableMatches)) {
+                $readable = array();
+                foreach ($readableMatches[0] as $match) {
+                    // Skip binary-looking strings and PDF commands
+                    if (preg_match('/^[A-Za-z\s\.\,\-\'\@\(\)0-9]+$/', $match) && 
+                        !preg_match('/^(obj|endobj|stream|endstream|xref|trailer)$/i', trim($match))) {
+                        $readable[] = $match;
+                    }
+                }
+                if (count($readable) > 0) {
+                    $text = implode(' ', $readable);
+                }
+            }
+        }
+        
+        // Clean up the text - remove non-printable characters but keep letters, numbers, punctuation
+        $text = preg_replace('/[^\x20-\x7E\n\r\t]/', ' ', $text);
+        // Remove language tags like en-US
+        $text = preg_replace('/\ben-[A-Z]{2}\b/i', '', $text);
+        // Remove PDF operators that leaked through
+        $text = preg_replace('/\b(Tj|TJ|BT|ET|Tm|Td|Tf|Tc|Tw|Tz|TL|Ts|Tr)\b/', '', $text);
+        // Normalize whitespace
+        $text = preg_replace('/\s+/', ' ', $text);
+        
+        return trim($text);
+    }
+    
+    /**
+     * Decode PDF escape sequences in a string
+     */
+    private function decodePdfString($str)
+    {
+        // Handle PDF escape sequences
+        $str = str_replace('\\n', "\n", $str);
+        $str = str_replace('\\r', "\r", $str);
+        $str = str_replace('\\t', "\t", $str);
+        $str = str_replace('\\(', '(', $str);
+        $str = str_replace('\\)', ')', $str);
+        $str = str_replace('\\\\', '\\', $str);
+        
+        // Handle octal escapes like \000
+        $str = preg_replace_callback('/\\\\([0-7]{1,3})/', function($m) {
+            return chr(octdec($m[1]));
+        }, $str);
+        
+        return $str;
+    }
+    
+    /**
+     * Extract text from DOC file (older Word format)
+     */
+    private function extractTextFromDoc($filePath)
+    {
+        $content = @file_get_contents($filePath);
+        if (empty($content)) {
+            return '';
+        }
+        
+        // Check if it's actually an RTF file
+        if (substr($content, 0, 5) === '{\rtf') {
+            return $this->extractTextFromRtf($content);
+        }
+        
+        // Try to extract readable ASCII text from DOC
+        $text = '';
+        
+        // DOC files have text in certain positions - try to find readable chunks
+        if (preg_match_all('/[\x20-\x7E]{20,}/', $content, $matches)) {
+            $text = implode(' ', $matches[0]);
+        }
+        
+        return trim($text);
+    }
+    
+    /**
+     * Extract text from RTF content
+     */
+    private function extractTextFromRtf($content)
+    {
+        // Remove RTF control words and groups
+        $text = preg_replace('/\{[^}]*\}/', '', $content);
+        $text = preg_replace('/\\\\[a-z]+\d*\s?/i', '', $text);
+        $text = preg_replace('/[{}]/', '', $text);
+        $text = preg_replace('/\s+/', ' ', $text);
+        
+        return trim($text);
+    }
+    
+    /**
+     * Clean extracted text to remove garbage and normalize
+     */
+    private function cleanExtractedText($text)
+    {
+        if (empty($text)) {
+            return '';
+        }
+        
+        // Remove language tags (en-US, en-GB, etc.)
+        $text = preg_replace('/\ben-[A-Z]{2}\b/i', '', $text);
+        $text = preg_replace('/\b[a-z]{2}-[A-Z]{2}\b/', '', $text);
+        
+        // Remove PDF metadata markers
+        $text = preg_replace('/\bPDF-\d+\.\d+\b/', '', $text);
+        $text = preg_replace('/\b(Producer|Creator|Author|Title|Subject|Keywords)\s*:/i', '', $text);
+        
+        // Remove excessive special characters
+        $text = preg_replace('/[^\w\s@.\-,;:\'\"()\[\]\/\\\\+&%$#!?=*<>]+/', ' ', $text);
+        
+        // Remove isolated single characters that are likely garbage
+        // But keep: I, A, and characters near punctuation (e.g., "C++", "R&D")
+        $text = preg_replace('/(?<!\w)\b[b-hj-zB-HJ-Z]\b(?!\w)(?!\s*[.@+&])/', '', $text);
+        
+        // Normalize whitespace
+        $text = preg_replace('/\s+/', ' ', $text);
+        $text = preg_replace('/\n\s*\n/', "\n", $text);
+        
+        return trim($text);
+    }
+    
+    /**
+     * Mark an attachment as a resume in the database
+     */
+    private function markAttachmentAsResume($attachmentID, $resumeText = '')
+    {
+        $db = DatabaseConnection::getInstance();
+        
+        $sql = sprintf(
+            "UPDATE attachment SET resume = 1, text = %s WHERE attachment_id = %d",
+            $db->makeQueryString($resumeText),
+            $attachmentID
+        );
+        
+        $db->query($sql);
+    }
+    
+    /**
+     * Manually attach a resume file when AttachmentCreator fails
+     */
+    private function attachResumeManually($candidateID, $tmpPath, $fileName, $contentType, $extractedText = '')
+    {
+        $result = ['success' => false, 'error' => '', 'attachmentID' => 0];
+        
+        try {
+            // Make a safe filename
+            $safeFileName = FileUtility::makeSafeFilename($fileName);
+            
+            // First, add the attachment record with empty directory (like AttachmentCreator does)
+            $attachments = new Attachments($this->_siteID);
+            
+            // Calculate file size and MD5
+            $fileSize = intval(@filesize($tmpPath) / 1024);
+            $md5sum = @md5_file($tmpPath);
+            
+            $attachmentID = $attachments->add(
+                DATA_ITEM_CANDIDATE,
+                $candidateID,
+                pathinfo($fileName, PATHINFO_FILENAME),  // title
+                $fileName,                               // originalFilename
+                $safeFileName,                           // storedFilename
+                $contentType,                            // contentType
+                true,                                    // isResume
+                $extractedText,                          // resumeText
+                false,                                   // isProfileImage
+                '',                                      // directoryName (empty initially)
+                $fileSize,                               // fileSize
+                $md5sum                                  // md5sum
+            );
+            
+            if ($attachmentID <= 0) {
+                $result['error'] = 'Failed to insert attachment record';
+                return $result;
+            }
+            
+            // Now create the directory structure like AttachmentCreator does
+            // ./attachments/site_X/Yxxx/uniquename/
+            
+            // Make sure attachments directory exists
+            if (!is_dir('./attachments')) {
+                @mkdir('./attachments', 0777);
+                @touch('./attachments/index.php');
+            }
+            
+            // Site directory
+            $siteDirectory = './attachments/site_' . $this->_siteID;
+            if (!is_dir($siteDirectory)) {
+                @mkdir($siteDirectory, 0777);
+                @file_put_contents($siteDirectory . '/index.php', "\n");
+            }
+            
+            // ID group directory (groups of 1000)
+            $IDGroupDirectory = sprintf('%s/%sxxx', $siteDirectory, ((int) ($attachmentID / 1000)));
+            if (!is_dir($IDGroupDirectory)) {
+                @mkdir($IDGroupDirectory, 0777);
+                @file_put_contents($IDGroupDirectory . '/index.php', "\n");
+            }
+            
+            // Unique directory for this attachment
+            $uniqueDirName = FileUtility::getUniqueDirectory($IDGroupDirectory, $safeFileName);
+            $uniqueDirectory = $IDGroupDirectory . '/' . $uniqueDirName . '/';
+            
+            if (!is_dir($uniqueDirectory)) {
+                @mkdir($uniqueDirectory, 0777);
+            }
+            
+            if (!is_dir($uniqueDirectory)) {
+                $attachments->delete($attachmentID, false);
+                $result['error'] = 'Failed to create attachment directory: ' . $uniqueDirectory;
+                return $result;
+            }
+            
+            // Copy the file to the unique directory
+            $destPath = $uniqueDirectory . $safeFileName;
+            
+            if (is_uploaded_file($tmpPath)) {
+                if (!@move_uploaded_file($tmpPath, $destPath)) {
+                    if (!@copy($tmpPath, $destPath)) {
+                        $attachments->delete($attachmentID, false);
+                        $result['error'] = 'Failed to move/copy uploaded file';
+                        return $result;
+                    }
+                }
+            } else {
+                if (!@copy($tmpPath, $destPath)) {
+                    $attachments->delete($attachmentID, false);
+                    $result['error'] = 'Failed to copy file';
+                    return $result;
+                }
+            }
+            
+            // Verify file was copied
+            if (!file_exists($destPath)) {
+                $attachments->delete($attachmentID, false);
+                $result['error'] = 'File does not exist after copy';
+                return $result;
+            }
+            
+            // Update the attachment record with the directory name
+            // The directory name stored should be relative: site_X/Yxxx/uniquename
+            $relativeDir = sprintf('site_%s/%sxxx/%s', $this->_siteID, ((int) ($attachmentID / 1000)), $uniqueDirName);
+            $attachments->setDirectoryName($attachmentID, $relativeDir);
+            
+            $result['success'] = true;
+            $result['attachmentID'] = $attachmentID;
+            
+        } catch (Exception $e) {
+            $result['error'] = 'Exception: ' . $e->getMessage();
+        }
+        
+        return $result;
     }
 }
 

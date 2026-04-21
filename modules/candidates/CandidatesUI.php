@@ -74,7 +74,8 @@ class CandidatesUI extends UserInterface
         $this->_moduleTabText = 'Candidates';
         $this->_subTabs = array(
             'Add Candidate'     => CATSUtility::getIndexName() . '?m=candidates&amp;a=add*al=' . ACCESS_LEVEL_EDIT . '@candidates.add',
-            'Search Candidates' => CATSUtility::getIndexName() . '?m=candidates&amp;a=search'
+            'Search Candidates' => CATSUtility::getIndexName() . '?m=candidates&amp;a=search',
+            'Bulk Import'       => CATSUtility::getIndexName() . '?m=import&amp;a=bulkImport*al=' . ACCESS_LEVEL_EDIT . '@candidates.add'
         );
     }
 
@@ -134,6 +135,14 @@ class CandidatesUI extends UserInterface
                 $this->onDelete();
                 break;
 
+            case 'bulkDelete':
+                if ($this->getUserAccessLevel('candidates.delete') < ACCESS_LEVEL_DELETE)
+                {
+                    CommonErrors::fatal(COMMONERROR_PERMISSION, $this, 'Invalid user level for action.');
+                }
+                $this->onBulkDelete();
+                break;
+
             case 'search':
                 if ($this->getUserAccessLevel('candidates.search') < ACCESS_LEVEL_READ)
                 {
@@ -160,6 +169,15 @@ class CandidatesUI extends UserInterface
                 include_once(LEGACY_ROOT . '/lib/Search.php');
 
                 $this->viewResume();
+                break;
+
+            case 'parseResumeAjax':
+                if ($this->getUserAccessLevel('candidates.add') < ACCESS_LEVEL_EDIT)
+                {
+                    echo json_encode(['success' => false, 'error' => 'Permission denied']);
+                    return;
+                }
+                $this->parseResumeAjax();
                 break;
 
             /*
@@ -500,6 +518,13 @@ class CandidatesUI extends UserInterface
         {
             CommonErrors::fatal(COMMONERROR_BADINDEX, $this, 'The specified candidate ID could not be found.');
             return;
+        }
+
+        /* Ensure no null values — PHP 8.1+ deprecates passing null to string functions */
+        foreach ($data as $key => $value) {
+            if ($value === null) {
+                $data[$key] = '';
+            }
         }
 
         if ($data['isAdminHidden'] == 1 && $this->getUserAccessLevel('candidates.hidden') < ACCESS_LEVEL_MULTI_SA)
@@ -1035,6 +1060,10 @@ class CandidatesUI extends UserInterface
         $this->_template->assign('EEOSettingsRS', $EEOSettingsRS);
         $this->_template->assign('isModal', false);
 
+        $jobOrders = new JobOrders($this->_siteID);
+        $jobOrdersRS = $jobOrders->getAll(JOBORDERS_STATUS_ACTIVE);
+        $this->_template->assign('jobOrders', $jobOrdersRS);
+
         /* REMEMBER TO ALSO UPDATE JobOrdersUI::addCandidateModal() IF
          * APPLICABLE.
          */
@@ -1194,6 +1223,24 @@ class CandidatesUI extends UserInterface
         if ($candidateID <= 0)
         {
             CommonErrors::fatal(COMMONERROR_RECORDERROR, $this, 'Failed to add candidate.');
+        }
+
+        $jobOrderID = isset($_POST['jobOrderID']) ? (int)$_POST['jobOrderID'] : 0;
+
+        // Add to pipeline if job order selected
+        if ($jobOrderID > 0) {
+            $pipelines = new Pipelines($this->_siteID);
+            $pipelines->add($candidateID, $jobOrderID, $this->_userID);
+            
+            $activityEntries = new ActivityEntries($this->_siteID);
+            $activityEntries->add(
+                $candidateID,
+                DATA_ITEM_CANDIDATE,
+                400,
+                'Added candidate to job order.',
+                $this->_userID,
+                $jobOrderID
+            );
         }
 
         $activityEntries = new ActivityEntries($this->_siteID);
@@ -1570,6 +1617,535 @@ class CandidatesUI extends UserInterface
         );
 
         CATSUtility::transferRelativeURI('m=candidates&a=listByView');
+    }
+
+    /*
+     * Called by handleRequest() to delete multiple candidates at once.
+     */
+    private function onBulkDelete()
+    {
+        /* Get candidate IDs from POST data */
+        $candidateIDs = array();
+        
+        if (isset($_POST['candidateIDs']) && is_array($_POST['candidateIDs']))
+        {
+            $candidateIDs = array_map('intval', $_POST['candidateIDs']);
+        }
+        else if (isset($_POST['candidateIDs']) && !empty($_POST['candidateIDs']))
+        {
+            $candidateIDs = array_map('intval', explode(',', $_POST['candidateIDs']));
+        }
+        
+        if (empty($candidateIDs))
+        {
+            CATSUtility::transferRelativeURI('m=candidates&a=listByView');
+            return;
+        }
+
+        $candidates = new Candidates($this->_siteID);
+        $deletedCount = 0;
+        
+        foreach ($candidateIDs as $candidateID)
+        {
+            if ($candidateID > 0)
+            {
+                $candidates->delete($candidateID);
+                
+                /* Delete the MRU entry if present. */
+                $_SESSION['CATS']->getMRU()->removeEntry(
+                    DATA_ITEM_CANDIDATE, $candidateID
+                );
+                
+                $deletedCount++;
+            }
+        }
+
+        /* Store success message in session for display */
+        $_SESSION['bulkDeleteMessage'] = sprintf('%d candidate(s) have been deleted successfully.', $deletedCount);
+        
+        CATSUtility::transferRelativeURI('m=candidates&a=listByView');
+    }
+
+    /*
+     * Called by handleRequest() to parse a resume file via AJAX and return extracted data.
+     */
+    private function parseResumeAjax()
+    {
+        // Suppress ALL PHP warnings/notices/deprecations — they break JSON output
+        $oldErrorReporting = error_reporting(0);
+        @ini_set('display_errors', '0');
+
+        // Clean any prior output
+        while (ob_get_level()) { ob_end_clean(); }
+        ob_start();
+
+        header('Content-Type: application/json');
+        header('Cache-Control: no-cache, must-revalidate');
+
+        try {
+            if (!isset($_FILES['resumeFile']) || $_FILES['resumeFile']['error'] !== UPLOAD_ERR_OK)
+            {
+                echo json_encode(['success' => false, 'error' => 'No file uploaded or upload error']);
+                return;
+            }
+
+            $file = $_FILES['resumeFile'];
+            $fileName = $file['name'];
+            $tmpPath = $file['tmp_name'];
+            $fileSize = $file['size'];
+
+            // Determine content type
+            $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+            $contentTypes = [
+                'pdf' => 'application/pdf',
+                'doc' => 'application/msword',
+                'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'txt' => 'text/plain',
+                'rtf' => 'application/rtf'
+            ];
+            $contentType = isset($contentTypes[$ext]) ? $contentTypes[$ext] : 'application/octet-stream';
+
+            // Extract text from the document
+            $extractedText = '';
+            
+            include_once(LEGACY_ROOT . '/lib/DocumentToText.php');
+            $documentToText = new DocumentToText();
+            $documentType = $documentToText->getDocumentType($fileName, $contentType);
+            
+            // Try DocumentToText first (uses external tools if available)
+            if ($documentType !== false && $documentToText->convert($tmpPath, $documentType))
+            {
+                $extractedText = $documentToText->getString();
+            }
+            
+            // Fallback: PHP-based extraction for DOCX
+            if (empty($extractedText) && $ext === 'docx' && class_exists('ZipArchive'))
+            {
+                $extractedText = $this->extractTextFromDocxBasic($tmpPath);
+            }
+            
+            // Fallback: Read TXT files directly
+            if (empty($extractedText) && $ext === 'txt')
+            {
+                $extractedText = @file_get_contents($tmpPath);
+            }
+            
+            // Fallback: PHP-based PDF extraction
+            if (empty($extractedText) && $ext === 'pdf')
+            {
+                $extractedText = $this->extractTextFromPdfBasic($tmpPath);
+            }
+            
+            // Clean extracted text
+            if (!empty($extractedText))
+            {
+                // Remove language tags
+                $extractedText = preg_replace('/\ben-[A-Z]{2}\b/i', '', $extractedText);
+                // Normalize spaces within lines but preserve newlines
+                $extractedText = preg_replace('/[^\S\n]+/', ' ', $extractedText);
+                // Remove blank lines
+                $extractedText = preg_replace('/\n\s*\n/', "\n", $extractedText);
+                $extractedText = trim($extractedText);
+            }
+
+            // Parse the extracted text
+            $parsedData = [
+                'firstName' => '',
+                'lastName' => '',
+                'email' => '',
+                'phone' => '',
+                'city' => '',
+                'state' => '',
+                'address' => '',
+                'zip' => '',
+                'skills' => '',
+                'currentEmployer' => '',
+                'linkedin' => '',
+                'github' => '',
+                'website' => '',
+                'notes' => ''
+            ];
+
+            if (!empty($extractedText))
+            {
+                include_once(LEGACY_ROOT . '/lib/ParseUtility.php');
+                $parseUtility = new ParseUtility();
+                $result = $parseUtility->documentParse($fileName, $fileSize, $contentType, $extractedText);
+                
+                if ($result && is_array($result))
+                {
+                    if (!empty($result['first_name'])) $parsedData['firstName'] = trim($result['first_name']);
+                    if (!empty($result['last_name'])) $parsedData['lastName'] = trim($result['last_name']);
+                    if (!empty($result['email_address'])) $parsedData['email'] = trim($result['email_address']);
+                    if (!empty($result['phone_number'])) $parsedData['phone'] = trim($result['phone_number']);
+                    if (!empty($result['city'])) $parsedData['city'] = trim($result['city']);
+                    if (!empty($result['state'])) $parsedData['state'] = trim($result['state']);
+                    if (!empty($result['us_address'])) $parsedData['address'] = trim($result['us_address']);
+                    if (!empty($result['zip_code'])) $parsedData['zip'] = trim($result['zip_code']);
+                    if (!empty($result['skills'])) $parsedData['skills'] = trim($result['skills']);
+                    if (!empty($result['current_employer'])) $parsedData['currentEmployer'] = trim($result['current_employer']);
+                    if (!empty($result['linkedin'])) $parsedData['linkedin'] = trim($result['linkedin']);
+                    if (!empty($result['github'])) $parsedData['github'] = trim($result['github']);
+                    if (!empty($result['website'])) $parsedData['website'] = trim($result['website']);
+                    
+                    // Build notes from education and experience
+                    $notes = [];
+                    if (!empty($result['education'])) {
+                        $notes[] = "EDUCATION:\n" . trim($result['education']);
+                    }
+                    if (!empty($result['experience'])) {
+                        $notes[] = "EXPERIENCE:\n" . trim($result['experience']);
+                    }
+                    if (!empty($result['years_experience']) && $result['years_experience'] > 0) {
+                        $notes[] = "Estimated Years of Experience: " . $result['years_experience'];
+                    }
+                    // Add social links to notes
+                    $socialLinks = [];
+                    if (!empty($result['linkedin'])) $socialLinks[] = "LinkedIn: " . $result['linkedin'];
+                    if (!empty($result['github'])) $socialLinks[] = "GitHub: " . $result['github'];
+                    if (!empty($result['website'])) $socialLinks[] = "Website: " . $result['website'];
+                    if (!empty($socialLinks)) {
+                        $notes[] = "SOCIAL PROFILES:\n" . implode("\n", $socialLinks);
+                    }
+                    if (!empty($notes)) {
+                        $parsedData['notes'] = implode("\n\n", $notes);
+                    }
+                }
+            }
+
+            // Direct regex fallbacks if parser missed fields
+            if (!empty($extractedText)) {
+                // Email fallback
+                if (empty($parsedData['email'])) {
+                    if (preg_match('/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/', $extractedText, $em)) {
+                        $parsedData['email'] = strtolower(trim($em[0]));
+                    }
+                }
+                // Phone fallback
+                if (empty($parsedData['phone'])) {
+                    $phonePatterns = array(
+                        '/(?:\+\d{1,3}[\s\-]?)?\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}/',
+                        '/\+91[\s\-]?\d{5}[\s\-]?\d{5}/',
+                        '/\b\d{10}\b/'
+                    );
+                    foreach ($phonePatterns as $pp) {
+                        if (preg_match($pp, $extractedText, $pm)) {
+                            $parsedData['phone'] = trim($pm[0]);
+                            break;
+                        }
+                    }
+                }
+                // Name fallback from text
+                if (empty($parsedData['firstName']) && empty($parsedData['lastName'])) {
+                    $lines = preg_split('/[\n\r]+/', $extractedText);
+                    foreach ($lines as $line) {
+                        $line = trim($line);
+                        if (empty($line) || strlen($line) > 60) continue;
+                        if (preg_match('/@|http|phone|email|address|resume|cv|objective|summary|experience|education|skills/i', $line)) continue;
+                        if (preg_match('/\d{3,}/', $line)) continue;
+                        $cleanLine = preg_replace('/[^A-Za-z\s]/', '', $line);
+                        $words = preg_split('/\s+/', trim($cleanLine));
+                        $words = array_filter($words, function($w) { return strlen($w) >= 2; });
+                        $words = array_values($words);
+                        if (count($words) >= 2 && count($words) <= 4) {
+                            $parsedData['firstName'] = ucfirst(strtolower($words[0]));
+                            $parsedData['lastName'] = ucfirst(strtolower(end($words)));
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Quality gate: reject garbage names (too short, like "Tx", "Ct")
+            if (!empty($parsedData['firstName']) && strlen($parsedData['firstName']) <= 2) {
+                $parsedData['firstName'] = '';
+            }
+            if (!empty($parsedData['lastName']) && strlen($parsedData['lastName']) <= 2) {
+                $parsedData['lastName'] = '';
+            }
+
+            // Email-based name fallback
+            if (empty($parsedData['firstName']) && empty($parsedData['lastName']) && !empty($parsedData['email'])) {
+                $prefix = strtolower(explode('@', $parsedData['email'])[0]);
+                $prefix = preg_replace('/\d+$/', '', $prefix);
+                if (!empty($prefix)) {
+                    // Split on dots/underscores/hyphens
+                    if (preg_match('/^([a-z]+)[._\-]([a-z]+)$/', $prefix, $nm)) {
+                        $parsedData['firstName'] = ucfirst($nm[1]);
+                        $parsedData['lastName'] = ucfirst($nm[2]);
+                    } else {
+                        // Try common surname detection
+                        $surnames = array('kumar','reddy','sharma','gupta','singh','verma','patel','das','nair','rao','naidu','prasad','murthy','varma','pillai','dasari','vemula','chimita','oggu','sri','dhannapaneni','smith','jones','brown','wilson','taylor','anderson','thomas','jackson','white','harris','martin','thompson','garcia','martinez','robinson','clark','lewis','lee','walker','hall','allen','young','king','wright','baker','nelson','carter','mitchell','bell','ward');
+                        $found = false;
+                        foreach ($surnames as $sn) {
+                            if (strlen($prefix) > strlen($sn) && substr($prefix, -strlen($sn)) === $sn) {
+                                $first = substr($prefix, 0, -strlen($sn));
+                                if (strlen($first) >= 2) {
+                                    $parsedData['firstName'] = ucfirst($first);
+                                    $parsedData['lastName'] = ucfirst($sn);
+                                    $found = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (!$found && strlen($prefix) >= 4) {
+                            $parsedData['firstName'] = ucfirst($prefix);
+                        }
+                    }
+                }
+            }
+
+            // Store the temp file path for later use when form is submitted
+            // Save to 'addcandidate' directory so _addCandidate can find it
+            $tempFileName = 'resume_' . time() . '_' . rand(1000, 9999) . '.' . $ext;
+            $tempDir = FileUtility::getUploadPath($this->_siteID, 'addcandidate');
+            if ($tempDir) {
+                $newTempPath = $tempDir . '/' . $tempFileName;
+                if (move_uploaded_file($tmpPath, $newTempPath)) {
+                    $parsedData['tempFile'] = $tempFileName;
+                    $parsedData['originalFileName'] = $fileName;
+                }
+            }
+
+            echo json_encode([
+                'success' => true,
+                'data' => $parsedData,
+                'hasText' => !empty($extractedText),
+                'textLength' => strlen($extractedText)
+            ]);
+
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'error' => 'Exception: ' . $e->getMessage()]);
+        }
+
+        // Flush output buffer, restore error reporting
+        $output = ob_get_clean();
+        // Strip any PHP warnings/errors that leaked before our JSON
+        if (strpos($output, '{') !== false) {
+            $output = substr($output, strpos($output, '{'));
+        }
+        echo $output;
+        error_reporting($oldErrorReporting);
+    }
+
+    /**
+     * Extract text from PDF file using basic PHP methods
+     */
+    private function extractTextFromPdfBasic($filePath)
+    {
+        $content = @file_get_contents($filePath);
+        if (empty($content)) {
+            return '';
+        }
+        
+        $text = '';
+        $allTextParts = array();
+        
+        // Try to extract text from PDF streams
+        if (preg_match_all('/stream\s*(.+?)\s*endstream/s', $content, $matches)) {
+            foreach ($matches[1] as $stream) {
+                // Try to decompress - handle errors gracefully
+                $decompressedStream = $stream;
+                try {
+                    $decompressed = @gzuncompress($stream);
+                    if ($decompressed !== false) {
+                        $decompressedStream = $decompressed;
+                    }
+                } catch (Exception $e) {
+                    try {
+                        $decompressed = @gzinflate($stream);
+                        if ($decompressed !== false) {
+                            $decompressedStream = $decompressed;
+                        }
+                    } catch (Exception $e2) {
+                        // Both failed, use original stream
+                    }
+                }
+                
+                // Extract text between parentheses (PDF text objects)
+                if (preg_match_all('/\(([^)]+)\)/', $decompressedStream, $textMatches)) {
+                    foreach ($textMatches[1] as $match) {
+                        // Skip metadata markers
+                        if (strpos($match, 'en-US') !== false || 
+                            strpos($match, 'en-GB') !== false ||
+                            preg_match('/^[A-Z]{2,3}$/', $match)) {
+                            continue;
+                        }
+                        // Decode PDF escape sequences
+                        $match = $this->decodePdfEscapes($match);
+                        if (strlen(trim($match)) > 0) {
+                            $allTextParts[] = $match;
+                        }
+                    }
+                }
+                
+                // Extract text from Tj/TJ operators
+                if (preg_match_all('/\[([^\]]+)\]\s*TJ/i', $decompressedStream, $tjMatches)) {
+                    foreach ($tjMatches[1] as $tj) {
+                        if (preg_match_all('/\(([^)]+)\)/', $tj, $innerMatches)) {
+                            $decoded = array_map(array($this, 'decodePdfEscapes'), $innerMatches[1]);
+                            $allTextParts[] = implode('', $decoded);
+                        }
+                    }
+                }
+                
+                // Also try BT...ET text blocks
+                if (preg_match_all('/BT\s*(.+?)\s*ET/s', $decompressedStream, $btMatches)) {
+                    foreach ($btMatches[1] as $btContent) {
+                        if (preg_match_all('/\(([^)]+)\)\s*Tj/i', $btContent, $tjMatches2)) {
+                            $decoded = array_map(array($this, 'decodePdfEscapes'), $tjMatches2[1]);
+                            $allTextParts[] = implode(' ', $decoded);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Join all text parts
+        $text = implode(' ', $allTextParts);
+        
+        // If we didn't get much text, try a simpler approach - look for readable strings
+        if (strlen($text) < 100) {
+            // Look for sequences of printable characters
+            if (preg_match_all('/[\x20-\x7E]{4,}/', $content, $readableMatches)) {
+                $readable = array();
+                foreach ($readableMatches[0] as $match) {
+                    // Skip binary-looking strings
+                    if (preg_match('/^[A-Za-z\s\.\,\-\'\@\(\)0-9]+$/', $match)) {
+                        $readable[] = $match;
+                    }
+                }
+                if (count($readable) > 0) {
+                    $text = implode(' ', $readable);
+                }
+            }
+        }
+        
+        // Clean up the text
+        $text = preg_replace('/[^\x20-\x7E\n\r\t]/', ' ', $text);
+        $text = preg_replace('/\b(Tj|TJ|BT|ET|Tm|Td|Tf|Tc|Tw|Tz|TL|Ts|Tr)\b/', '', $text);
+        $text = preg_replace('/\s+/', ' ', $text);
+        
+        return trim($text);
+    }
+    
+    /**
+     * Decode PDF escape sequences in a string
+     */
+    private function decodePdfEscapes($str)
+    {
+        $str = str_replace('\\n', "\n", $str);
+        $str = str_replace('\\r', "\r", $str);
+        $str = str_replace('\\t', "\t", $str);
+        $str = str_replace('\\(', '(', $str);
+        $str = str_replace('\\)', ')', $str);
+        $str = str_replace('\\\\', '\\', $str);
+        
+        // Handle octal escapes
+        $str = preg_replace_callback('/\\\\([0-7]{1,3})/', function($m) {
+            return chr(octdec($m[1]));
+        }, $str);
+        
+        return $str;
+    }
+    
+    /**
+     * Extract text from DOCX file using PHP ZipArchive
+     */
+    private function extractTextFromDocxBasic($filePath)
+    {
+        if (!class_exists('ZipArchive')) {
+            return '';
+        }
+        
+        $zip = new ZipArchive();
+        $openResult = $zip->open($filePath);
+        if ($openResult !== true) {
+            return '';
+        }
+        
+        $text = '';
+        
+        // Try to get document.xml
+        $content = $zip->getFromName('word/document.xml');
+        
+        if (empty($content)) {
+            // Try alternative paths
+            for ($i = 0; $i < $zip->numFiles; $i++) {
+                $name = $zip->getNameIndex($i);
+                if (stripos($name, 'document.xml') !== false) {
+                    $content = $zip->getFromIndex($i);
+                    break;
+                }
+            }
+        }
+        
+        $zip->close();
+        
+        if (empty($content)) {
+            return '';
+        }
+        
+        // Method 1: Use DOMDocument - paragraph-aware extraction
+        $dom = new DOMDocument();
+        libxml_use_internal_errors(true);
+        $dom->loadXML($content);
+        libxml_clear_errors();
+
+        $xpath = new DOMXPath($dom);
+        $xpath->registerNamespace('w', 'http://schemas.openxmlformats.org/wordprocessingml/2006/main');
+
+        // Extract text paragraph by paragraph to preserve line structure
+        $paraNodes = $xpath->query('//w:p');
+        $paragraphTexts = array();
+
+        if ($paraNodes->length > 0) {
+            foreach ($paraNodes as $para) {
+                $paraText = '';
+                $textInPara = $xpath->query('.//w:t', $para);
+                foreach ($textInPara as $tNode) {
+                    $paraText .= $tNode->textContent;
+                }
+                $paraText = trim($paraText);
+                if (!empty($paraText)) {
+                    $paragraphTexts[] = $paraText;
+                }
+            }
+            $text = implode("\n", $paragraphTexts);
+        }
+
+        // Fallback: flat extraction if paragraph method got nothing
+        if (empty(trim($text))) {
+            $textNodes = $xpath->query('//w:t');
+            if ($textNodes->length > 0) {
+                $parts = array();
+                foreach ($textNodes as $node) {
+                    $parts[] = $node->textContent;
+                }
+                $text = implode(' ', $parts);
+            }
+        }
+        
+        // Method 2: Fallback to regex if DOMDocument didn't work
+        if (empty(trim($text))) {
+            if (preg_match_all('/<w:t[^>]*>([^<]*)<\/w:t>/i', $content, $matches)) {
+                $text = implode(' ', $matches[1]);
+            }
+        }
+        
+        // Method 3: Strip all tags as last resort
+        if (empty(trim($text))) {
+            $content = str_replace('</w:p>', "\n", $content);
+            $content = str_replace('</w:r>', ' ', $content);
+            $text = strip_tags($content);
+        }
+        
+        // Clean up
+        $text = html_entity_decode($text, ENT_QUOTES, 'UTF-8');
+        $text = preg_replace('/\s+/', ' ', $text);
+        $text = preg_replace('/\n\s+/', "\n", $text);
+        
+        return trim($text);
     }
 
     /*
