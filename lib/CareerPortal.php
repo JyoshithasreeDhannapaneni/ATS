@@ -348,6 +348,81 @@ class CareerPortalSettings
     }
 
     /**
+     * Deletes a built-in (default) template from the database.
+     *
+     * @param string Template name.
+     * @return boolean Was the query executed successfully?
+     */
+    public function deleteDefaultTemplate($template)
+    {
+        $sql = sprintf(
+            "DELETE FROM
+                career_portal_template
+            WHERE
+                career_portal_name = %s",
+            $this->_db->makeQueryString($template)
+        );
+
+        return (boolean) $this->_db->query($sql);
+    }
+
+    /**
+     * Sets a career portal setting for a built-in (default) template.
+     *
+     * @param string Setting name.
+     * @param string Setting value.
+     * @param string Template name.
+     * @return void
+     */
+    public function setForDefaultTemplate($setting, $value, $template)
+    {
+        $sql = sprintf(
+            "DELETE FROM
+                career_portal_template
+            WHERE
+                career_portal_template.setting = %s
+            AND
+                career_portal_template.career_portal_name = %s",
+            $this->_db->makeQueryString($setting),
+            $this->_db->makeQueryString($template)
+        );
+        $this->_db->query($sql);
+
+        $sql = sprintf(
+            "INSERT INTO career_portal_template (
+                setting,
+                value,
+                career_portal_name
+            )
+            VALUES (
+                %s,
+                %s,
+                %s
+            )",
+            $this->_db->makeQueryString($setting),
+            $this->_db->makeQueryString($value),
+            $this->_db->makeQueryString($template)
+         );
+         $this->_db->query($sql);
+    }
+
+    /**
+     * Checks if a template exists in the default templates table.
+     *
+     * @param string Template name.
+     * @return boolean
+     */
+    public function isDefaultTemplate($template)
+    {
+        $defaults = $this->getDefaultTemplates();
+        foreach ($defaults as $d)
+        {
+            if ($d['careerPortalName'] === $template) return true;
+        }
+        return false;
+    }
+
+    /**
      * Sets a career portal setting for a custom template.
      *
      * @param string Setting name.

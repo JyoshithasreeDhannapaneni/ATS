@@ -640,6 +640,49 @@
 .hidden-input {
     display: none;
 }
+
+/* File format badge */
+.file-format-badge {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-left: 8px;
+    background: #e0e7ff;
+    color: #3730a3;
+    vertical-align: middle;
+}
+.file-format-badge.pdf  { background: #fee2e2; color: #991b1b; }
+.file-format-badge.doc,
+.file-format-badge.docx { background: #dbeafe; color: #1e40af; }
+.file-format-badge.csv  { background: #d1fae5; color: #065f46; }
+.file-format-badge.txt  { background: #f3f4f6; color: #374151; }
+.file-format-badge.rtf  { background: #fef3c7; color: #92400e; }
+
+/* Download button on file item */
+.file-item-download {
+    margin-left: 8px;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: #eff6ff;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+.file-item-download:hover {
+    background: #2563eb;
+    color: #fff;
+}
+.file-item-download svg { color: #2563eb; }
+.file-item-download:hover svg { color: #fff; }
 </style>
 
 <div id="main">
@@ -737,17 +780,17 @@
             <div id="resumeTab" class="tab-content">
                 <!-- Resume Upload Zone -->
                 <div class="upload-zone" id="resumeUploadZone" onclick="document.getElementById('resumeFileInput').click()">
-                    <input type="file" id="resumeFileInput" class="hidden-input" accept=".pdf,.doc,.docx,.txt,.rtf" multiple onchange="handleResumeFiles(this.files)">
+                    <input type="file" id="resumeFileInput" class="hidden-input" accept=".pdf,.doc,.docx,.txt,.rtf,.csv" multiple onchange="handleResumeFiles(this.files)">
                     <div class="upload-zone-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
                             <polyline points="14 2 14 8 20 8"/>
                         </svg>
                     </div>
-                    <h3>Upload Resume Files</h3>
-                    <p>Drag and drop multiple resume files here, or click to browse</p>
+                    <h3>Upload Resume or CSV Files</h3>
+                    <p>Drag and drop multiple files here, or click to browse</p>
                     <span class="browse-btn">Browse Files</span>
-                    <div class="file-types">Supported formats: PDF, DOC, DOCX, TXT, RTF (Max 50 files at once)</div>
+                    <div class="file-types">Supported formats: PDF, DOC, DOCX, TXT, RTF, CSV (Max 50 files at once)</div>
                 </div>
 
                 <!-- Resume File List -->
@@ -969,10 +1012,10 @@ function showCSVPreview(headers, data) {
     preview.classList.add('active');
 }
 
-// Handle resume files
+// Handle resume files (also accepts CSV for structured candidate import)
 function handleResumeFiles(files) {
-    const validExtensions = ['.pdf', '.doc', '.docx', '.txt', '.rtf'];
-    
+    const validExtensions = ['.pdf', '.doc', '.docx', '.txt', '.rtf', '.csv'];
+
     for (let file of files) {
         const ext = '.' + file.name.split('.').pop().toLowerCase();
         if (validExtensions.includes(ext) && resumeFiles.length < 50) {
@@ -981,7 +1024,7 @@ function handleResumeFiles(files) {
             }
         }
     }
-    
+
     renderResumeFileList();
     updateSummary();
 }
@@ -1003,19 +1046,30 @@ function renderResumeFileList() {
     items.innerHTML = resumeFiles.map((file, idx) => {
         const ext = file.name.split('.').pop().toLowerCase();
         const size = formatFileSize(file.size);
-        
-        return `<div class="file-item">
-            <div class="file-item-icon">
+        const isCsv = ext === 'csv';
+
+        return `<div class="file-item" data-idx="${idx}">
+            <div class="file-item-icon${isCsv ? ' csv' : ''}">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
                     <polyline points="14 2 14 8 20 8"/>
                 </svg>
             </div>
             <div class="file-item-info">
-                <div class="file-item-name">${escapeHtml(file.name)}</div>
+                <div class="file-item-name">
+                    ${escapeHtml(file.name)}
+                    <span class="file-format-badge ${ext}">${ext.toUpperCase()}</span>
+                </div>
                 <div class="file-item-size">${size}</div>
             </div>
             <span class="file-item-status pending">Pending</span>
+            <button class="file-item-download" title="Download ${escapeHtml(file.name)}" onclick="downloadFile(${idx})">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+            </button>
             <button class="file-item-remove" onclick="removeResumeFile(${idx})">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="18" y1="6" x2="6" y2="18"/>
@@ -1024,6 +1078,18 @@ function renderResumeFileList() {
             </button>
         </div>`;
     }).join('');
+}
+
+// Download a file from the selected resume list
+function downloadFile(idx) {
+    const file = resumeFiles[idx];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = file.name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 // Remove a resume file
@@ -1155,90 +1221,133 @@ function importCSVData() {
     processNext();
 }
 
-// Import resume files
+// Import resume files (routes CSV files through structured import, others through resume parser)
 function importResumeFiles() {
     if (resumeFiles.length === 0) return;
-    
+
     document.getElementById('importActions').style.display = 'none';
     document.getElementById('importProgress').classList.add('active');
-    
+
     let imported = 0;
     let failed = 0;
+    let skipped = 0;
     let current = 0;
-    
+
     function processNext() {
         if (current >= resumeFiles.length) {
-            showResults(imported, failed, 0);
+            showResults(imported, failed, skipped);
             return;
         }
-        
+
         const file = resumeFiles[current];
+        const ext = file.name.split('.').pop().toLowerCase();
         const percent = Math.round((current / resumeFiles.length) * 100);
-        
+
         document.getElementById('progressPercent').textContent = percent + '%';
         document.getElementById('progressBarFill').style.width = percent + '%';
-        document.getElementById('progressStatus').textContent = `Uploading ${file.name}...`;
-        
+        document.getElementById('progressStatus').textContent = `Processing ${file.name}...`;
+
+        if (ext === 'csv') {
+            // Read and import CSV file rows via structured import endpoint
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                const lines = content.split('\n').filter(l => l.trim());
+                if (lines.length < 2) {
+                    failed++;
+                    updateFileStatus(current, 'error', {error: 'CSV has no data rows'});
+                    current++;
+                    setTimeout(processNext, 50);
+                    return;
+                }
+                const headers = parseCSVLine(lines[0]);
+                const rows = [];
+                for (let i = 1; i < lines.length; i++) {
+                    const vals = parseCSVLine(lines[i]);
+                    if (vals.some(v => v.trim())) {
+                        const row = {};
+                        headers.forEach((h, idx) => { row[h.trim().toLowerCase().replace(/\s+/g, '_')] = vals[idx] || ''; });
+                        rows.push(row);
+                    }
+                }
+                let rowIdx = 0;
+                function importRow() {
+                    if (rowIdx >= rows.length) {
+                        updateFileStatus(current, 'success', {name: file.name + ' (' + rows.length + ' rows)'});
+                        current++;
+                        setTimeout(processNext, 50);
+                        return;
+                    }
+                    const row = rows[rowIdx];
+                    const fd = new FormData();
+                    fd.append('firstName', row.first_name || row.firstname || '');
+                    fd.append('lastName', row.last_name || row.lastname || '');
+                    fd.append('email', row.email || row.email1 || '');
+                    fd.append('phone', row.phone || row.phone_cell || row.mobile || '');
+                    fd.append('city', row.city || '');
+                    fd.append('state', row.state || '');
+                    fd.append('keySkills', row.key_skills || row.skills || '');
+                    fd.append('currentEmployer', row.current_employer || row.employer || row.company || '');
+                    fd.append('notes', row.notes || '');
+                    fd.append('source', row.source || 'Bulk Import');
+                    fd.append('jobOrderID', document.getElementById('jobOrderID').value);
+                    fetch('<?php echo CATSUtility::getIndexName(); ?>?m=import&a=bulkImportCandidate', {method: 'POST', body: fd})
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.success) imported++;
+                            else if (data.duplicate) skipped++;
+                            else failed++;
+                            rowIdx++;
+                            setTimeout(importRow, 30);
+                        })
+                        .catch(() => { failed++; rowIdx++; setTimeout(importRow, 30); });
+                }
+                importRow();
+            };
+            reader.readAsText(file);
+            return;
+        }
+
+        // Standard resume file (PDF, DOC, DOCX, etc.)
         const formData = new FormData();
         formData.append('action', 'importResume');
         formData.append('resumeFile', file);
         formData.append('jobOrderID', document.getElementById('jobOrderID').value);
-        
+
         fetch('<?php echo CATSUtility::getIndexName(); ?>?m=import&a=bulkImportResume', {
             method: 'POST',
             body: formData,
             credentials: 'same-origin'
         })
         .then(response => {
-            if (!response.ok) {
-                throw new Error('HTTP error ' + response.status);
-            }
+            if (!response.ok) throw new Error('HTTP error ' + response.status);
             return response.text();
         })
         .then(text => {
-            console.log('Server response for ' + file.name + ':', text);
             try {
                 const data = JSON.parse(text);
                 if (data.success) {
                     imported++;
                     updateFileStatus(current, 'success', data);
-                    console.log('%c Successfully imported: ' + (data.name || file.name), 'color: green; font-weight: bold');
-                    if (data.email) console.log('  Email: ' + data.email);
-                    if (data.phone) console.log('  Phone: ' + data.phone);
-                    if (data.city) console.log('  City: ' + data.city);
-                    if (data.state) console.log('  State: ' + data.state);
-                    if (data.skills) console.log('  Skills: ' + data.skills);
-                    if (data.warning) console.warn('  Warning: ' + data.warning);
-                    if (data.debug) {
-                        console.log('  Debug Info:');
-                        console.log('    - Extraction Method: ' + data.debug.extractionMethod);
-                        console.log('    - Text Length: ' + data.debug.textLength);
-                        console.log('    - Text Preview: ' + (data.debug.textPreview || '(empty)'));
-                    }
                 } else {
                     failed++;
                     updateFileStatus(current, 'error', data);
-                    console.error('%c Import failed for ' + file.name + ': ' + (data.error || 'Unknown error'), 'color: red; font-weight: bold');
                 }
             } catch (e) {
                 failed++;
                 updateFileStatus(current, 'error');
-                console.error('%c JSON parse error for ' + file.name, 'color: red; font-weight: bold');
-                console.error('  Parse Error:', e);
-                console.error('  Raw Response:', text.substring(0, 500));
             }
             current++;
             setTimeout(processNext, 100);
         })
-        .catch((err) => {
+        .catch(() => {
             failed++;
             updateFileStatus(current, 'error');
-            console.error('Fetch error for ' + file.name + ':', err);
             current++;
             setTimeout(processNext, 100);
         });
     }
-    
+
     processNext();
 }
 

@@ -2217,8 +2217,18 @@ class ImportUI extends UserInterface
             // Add to pipeline if job order selected
             if ($jobOrderID > 0) {
                 $pipelines = new Pipelines($this->_siteID);
+                // Cooling period check: 90 days (3 months)
+                if ($pipelines->isInCoolingPeriod($candidateID, $jobOrderID)) {
+                    echo json_encode([
+                        'success'       => true,
+                        'candidateID'   => $candidateID,
+                        'coolingPeriod' => true,
+                        'warning'       => 'Candidate is within the 3-month reapplication cooling period for this job order and was not added to the pipeline.'
+                    ]);
+                    return;
+                }
                 $pipelines->add($candidateID, $jobOrderID, $_SESSION['CATS']->getUserID());
-                
+
                 $activityEntries = new ActivityEntries($this->_siteID);
                 $activityEntries->add(
                     $candidateID,
@@ -2229,13 +2239,57 @@ class ImportUI extends UserInterface
                     $jobOrderID
                 );
             }
-            
+
             echo json_encode(['success' => true, 'candidateID' => $candidateID]);
         }
         else
         {
             echo json_encode(['success' => false, 'error' => 'Failed to create candidate']);
         }
+    }
+
+    /**
+     * Extracts a candidate's full name from a resume filename.
+     * Strips resume/CV keywords, parenthetical numbers, replaces separators with spaces.
+     * Returns [$firstName, $lastName].
+     */
+    private function extractNameFromFilename($fileName)
+    {
+        $name = pathinfo($fileName, PATHINFO_FILENAME);
+
+        // Remove separator-prefixed resume/cv suffixes: _Resume, -CV, etc.
+        $name = preg_replace('/[\s_\-]+(?:resume|cv|curriculum[\s_\-]*vitae)\b[\s_\-]*/i', ' ', $name);
+        // Remove standalone Resume / CV words
+        $name = preg_replace('/\b(?:resume|cv|curriculum\s+vitae)\b/i', '', $name);
+        // Remove parenthetical noise: (1), (2), ( 1 ), etc.
+        $name = preg_replace('/\(\s*\d+\s*\)/u', '', $name);
+        // Remove trailing standalone digits
+        $name = preg_replace('/\s+\d+\s*$/', '', $name);
+        // Replace underscores and hyphens with spaces
+        $name = str_replace(['_', '-'], ' ', $name);
+        // Collapse multiple spaces
+        $name = trim(preg_replace('/\s+/', ' ', $name));
+
+        // Fallback: raw filename without extension (just separator-to-space)
+        if (strlen($name) < 2) {
+            $name = trim(str_replace(['_', '-'], ' ', pathinfo($fileName, PATHINFO_FILENAME)));
+        }
+
+        if (strlen($name) < 2) {
+            return ['', ''];
+        }
+
+        // Title-case the full name
+        $name = mb_convert_case($name, MB_CASE_TITLE, 'UTF-8');
+
+        // Split into firstName / lastName
+        $words = array_values(array_filter(preg_split('/\s+/', $name)));
+        if (count($words) === 1) {
+            return [$words[0], ''];
+        }
+        $lastName  = array_pop($words);
+        $firstName = implode(' ', $words);
+        return [$firstName, $lastName];
     }
 
     /**
@@ -2313,9 +2367,8 @@ class ImportUI extends UserInterface
             ];
             $contentType = isset($contentTypes[$ext]) ? $contentTypes[$ext] : 'application/octet-stream';
 
-            // Initialize parsed data - only from resume content, not filename
-            $firstName = '';
-            $lastName = '';
+            // Pre-populate name from filename — text parsing may override this below
+            list($firstName, $lastName) = $this->extractNameFromFilename($fileName);
             $email = '';
             $phone = '';
             $city = '';
@@ -2390,8 +2443,26 @@ class ImportUI extends UserInterface
                 throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
             });
             
+            // For DOCX: pull email from hyperlink relationships (mailto:) before cleaning text
+            // — email hyperlinks are NOT embedded in the word/document.xml text nodes
+            $docxEmail = ($ext === 'docx') ? $this->extractEmailFromDocx($tmpPath) : '';
+
             // Clean the extracted text to remove garbage
             $extractedText = $this->cleanExtractedText($extractedText);
+
+            // Sanitize to valid UTF-8 — DOCX/ZIP extraction can produce invalid byte sequences
+            // that cause json_encode() to silently return false, breaking the AJAX response.
+            if (!empty($extractedText)) {
+                if (function_exists('mb_convert_encoding')) {
+                    $extractedText = mb_convert_encoding($extractedText, 'UTF-8', 'UTF-8');
+                }
+                // Strip null bytes and non-UTF-8 sequences
+                $extractedText = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $extractedText);
+                if (!mb_check_encoding($extractedText, 'UTF-8')) {
+                    $extractedText = iconv('UTF-8', 'UTF-8//IGNORE', $extractedText);
+                }
+                $extractedText = $extractedText ?: '';
+            }
 
             // Parse the extracted text to get structured data
             if (!empty($extractedText))
@@ -2480,19 +2551,27 @@ class ImportUI extends UserInterface
                     }
                 }
                 
-                // If still no email, try direct extraction
+                // Email: prefer DOCX mailto hyperlink, then text regex
+                if (empty($email) && !empty($docxEmail)) {
+                    $email = $docxEmail;
+                }
                 if (empty($email)) {
                     if (preg_match('/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/', $extractedText, $emailMatch)) {
                         $email = strtolower(trim($emailMatch[0]));
                     }
                 }
-                
-                // If still no phone, try direct extraction
+
+                // Skills: local section parser when ParseUtility missed it
+                if (empty($keySkills)) {
+                    $keySkills = $this->extractSkillsFromText($extractedText);
+                }
+
+                // Phone: direct regex fallback
                 if (empty($phone)) {
                     $phonePatterns = array(
-                        '/(?:\+\d{1,3}[\s\-]?)?\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}/',
                         '/\+91[\s\-]?\d{5}[\s\-]?\d{5}/',
-                        '/\b\d{10}\b/'
+                        '/\b\d{10}\b/',
+                        '/(?:\+\d{1,3}[\s\-]?)?\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}/',
                     );
                     foreach ($phonePatterns as $pattern) {
                         if (preg_match($pattern, $extractedText, $phoneMatch)) {
@@ -2501,6 +2580,11 @@ class ImportUI extends UserInterface
                         }
                     }
                 }
+            }
+
+            // Apply DOCX mailto email even when extractedText was empty
+            if (empty($email) && !empty($docxEmail)) {
+                $email = $docxEmail;
             }
 
             // Quality gate: reject garbage names (too short, like "Tx Ct")
@@ -2523,30 +2607,12 @@ class ImportUI extends UserInterface
                 }
             }
 
-            // Last resort: try filename, then email prefix, then "Unknown"
+            // Final fallback: if name is still empty after all parsing, use email prefix or "Candidate"
             if (empty($firstName) && empty($lastName)) {
-                // Try filename first (e.g., "John_Doe_Resume.pdf")
-                $fileBaseName = pathinfo($fileName, PATHINFO_FILENAME);
-                $fileBaseName = preg_replace('/[_\-]+/', ' ', $fileBaseName);
-                $fileBaseName = preg_replace('/\b(resume|cv|curriculum|vitae|updated|final|new|copy|\d+)\b/i', '', $fileBaseName);
-                $fileWords = preg_split('/\s+/', trim($fileBaseName));
-                $fileWords = array_filter($fileWords, function($w) { return strlen($w) >= 3 && preg_match('/^[A-Za-z]+$/', $w); });
-                $fileWords = array_values($fileWords);
-
-                if (count($fileWords) >= 2) {
-                    $firstName = ucfirst(strtolower($fileWords[0]));
-                    $lastName = ucfirst(strtolower($fileWords[1]));
-                } elseif (count($fileWords) == 1) {
-                    $firstName = ucfirst(strtolower($fileWords[0]));
-                } elseif (!empty($email)) {
-                    // Use email prefix as name
+                if (!empty($email)) {
                     $emailPrefix = strtolower(explode('@', $email)[0]);
                     $emailPrefix = preg_replace('/\d+$/', '', $emailPrefix);
-                    if (strlen($emailPrefix) >= 3) {
-                        $firstName = ucfirst($emailPrefix);
-                    } else {
-                        $firstName = 'Candidate';
-                    }
+                    $firstName = (strlen($emailPrefix) >= 3) ? ucfirst($emailPrefix) : 'Candidate';
                 } else {
                     $firstName = 'Candidate';
                 }
@@ -2612,82 +2678,112 @@ class ImportUI extends UserInterface
                 return;
             }
 
-            // Add to pipeline if job order selected
-            if ($jobOrderID > 0) {
-                $pipelines = new Pipelines($this->_siteID);
-                $pipelines->add($candidateID, $jobOrderID, $_SESSION['CATS']->getUserID());
-                
-                $activityEntries = new ActivityEntries($this->_siteID);
-                $activityEntries->add(
-                    $candidateID,
-                    DATA_ITEM_CANDIDATE,
-                    400,
-                    'Added candidate to job order.',
-                    $_SESSION['CATS']->getUserID(),
-                    $jobOrderID
-                );
-            }
-
-            // Use AttachmentCreator to properly handle the file attachment
-            $attachmentCreator = new AttachmentCreator($this->_siteID);
-            
-            $attachSuccess = $attachmentCreator->createFromFile(
-                DATA_ITEM_CANDIDATE,
-                $candidateID,
-                $tmpPath,
-                $fileName,
-                $contentType,
-                false,  // extractText - we already extracted it
-                true    // fileExists
-            );
-
+            // Candidate created successfully — attachment and pipeline steps run independently.
+            // Errors here must never suppress the success response.
             $attachmentID = 0;
             $warning = '';
             $attachmentPath = '';
-            
-            if ($attachSuccess) {
-                $attachmentID = $attachmentCreator->getAttachmentID();
-                $attachmentPath = $attachmentCreator->getContainingDirectory();
-                
-                // Mark this attachment as a resume
-                $this->markAttachmentAsResume($attachmentID, $extractedText);
-            } else {
-                // Try alternative method - manual file copy and database insert
-                $altResult = $this->attachResumeManually($candidateID, $tmpPath, $fileName, $contentType, $extractedText);
-                if ($altResult['success']) {
-                    $attachmentID = $altResult['attachmentID'];
-                    $warning = 'Used alternative attachment method';
-                } else {
-                    $warning = 'Resume file could not be attached: ' . $attachmentCreator->getError() . '. Alt: ' . $altResult['error'];
-                    error_log('Bulk import attachment error for ' . $fileName . ': ' . $attachmentCreator->getError());
+
+            // Restore default error handler so warnings from attachment/pipeline code
+            // do NOT bubble up as exceptions and silently discard the success response.
+            restore_error_handler();
+
+            try {
+                // Add to pipeline if job order selected
+                if ($jobOrderID > 0) {
+                    $pipelines = new Pipelines($this->_siteID);
+                    // Cooling period check: 90 days (3 months)
+                    if ($pipelines->isInCoolingPeriod($candidateID, $jobOrderID)) {
+                        $warning = 'Candidate is within the 3-month reapplication cooling period for this job order and was not added to the pipeline.';
+                    } else {
+                        $pipelines->add($candidateID, $jobOrderID, $_SESSION['CATS']->getUserID());
+                    }
+
+                    if (empty($warning)) {
+                        $activityEntries = new ActivityEntries($this->_siteID);
+                        $activityEntries->add(
+                            $candidateID,
+                            DATA_ITEM_CANDIDATE,
+                            400,
+                            'Added candidate to job order.',
+                            $_SESSION['CATS']->getUserID(),
+                            $jobOrderID
+                        );
+                    }
                 }
+
+                // Attach the uploaded file to the candidate record
+                $attachmentCreator = new AttachmentCreator($this->_siteID);
+
+                $attachSuccess = $attachmentCreator->createFromFile(
+                    DATA_ITEM_CANDIDATE,
+                    $candidateID,
+                    $tmpPath,
+                    $fileName,
+                    $contentType,
+                    false,  // extractText — already done above
+                    true    // fileExists
+                );
+
+                if ($attachSuccess) {
+                    $attachmentID   = $attachmentCreator->getAttachmentID();
+                    $attachmentPath = $attachmentCreator->getContainingDirectory();
+                    $this->markAttachmentAsResume($attachmentID, $extractedText);
+                } else {
+                    // Fall back to manual copy
+                    $altResult = $this->attachResumeManually(
+                        $candidateID, $tmpPath, $fileName, $contentType, $extractedText
+                    );
+                    if ($altResult['success']) {
+                        $attachmentID = $altResult['attachmentID'];
+                        $warning = 'Used alternative attachment method';
+                    } else {
+                        $warning = 'Resume attached but file could not be saved: ' . $attachmentCreator->getError();
+                        error_log('Bulk import attachment error for ' . $fileName . ': ' . $attachmentCreator->getError());
+                    }
+                }
+            } catch (\Throwable $attachErr) {
+                // Attachment failure — candidate is already saved; log and continue.
+                $warning = 'Attachment error (candidate saved): ' . $attachErr->getMessage();
+                error_log('Bulk import attachment exception for ' . $fileName . ': ' . $attachErr->getMessage());
             }
 
+            $jsonFlags = defined('JSON_INVALID_UTF8_SUBSTITUTE') ? JSON_INVALID_UTF8_SUBSTITUTE : 0;
             echo json_encode([
-                'success' => true, 
-                'candidateID' => $candidateID,
-                'attachmentID' => $attachmentID,
-                'name' => trim($firstName . ' ' . $lastName),
-                'email' => $email,
-                'phone' => $phone,
-                'city' => $city,
-                'state' => $state,
-                'zip' => $zip,
-                'address' => $address,
+                'success'         => true,
+                'candidateID'     => $candidateID,
+                'attachmentID'    => $attachmentID,
+                'name'            => trim($firstName . ' ' . $lastName),
+                'email'           => $email,
+                'phone'           => $phone,
+                'city'            => $city,
+                'state'           => $state,
+                'zip'             => $zip,
+                'address'         => $address,
                 'currentEmployer' => $currentEmployer,
-                'linkedin' => $linkedin,
-                'github' => $github,
-                'website' => $website,
-                'skills' => $keySkills ? substr($keySkills, 0, 150) . (strlen($keySkills) > 150 ? '...' : '') : '',
-                'warning' => $warning,
-                'debug' => [
-                    'parsed' => !empty($extractedText),
-                    'textLength' => strlen($extractedText),
-                    'extractionMethod' => $extractionMethod,
-                    'textPreview' => substr($extractedText, 0, 300),
-                    'attachmentPath' => $attachmentPath
+                'linkedin'        => $linkedin,
+                'github'          => $github,
+                'website'         => $website,
+                'skills'          => $keySkills ? substr($keySkills, 0, 150) . (strlen($keySkills) > 150 ? '...' : '') : '',
+                'warning'         => $warning,
+                'debug'           => [
+                    'parsed'            => !empty($extractedText),
+                    'textLength'        => strlen($extractedText),
+                    'extractionMethod'  => $extractionMethod,
+                    'textPreview'       => substr($extractedText, 0, 300),
+                    'attachmentPath'    => $attachmentPath
                 ]
-            ]);
+            ], $jsonFlags);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                // Fallback: strip non-ASCII and retry
+                echo json_encode([
+                    'success'     => true,
+                    'candidateID' => $candidateID,
+                    'name'        => trim($firstName . ' ' . $lastName),
+                    'email'       => $email,
+                    'warning'     => 'Text encoding issue - candidate saved without full details'
+                ]);
+            }
             
         } catch (Exception $e) {
             restore_error_handler();
@@ -2721,6 +2817,96 @@ class ImportUI extends UserInterface
     }
 
     /**
+     * Extract the email address from a DOCX file by reading mailto: hyperlinks
+     * stored in word/_rels/document.xml.rels (they are NOT in the text nodes).
+     */
+    private function extractEmailFromDocx($filePath)
+    {
+        if (!class_exists('ZipArchive')) return '';
+
+        $zip = new ZipArchive();
+        if ($zip->open($filePath) !== true) return '';
+
+        // Relationships file that holds external hyperlinks
+        $relsXml = $zip->getFromName('word/_rels/document.xml.rels');
+        $zip->close();
+
+        if (empty($relsXml)) return '';
+
+        // Extract all mailto: targets
+        if (preg_match_all('/Target="mailto:([^"]+)"/i', $relsXml, $m)) {
+            foreach ($m[1] as $addr) {
+                $addr = trim($addr);
+                if (filter_var($addr, FILTER_VALIDATE_EMAIL)) {
+                    return strtolower($addr);
+                }
+            }
+        }
+        return '';
+    }
+
+    /**
+     * Extract skills from plain text using heuristic section detection.
+     * Looks for sections labelled SKILLS / TECHNICAL SKILLS / KEY SKILLS / COMPETENCIES.
+     */
+    private function extractSkillsFromText($text)
+    {
+        if (empty($text)) return '';
+
+        $lines  = preg_split('/\r?\n/', $text);
+        $skills = [];
+        $inSkills = false;
+        $sectionPattern = '/^(?:technical\s+skills?|key\s+skills?|skills?\s*(?:&|and)?\s*(?:competencies|expertise)?|competencies|soft\s+skills?|core\s+skills?|areas?\s+of\s+expertise|proficiencies?)\s*:?\s*$/i';
+        // Pattern that looks like a new major section (all-caps, or known section keywords)
+        $sectionBreakPattern = '/^\s*(?:EDUCATION|EXPERIENCE|PROFILE|SUMMARY|OBJECTIVE|EMPLOYMENT|WORK\s+HISTORY|CERTIFICATIONS?|PROJECTS?|AWARDS?|ACHIEVEMENTS?|ACTIVITIES?|REFERENCES?|INTERNSHIP|VOLUNTEERING)\b/i';
+
+        foreach ($lines as $line) {
+            $trimmed = trim($line);
+
+            if (preg_match($sectionPattern, $trimmed)) {
+                $inSkills = true;
+                continue;
+            }
+
+            if ($inSkills) {
+                // Stop at the next major section heading
+                if (!empty($trimmed) && preg_match($sectionBreakPattern, $trimmed)) {
+                    break;
+                }
+                // Skip empty lines
+                if (empty($trimmed)) continue;
+                // Skip lines that look like section sub-headings (very short, all caps)
+                if (strlen($trimmed) < 3) continue;
+                // Strip leading bullet characters
+                $skill = preg_replace('/^[\-\*\•\◦\▪\➢\✓\✔\>\·\o]+\s*/', '', $trimmed);
+                $skill = trim($skill);
+                if (!empty($skill) && strlen($skill) < 120) {
+                    $skills[] = $skill;
+                }
+            }
+        }
+
+        // Also try inline comma/semicolon-separated lists if no bullet skills found
+        if (empty($skills)) {
+            // Reset and look for "Skills: X, Y, Z" style on one line
+            foreach ($lines as $line) {
+                if (preg_match('/(?:skills?|competencies|expertise)\s*:\s*(.+)/i', $line, $m)) {
+                    $inline = trim($m[1]);
+                    if (!empty($inline)) {
+                        $parts = preg_split('/[,;|]+/', $inline);
+                        foreach ($parts as $p) {
+                            $p = trim($p);
+                            if (!empty($p)) $skills[] = $p;
+                        }
+                    }
+                }
+            }
+        }
+
+        return implode(', ', array_unique($skills));
+    }
+
+    /**
      * Extract text from DOCX file using PHP ZipArchive
      */
     private function extractTextFromDocx($filePath)
@@ -2729,16 +2915,16 @@ class ImportUI extends UserInterface
             error_log('ZipArchive class not available for DOCX extraction');
             return '';
         }
-        
+
         $zip = new ZipArchive();
         $openResult = $zip->open($filePath);
         if ($openResult !== true) {
             error_log('Failed to open DOCX file: ' . $filePath . ' - Error code: ' . $openResult);
             return '';
         }
-        
+
         $text = '';
-        
+
         // Try to get document.xml
         $content = $zip->getFromName('word/document.xml');
         
@@ -2815,11 +3001,12 @@ class ImportUI extends UserInterface
             $text = strip_tags($content);
         }
         
-        // Clean up
+        // Clean up — preserve newlines so paragraph structure is kept
         $text = html_entity_decode($text, ENT_QUOTES, 'UTF-8');
-        $text = preg_replace('/\s+/', ' ', $text);
-        $text = preg_replace('/\n\s+/', "\n", $text);
-        
+        $text = preg_replace('/[ \t]+/', ' ', $text);          // collapse spaces/tabs only, not newlines
+        $text = preg_replace('/[ \t]*\n[ \t]*/', "\n", $text); // trim spaces around newlines
+        $text = preg_replace('/\n{3,}/', "\n\n", $text);       // max two consecutive blank lines
+
         return trim($text);
     }
     
@@ -3197,10 +3384,11 @@ class ImportUI extends UserInterface
         // But keep: I, A, and characters near punctuation (e.g., "C++", "R&D")
         $text = preg_replace('/(?<!\w)\b[b-hj-zB-HJ-Z]\b(?!\w)(?!\s*[.@+&])/', '', $text);
         
-        // Normalize whitespace
-        $text = preg_replace('/\s+/', ' ', $text);
-        $text = preg_replace('/\n\s*\n/', "\n", $text);
-        
+        // Normalize whitespace — preserve newlines so paragraph structure is kept
+        $text = preg_replace('/[ \t]+/', ' ', $text);          // collapse spaces/tabs only
+        $text = preg_replace('/[ \t]*\n[ \t]*/', "\n", $text); // trim spaces around newlines
+        $text = preg_replace('/\n{3,}/', "\n\n", $text);       // max two consecutive blank lines
+
         return trim($text);
     }
     

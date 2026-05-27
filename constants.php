@@ -85,6 +85,7 @@ define('ACCESS_LEVEL_ROOT',     500);
 define('CALENDAR_DAY_SUNDAY',   1);
 define('CALENDAR_DAY_MONDAY',   2);
 define('CALENDAR_DAY_TUESDAY',  3);
+define('CALENDAR_DAY_WEDNESDAY', 4);
 define('CALENDAR_DAY_WEDNSDAY', 4);
 define('CALENDAR_DAY_THURSDAY', 5);
 define('CALENDAR_DAY_FRIDAY',   6);

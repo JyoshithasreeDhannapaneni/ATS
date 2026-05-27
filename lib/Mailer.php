@@ -554,7 +554,10 @@ class Mailer
      */
     private function logMessage($from, $to, $subject, $body)
     {
-        $messageText = sprintf("Subject: %s\n\nMessage:\n%s", $subject, $body);
+        /* Strip HTML tags so we store plain text in the log, not full HTML */
+        $plainBody = html_entity_decode(strip_tags($body), ENT_QUOTES, 'UTF-8');
+        $plainBody = preg_replace('/\s+/', ' ', $plainBody);
+        $messageText = sprintf("Subject: %s\n\nMessage:\n%s", $subject, trim($plainBody));
 
         $sql = sprintf(
             "INSERT INTO email_history (
@@ -580,7 +583,7 @@ class Mailer
             $this->_siteID
          );
 
-         $this->_db->query($sql);
+         $this->_db->query($sql, true);
     }
 }
 

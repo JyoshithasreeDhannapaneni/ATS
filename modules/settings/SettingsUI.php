@@ -934,10 +934,10 @@ class SettingsUI extends UserInterface
         }
         
         $emailTemplates = new EmailTemplates($this->_siteID);
-        $templateID = $_GET['id'];
+        $templateID = intval($_GET['id']);
         $emailTemplates->delete($templateID);
-       
-        $this->emailTemplates();
+
+        CATSUtility::transferRelativeURI('m=settings&a=emailTemplates&deleted=1');
     }
     
     private function addEmailTemplate()
@@ -957,7 +957,7 @@ class SettingsUI extends UserInterface
         }
         else
         {
-            $this->emailTemplates();
+            CATSUtility::transferRelativeURI('m=settings&a=emailTemplates&newTemplate=' . $emailTemplateID);
         }
     }
     
@@ -1705,10 +1705,12 @@ class SettingsUI extends UserInterface
             CommonErrors::fatal(COMMONERROR_MISSINGFIELDS, $this, 'Required fields are missing.');
         }
 
-        $emailTemplates = new EmailTemplates($this->_siteID);
-        $emailTemplates->update($templateID, $templateTitle, $text, $disabled);
+        $subject = isset($_POST['emailSubject']) ? trim($_POST['emailSubject']) : '';
 
-        CATSUtility::transferRelativeURI('m=settings&a=emailTemplates');
+        $emailTemplates = new EmailTemplates($this->_siteID);
+        $emailTemplates->update($templateID, $templateTitle, $text, $disabled, $subject);
+
+        CATSUtility::transferRelativeURI('m=settings&a=emailTemplates&saved=' . $templateID);
     }
 
     /*
@@ -1748,10 +1750,16 @@ class SettingsUI extends UserInterface
 
         $careerPortalSettings = new CareerPortalSettings($this->_siteID);
 
+        $isDefault = false;
         $templateSource = $careerPortalSettings->getAllFromCustomTemplate($templateName);
         if (empty($templateSource))
         {
-            CommonErrors::fatal(COMMONERROR_BADINDEX, $this, 'No custom template with that name exists.');
+            $templateSource = $careerPortalSettings->getAllFromDefaultTemplate($templateName);
+            $isDefault = true;
+        }
+        if (empty($templateSource))
+        {
+            CommonErrors::fatal(COMMONERROR_BADINDEX, $this, 'No template with that name exists.');
         }
 
         $templateBySetting = array();
@@ -1799,6 +1807,7 @@ class SettingsUI extends UserInterface
         $this->_template->assign('subActive', 'Administration');
         $this->_template->assign('template', $template);
         $this->_template->assign('templateName', $templateName);
+        $this->_template->assign('isDefaultTemplate', $isDefault);
         $this->_template->assign('eeoEnabled', $EEOSettingsRS['enabled']);
         $this->_template->assign('EEOSettingsRS', $EEOSettingsRS);
         $this->_template->assign('sessionCookie', $_SESSION['CATS']->getCookie());
@@ -1820,18 +1829,33 @@ class SettingsUI extends UserInterface
 
         $careerPortalSettings = new CareerPortalSettings($this->_siteID);
 
+        $isDefault = $careerPortalSettings->isDefaultTemplate($templateName);
         $templateSource = $careerPortalSettings->getAllFromCustomTemplate($templateName);
+        if (empty($templateSource))
+        {
+            $templateSource = $careerPortalSettings->getAllFromDefaultTemplate($templateName);
+        }
 
-        // FIXME: Document this md5() stuff.
         foreach ($templateSource as $templateLine)
         {
             if ($templateLine['setting'] != '')
             {
-                $careerPortalSettings->setForTemplate(
-                    $templateLine['setting'],
-                    $_POST[md5($templateLine['setting'])],
-                    $templateName
-                );
+                if ($isDefault)
+                {
+                    $careerPortalSettings->setForDefaultTemplate(
+                        $templateLine['setting'],
+                        $_POST[md5($templateLine['setting'])],
+                        $templateName
+                    );
+                }
+                else
+                {
+                    $careerPortalSettings->setForTemplate(
+                        $templateLine['setting'],
+                        $_POST[md5($templateLine['setting'])],
+                        $templateName
+                    );
+                }
             }
         }
 
@@ -1839,11 +1863,22 @@ class SettingsUI extends UserInterface
         {
             if ($field != '' && isset($_POST[md5($field)]))
             {
-                $careerPortalSettings->setForTemplate(
-                    $field,
-                    $_POST[md5($field)],
-                    $templateName
-                );
+                if ($isDefault)
+                {
+                    $careerPortalSettings->setForDefaultTemplate(
+                        $field,
+                        $_POST[md5($field)],
+                        $templateName
+                    );
+                }
+                else
+                {
+                    $careerPortalSettings->setForTemplate(
+                        $field,
+                        $_POST[md5($field)],
+                        $templateName
+                    );
+                }
             }
         }
 
@@ -2035,6 +2070,10 @@ class SettingsUI extends UserInterface
                 //FIXME: Input validation.
                 $delName = $_POST['delName'];
                 $careerPortalSettings->deleteCustomTemplate($delName);
+                if ($careerPortalSettings->isDefaultTemplate($delName))
+                {
+                    $careerPortalSettings->deleteDefaultTemplate($delName);
+                }
                 break;
 
             case 'setAsActive':
@@ -2142,8 +2181,49 @@ class SettingsUI extends UserInterface
             $emailTemplates->updateIsActive($data['emailTemplateID'], (UserInterface::isChecked('useThisTemplate'.$data['emailTemplateID'], $_POST) ? 0 : 1));
         }
 
+        /* Save SMTP / mailer settings back to config.php */
+        $configPath = realpath(dirname(__FILE__) . '/../../config.php');
+        if ($configPath && is_writable($configPath))
+        {
+            $cfg = file_get_contents($configPath);
+
+            $smtpUpdates = array(
+                'MAIL_MAILER'       => isset($_POST['mailMailer'])   ? (int)$_POST['mailMailer']              : null,
+                'MAIL_SMTP_HOST'    => isset($_POST['smtpHost'])     ? trim($_POST['smtpHost'])                : null,
+                'MAIL_SMTP_PORT'    => isset($_POST['smtpPort'])     ? (int)$_POST['smtpPort']                : null,
+                'MAIL_SMTP_USER'    => isset($_POST['smtpUser'])     ? trim($_POST['smtpUser'])                : null,
+                'MAIL_SMTP_PASS'    => isset($_POST['smtpPass'])     ? $_POST['smtpPass']                     : null,
+                'MAIL_SMTP_SECURE'  => isset($_POST['smtpSecure'])   ? trim($_POST['smtpSecure'])              : null,
+                'MAIL_SENDMAIL_PATH'=> isset($_POST['sendmailPath']) ? trim($_POST['sendmailPath'])            : null,
+            );
+
+            foreach ($smtpUpdates as $constant => $newVal)
+            {
+                if ($newVal === null) continue;
+                if (is_int($newVal) || $constant === 'MAIL_MAILER' || $constant === 'MAIL_SMTP_PORT')
+                {
+                    $cfg = preg_replace(
+                        "/define\('" . preg_quote($constant, '/') . "',\s*[0-9]+\)/",
+                        "define('" . $constant . "', " . (int)$newVal . ")",
+                        $cfg
+                    );
+                }
+                else
+                {
+                    $escaped = addslashes($newVal);
+                    $cfg = preg_replace(
+                        "/define\('" . preg_quote($constant, '/') . "',\s*\"[^\"]*\"\)/",
+                        "define('" . $constant . "', \"" . $escaped . "\")",
+                        $cfg
+                    );
+                }
+            }
+
+            file_put_contents($configPath, $cfg);
+        }
+
         $this->_template->assign('active', $this);
-        CATSUtility::transferRelativeURI('m=settings&a=administration');
+        CATSUtility::transferRelativeURI('m=settings&a=emailSettings');
     }
 
     /*

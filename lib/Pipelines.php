@@ -68,7 +68,8 @@ class Pipelines
             1040 => 'L3 Select',
             1050 => 'Offer Release',
             1060 => 'Onboarded',
-            1070 => 'No Show'
+            1070 => 'No Show',
+            1080 => 'Hired'
         );
 
         foreach ($customStatuses as $statusID => $description) {
@@ -81,17 +82,71 @@ class Pipelines
             
             if (empty($rs)) {
                 $insertSQL = sprintf(
-                    "INSERT INTO candidate_joborder_status 
-                     (candidate_joborder_status_id, short_description, can_be_scheduled, triggers_email, is_enabled) 
-                     VALUES (%d, '%s', 0, 0, 1)",
+                    "INSERT INTO candidate_joborder_status
+                     (candidate_joborder_status_id, short_description, can_be_scheduled, triggers_email, is_enabled)
+                     VALUES (%d, %s, 0, 0, 1)",
                     $statusID,
-                    $this->_db->escapeString($description)
+                    $this->_db->makeQueryString($description)
                 );
                 @$this->_db->query($insertSQL);
             }
         }
     }
 
+
+    /**
+     * Checks whether a candidate is within the 3-month reapplication cooling period
+     * for a given job order.
+     *
+     * Returns true  → candidate is still in cooling period (block the application).
+     * Returns false → no cooling period restriction.
+     */
+    public function isInCoolingPeriod($candidateID, $jobOrderID, $coolingDays = 90)
+    {
+        // Ensure the tracking table exists (created once, silently ignored thereafter)
+        $createSQL = "CREATE TABLE IF NOT EXISTS candidate_application_log (
+            log_id       SERIAL PRIMARY KEY,
+            site_id      INTEGER NOT NULL DEFAULT 0,
+            candidate_id INTEGER NOT NULL DEFAULT 0,
+            joborder_id  INTEGER NOT NULL DEFAULT 0,
+            date_applied TIMESTAMP NOT NULL DEFAULT NOW()
+        )";
+        @$this->_db->query($createSQL);
+        @$this->_db->query("CREATE INDEX IF NOT EXISTS idx_cal_cand_job_site ON candidate_application_log (site_id, candidate_id, joborder_id)");
+        @$this->_db->query("CREATE INDEX IF NOT EXISTS idx_cal_date_applied ON candidate_application_log (date_applied)");
+
+        $sql = sprintf(
+            "SELECT COUNT(*) AS cnt
+             FROM candidate_application_log
+             WHERE candidate_id = %s
+               AND joborder_id  = %s
+               AND site_id      = %s
+               AND date_applied >= (NOW() - INTERVAL '%d days')",
+            $this->_db->makeQueryInteger($candidateID),
+            $this->_db->makeQueryInteger($jobOrderID),
+            $this->_db->makeQueryInteger($this->_siteID),
+            (int)$coolingDays
+        );
+        $rs = $this->_db->getAssoc($sql);
+        return (!empty($rs) && $rs['cnt'] > 0);
+    }
+
+    /**
+     * Logs a candidate application to the cooling-period tracking table.
+     * Called automatically by add() after a successful pipeline insert.
+     */
+    private function logApplication($candidateID, $jobOrderID)
+    {
+        $sql = sprintf(
+            "INSERT INTO candidate_application_log
+                (site_id, candidate_id, joborder_id, date_applied)
+             VALUES (%s, %s, %s, NOW())",
+            $this->_db->makeQueryInteger($this->_siteID),
+            $this->_db->makeQueryInteger($candidateID),
+            $this->_db->makeQueryInteger($jobOrderID)
+        );
+        @$this->_db->query($sql);
+    }
 
     /**
      * Adds a candidate to the pipeline for a job order.
@@ -115,7 +170,7 @@ class Pipelines
                 site_id = %s",
             $this->_db->makeQueryInteger($candidateID),
             $this->_db->makeQueryInteger($jobOrderID),
-            $this->_siteID
+            $this->_db->makeQueryInteger($this->_siteID)
         );
         $rs = $this->_db->getAssoc($sql);
 
@@ -156,7 +211,7 @@ class Pipelines
                 NOW()%s
             )",
             $extraFields,
-            $this->_siteID,
+            $this->_db->makeQueryInteger($this->_siteID),
             $this->_db->makeQueryInteger($jobOrderID),
             $this->_db->makeQueryInteger($candidateID),
             $this->_db->makeQueryInteger($userID),
@@ -168,6 +223,9 @@ class Pipelines
         {
             return false;
         }
+
+        // Record this application for cooling-period tracking
+        $this->logApplication($candidateID, $jobOrderID);
 
         return true;
     }
@@ -192,7 +250,7 @@ class Pipelines
                 site_id = %s",
             $this->_db->makeQueryInteger($jobOrderID),
             $this->_db->makeQueryInteger($candidateID),
-            $this->_siteID
+            $this->_db->makeQueryInteger($this->_siteID)
         );
         $this->_db->query($sql);
 
@@ -207,7 +265,7 @@ class Pipelines
                 site_id = %s",
             $this->_db->makeQueryInteger($jobOrderID),
             $this->_db->makeQueryInteger($candidateID),
-            $this->_siteID
+            $this->_db->makeQueryInteger($this->_siteID)
         );
         $this->_db->query($sql);
 
@@ -290,9 +348,9 @@ class Pipelines
                 company.site_id = %s",
             $this->_db->makeQueryInteger($candidateID),
             $this->_db->makeQueryInteger($jobOrderID),
-            $this->_siteID,
-            $this->_siteID,
-            $this->_siteID
+            $this->_db->makeQueryInteger($this->_siteID),
+            $this->_db->makeQueryInteger($this->_siteID),
+            $this->_db->makeQueryInteger($this->_siteID)
         );
 
         return $this->_db->getAssoc($sql);
@@ -321,7 +379,7 @@ class Pipelines
                 site_id = %s",
             $this->_db->makeQueryInteger($candidateID),
             $this->_db->makeQueryInteger($jobOrderID),
-            $this->_siteID
+            $this->_db->makeQueryInteger($this->_siteID)
         );
         $rs = $this->_db->getAssoc($sql);
 
@@ -352,7 +410,7 @@ class Pipelines
                 site_id = %s",
             $this->_db->makeQueryInteger($jobOrderID),
             $this->_db->makeQueryInteger($candidateID),
-            $this->_siteID
+            $this->_db->makeQueryInteger($this->_siteID)
         );
         $rs = $this->_db->getAssoc($sql);
 
@@ -385,7 +443,7 @@ class Pipelines
                 site_id = %s",
             $this->_db->makeQueryInteger($statusID),
             $this->_db->makeQueryInteger($candidateJobOrderID),
-            $this->_siteID
+            $this->_db->makeQueryInteger($this->_siteID)
         );
         $this->_db->query($sql);
 
@@ -436,7 +494,7 @@ class Pipelines
                 is_enabled = 1
             ORDER BY
                 candidate_joborder_status_id ASC",
-            $this->_siteID
+            $this->_db->makeQueryInteger($this->_siteID)
         );
 
         return $this->_db->getAllAssoc($sql);
@@ -460,7 +518,7 @@ class Pipelines
                 candidate_joborder_status_id != 0
             ORDER BY
                 candidate_joborder_status_id ASC",
-            $this->_siteID
+            $this->_db->makeQueryInteger($this->_siteID)
         );
 
         return $this->_db->getAllAssoc($sql);
@@ -489,7 +547,7 @@ class Pipelines
             )",
             $this->_db->makeQueryInteger($jobOrderID),
             $this->_db->makeQueryInteger($candidateID),
-            $this->_siteID,
+            $this->_db->makeQueryInteger($this->_siteID),
             $this->_db->makeQueryInteger($statusToID),
             $this->_db->makeQueryInteger($statusFromID)
         );
@@ -511,6 +569,18 @@ class Pipelines
      */
     public function getCandidatePipeline($candidateID)
     {
+        // Ensure the application log table exists (idempotent)
+        @$this->_db->query("CREATE TABLE IF NOT EXISTS candidate_application_log (
+            log_id       SERIAL PRIMARY KEY,
+            site_id      INTEGER NOT NULL DEFAULT 0,
+            candidate_id INTEGER NOT NULL DEFAULT 0,
+            joborder_id  INTEGER NOT NULL DEFAULT 0,
+            date_applied TIMESTAMP NOT NULL DEFAULT NOW()
+        )");
+
+        $siteID = (int) $this->_siteID;
+        $candID = (int) $candidateID;
+
         $sql = sprintf(
             "SELECT
                 company.company_id AS companyID,
@@ -524,6 +594,9 @@ class Pipelines
                 joborder.salary AS salary,
                 joborder.is_hot AS isHot,
                 joborder.client_job_id AS clientJobID,
+                joborder.city AS jobCity,
+                joborder.state AS jobState,
+                COALESCE(dept.name, '') AS department,
                 DATE_FORMAT(
                     joborder.start_date, '%%m-%%d-%%y'
                 ) AS start_date,
@@ -539,7 +612,18 @@ class Pipelines
                 owner_user.first_name AS ownerFirstName,
                 owner_user.last_name AS ownerLastName,
                 added_user.first_name AS addedByFirstName,
-                added_user.last_name AS addedByLastName
+                added_user.last_name AS addedByLastName,
+                IF((SELECT COUNT(*) FROM candidate_application_log
+                    WHERE candidate_id = candidate.candidate_id
+                      AND joborder_id  = joborder.joborder_id
+                      AND site_id      = $siteID) > 0, 1, 0) AS isPortalApplication,
+                DATE_FORMAT(
+                    (SELECT MIN(date_applied) FROM candidate_application_log
+                     WHERE candidate_id = candidate.candidate_id
+                       AND joborder_id  = joborder.joborder_id
+                       AND site_id      = $siteID),
+                    '%%m-%%d-%%y (%%h:%%i %%p)'
+                ) AS applicationDate
             FROM
                 candidate_joborder
             INNER JOIN candidate
@@ -554,6 +638,8 @@ class Pipelines
                 ON candidate_joborder.added_by = added_user.user_id
             INNER JOIN candidate_joborder_status
                 ON candidate_joborder.status = candidate_joborder_status.candidate_joborder_status_id
+            LEFT JOIN company_department AS dept
+                ON joborder.company_department_id = dept.company_department_id
             WHERE
                 candidate.candidate_id = %s
             AND
@@ -563,9 +649,9 @@ class Pipelines
             AND
                 company.site_id = %s",
             $this->_db->makeQueryInteger($candidateID),
-            $this->_siteID,
-            $this->_siteID,
-            $this->_siteID
+            $this->_db->makeQueryInteger($this->_siteID),
+            $this->_db->makeQueryInteger($this->_siteID),
+            $this->_db->makeQueryInteger($this->_siteID)
         );
 
         return $this->_db->getAllAssoc($sql);
@@ -677,10 +763,10 @@ class Pipelines
             $this->_db->makeQueryInteger($jobOrderID),
             $this->_db->makeQueryInteger($jobOrderID),
             PIPELINE_STATUS_SUBMITTED,
-            $this->_siteID,
+            $this->_db->makeQueryInteger($this->_siteID),
             $this->_db->makeQueryInteger($jobOrderID),
-            $this->_siteID,
-            $this->_siteID,
+            $this->_db->makeQueryInteger($this->_siteID),
+            $this->_db->makeQueryInteger($this->_siteID),
             $orderBy
         );
 
@@ -701,7 +787,7 @@ class Pipelines
                 candidate_joborder.site_id = %s",
             $this->_db->makeQueryInteger($value),
             $this->_db->makeQueryInteger($candidateJobOrderID),
-            $this->_siteID
+            $this->_db->makeQueryInteger($this->_siteID)
         );
 
         $queryResult = $this->_db->query($sql);
@@ -724,7 +810,7 @@ class Pipelines
             AND
                 site_id = %s",
             $this->_db->makeQueryInteger($candidateJobOrderID),
-            $this->_siteID
+            $this->_db->makeQueryInteger($this->_siteID)
         );
         $rs = $this->_db->getAssoc($sql);
 
@@ -773,7 +859,7 @@ class Pipelines
             ",
             $this->_db->makeQueryInteger($candidateJobOrderID),
             DATA_ITEM_CANDIDATE,
-            $this->_siteID
+            $this->_db->makeQueryInteger($this->_siteID)
         );
 
         return $this->_db->getAllAssoc($sql);

@@ -308,6 +308,28 @@ class DataGrid
     	return $this->_instanceName;
     }
 
+    public function getParameters() {
+        return $this->_parameters;
+    }
+
+    public function getOptionalColumns() {
+        $result = array();
+        foreach ($this->_classColumns as $name => $data) {
+            if (!isset($data['pagerOptional']) || $data['pagerOptional'] == true) {
+                $result[$name] = $data;
+            }
+        }
+        return $result;
+    }
+
+    public function getCurrentColumnNames() {
+        $names = array();
+        foreach ($this->_currentColumns as $col) {
+            if (isset($col['name'])) $names[] = $col['name'];
+        }
+        return $names;
+    }
+
     /**
      * Static function retrieves the most recent parameter array for a datagrid from the database.
      *
@@ -645,24 +667,39 @@ class DataGrid
      * @param string column name
      * @return string filter value
      */
+    /**
+     * Parses a single filter token into [columnName, operator, value].
+     * Handles two-char operators like ==, =~, =>, =<, =#, =@, !=.
+     * Returns false if the token has no '='.
+     */
+    private function _parseFilterToken($token)
+    {
+        if (strpos($token, '=') === false)
+        {
+            return false;
+        }
+        // Match optional leading non-= prefix (e.g. '!' for '!='), then '=', then one more operator char
+        if (preg_match('/^(.*?)(!=|==|=~|=>|=<|=#|=@|=)(.*)$/', $token, $m))
+        {
+            return array(
+                'column'   => urldecode($m[1]),
+                'operator' => $m[2],
+                'value'    => urldecode($m[3]),
+            );
+        }
+        return false;
+    }
+
     public function getFilterValue($columnName)
     {
         if (isset($this->_parameters['filter']))
         {
-            $filterStrings = explode(',', $this->_parameters['filter']);
-
-            foreach ($filterStrings as $index => $data)
+            foreach (explode(',', $this->_parameters['filter']) as $data)
             {
-                if (strpos($data, '=') === false)
+                $parsed = $this->_parseFilterToken($data);
+                if ($parsed && $parsed['column'] === $columnName)
                 {
-                    continue;
-                }
-
-                $dataColumnName = urldecode(substr($data, 0, strpos($data, '=')));
-
-                if ($columnName == $dataColumnName)
-                {
-                    return urldecode(substr($data, strpos($data, '=') + 2));
+                    return $parsed['value'];
                 }
             }
         }
@@ -679,20 +716,12 @@ class DataGrid
     {
         if (isset($this->_parameters['filter']))
         {
-            $filterStrings = explode(',', $this->_parameters['filter']);
-
-            foreach ($filterStrings as $index => $data)
+            foreach (explode(',', $this->_parameters['filter']) as $data)
             {
-                if (strpos($data, '=') === false)
+                $parsed = $this->_parseFilterToken($data);
+                if ($parsed && $parsed['column'] === $columnName)
                 {
-                    continue;
-                }
-
-                $dataColumnName = urldecode(substr($data, 0, strpos($data, '=')));
-
-                if ($columnName == $dataColumnName)
-                {
-                    return urldecode(substr($data, strpos($data, '='), 2));
+                    return $parsed['operator'];
                 }
             }
         }
@@ -850,6 +879,10 @@ class DataGrid
 
                     case '=#':
                         $filterOperatorHuman = ' has element';
+                        break;
+
+                    case '!=':
+                        $filterOperatorHuman = ' is not equal to';
                         break;
                 }
 
@@ -1077,13 +1110,12 @@ class DataGrid
 
             foreach ($filterStrings as $index => $data)
             {
-                if (strpos($data, '=') === false)
-                {
-                    continue;
-                }
+                $parsed = $this->_parseFilterToken($data);
+                if ($parsed === false) { continue; }
 
-                $columnName = urldecode(substr($data, 0, strpos($data, '=')));
-                $argument = urldecode(substr($data, strpos($data, '=') + 2));
+                $columnName = $parsed['column'];
+                $argument   = $parsed['value'];
+                // $data kept intact for operator detection below via strpos
 
                 /* Is this a valid column? */
                 if (!isset($this->_classColumns[$columnName]))
@@ -1195,6 +1227,22 @@ class DataGrid
                         if (isset($this->_classColumns[$columnName]['filterHaving']))
                         {
                             $havingSQL_or[] = $this->_classColumns[$columnName]['filterHaving'] . ' >= ' . $db->makeQueryInteger($argument)  .' ';
+                        }
+                    }
+
+                    /* Not equal to (!=) */
+                    if (strpos($data, '!=') !== false)
+                    {
+                        if (isset($this->_classColumns[$columnName]['filter']))
+                        {
+                            $whereSQL_or[] = '(' . $this->_classColumns[$columnName]['filter'] . ' IS NULL OR ' .
+                                             $this->_classColumns[$columnName]['filter'] . ' != ' . $db->makeQueryString($argument) . ') ';
+                        }
+
+                        if (isset($this->_classColumns[$columnName]['filterHaving']))
+                        {
+                            $havingSQL_or[] = '(' . $this->_classColumns[$columnName]['filterHaving'] . ' IS NULL OR ' .
+                                              $this->_classColumns[$columnName]['filterHaving'] . ' != ' . $db->makeQueryString($argument) . ') ';
                         }
                     }
 

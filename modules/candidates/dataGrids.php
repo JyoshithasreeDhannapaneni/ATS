@@ -22,15 +22,12 @@ class candidatesListByViewDataGrid extends CandidatesDataGrid
         $this->defaultSortDirection = 'DESC';
 
         $this->_defaultColumns = array(
-            array('name' => 'Attachments', 'width' => 31),
-            array('name' => 'First Name', 'width' => 75),
-            array('name' => 'Last Name', 'width' => 85),
-            array('name' => 'City', 'width' => 75),
-            array('name' => 'State', 'width' => 50),
-            array('name' => 'Key Skills', 'width' => 215),
-            array('name' => 'Owner', 'width' => 65),
-            array('name' => 'Created', 'width' => 60),
-            array('name' => 'Modified', 'width' => 60),
+            array('name' => 'Candidate ID', 'width' => 85),
+            array('name' => 'First Name', 'width' => 100),
+            array('name' => 'Last Name', 'width' => 100),
+            array('name' => 'Key Skills', 'width' => 130),
+            array('name' => 'Applied Date', 'width' => 80),
+            array('name' => 'Owner', 'width' => 75),
         );
 
          parent::__construct("candidates:candidatesListByViewDataGrid",

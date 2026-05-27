@@ -38,72 +38,63 @@ class CandidateDocuments
     private function _ensureTablesExist()
     {
         try {
-            // Create candidate_upload_token table if not exists
-            $sql = "CREATE TABLE IF NOT EXISTS candidate_upload_token (
-                token_id INT(11) NOT NULL AUTO_INCREMENT,
-                candidate_id INT(11) NOT NULL,
-                site_id INT(11) NOT NULL DEFAULT 1,
-                token VARCHAR(64) NOT NULL,
-                created_by INT(11) NOT NULL,
-                created_date DATETIME NOT NULL,
-                expires_date DATETIME NOT NULL,
-                is_active TINYINT(1) NOT NULL DEFAULT 1,
-                max_uploads INT(11) NOT NULL DEFAULT 20,
-                upload_count INT(11) NOT NULL DEFAULT 0,
-                PRIMARY KEY (token_id),
-                UNIQUE KEY idx_token (token),
-                KEY idx_candidate (candidate_id),
-                KEY idx_active_expires (is_active, expires_date)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
-            @$this->_db->query($sql);
-            
-            // Create candidate_document table if not exists
-            $sql = "CREATE TABLE IF NOT EXISTS candidate_document (
-                document_id INT(11) NOT NULL AUTO_INCREMENT,
-                candidate_id INT(11) NOT NULL,
-                site_id INT(11) NOT NULL DEFAULT 1,
-                token_id INT(11) DEFAULT NULL,
+            $this->_db->query("CREATE TABLE IF NOT EXISTS candidate_upload_token (
+                token_id SERIAL PRIMARY KEY,
+                candidate_id INTEGER NOT NULL,
+                site_id INTEGER NOT NULL DEFAULT 1,
+                token VARCHAR(64) NOT NULL UNIQUE,
+                created_by INTEGER NOT NULL,
+                created_date TIMESTAMP NOT NULL,
+                expires_date TIMESTAMP NOT NULL,
+                is_active SMALLINT NOT NULL DEFAULT 1,
+                max_uploads INTEGER NOT NULL DEFAULT 20,
+                upload_count INTEGER NOT NULL DEFAULT 0
+            )", true);
+
+            $this->_db->query("CREATE TABLE IF NOT EXISTS candidate_document (
+                document_id SERIAL PRIMARY KEY,
+                candidate_id INTEGER NOT NULL,
+                site_id INTEGER NOT NULL DEFAULT 1,
+                token_id INTEGER DEFAULT NULL,
                 document_type VARCHAR(50) NOT NULL DEFAULT 'other',
                 original_filename VARCHAR(255) NOT NULL,
                 stored_filename VARCHAR(255) NOT NULL,
                 directory_name VARCHAR(255) NOT NULL,
-                file_size_kb INT(11) NOT NULL DEFAULT 0,
+                file_size_kb INTEGER NOT NULL DEFAULT 0,
                 content_type VARCHAR(100) NOT NULL DEFAULT 'application/octet-stream',
-                uploaded_date DATETIME NOT NULL,
-                status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
-                notes TEXT,
-                PRIMARY KEY (document_id),
-                KEY idx_candidate (candidate_id),
-                KEY idx_token (token_id)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
-            @$this->_db->query($sql);
+                file_hash VARCHAR(64) DEFAULT NULL,
+                uploaded_date TIMESTAMP NOT NULL,
+                status VARCHAR(20) NOT NULL DEFAULT 'pending',
+                notes TEXT
+            )", true);
+
+            // Add file_hash column if table already existed without it
+            try {
+                $this->_db->query("ALTER TABLE candidate_document ADD COLUMN IF NOT EXISTS file_hash VARCHAR(64) DEFAULT NULL", true);
+            } catch (Exception $e) {
+                // Column may already exist
+            }
         } catch (Exception $e) {
-            // Silently fail - tables might already exist or user lacks CREATE permission
+            // Silently fail
         }
     }
 
     public function validateToken($token)
     {
-        // Use mysqli_real_escape_string directly for safety
-        $tokenEscaped = mysqli_real_escape_string($this->_db->getConnection(), $token);
-        
-        // First, just find the token without the candidate join to debug
+        $tokenEscaped = $this->_db->makeQueryString($token);
+
         $sql = "SELECT t.*, c.first_name AS firstName, c.last_name AS lastName,
                        c.email1, c.email2
                 FROM candidate_upload_token t
                 LEFT JOIN candidate c ON c.candidate_id = t.candidate_id
-                WHERE t.token = '{$tokenEscaped}'
+                WHERE t.token = {$tokenEscaped}
                   AND t.is_active = 1
                   AND t.expires_date > NOW()
                   AND t.upload_count < t.max_uploads";
 
         try {
-            $queryResult = $this->_db->query($sql);
-            if ($queryResult === false) {
-                return null;
-            }
-            $row = @mysqli_fetch_assoc($queryResult);
-            return (!empty($row)) ? $row : null;
+            $rs = $this->_db->getAssoc($sql);
+            return (!empty($rs)) ? $rs : null;
         } catch (Exception $e) {
             return null;
         }
@@ -131,15 +122,7 @@ class CandidateDocuments
                 ORDER BY t.created_date DESC";
 
         try {
-            $queryResult = $this->_db->query($sql);
-            if ($queryResult === false) {
-                return array();
-            }
-            $results = array();
-            while ($row = @mysqli_fetch_assoc($queryResult)) {
-                $results[] = $row;
-            }
-            return $results;
+            return $this->_db->getAllAssoc($sql);
         } catch (Exception $e) {
             return array();
         }
@@ -157,33 +140,50 @@ class CandidateDocuments
                 LIMIT 1";
 
         try {
-            $queryResult = $this->_db->query($sql);
-            if ($queryResult === false) {
-                return null;
-            }
-            $row = @mysqli_fetch_assoc($queryResult);
-            return (!empty($row) && isset($row['token'])) ? $row['token'] : null;
+            $rs = $this->_db->getAssoc($sql);
+            return (!empty($rs) && isset($rs['token'])) ? $rs['token'] : null;
         } catch (Exception $e) {
             return null;
         }
     }
 
+    public function isDuplicateFile($candidateID, $fileHash)
+    {
+        if (empty($fileHash)) return false;
+
+        $sql = sprintf(
+            "SELECT document_id, original_filename FROM candidate_document
+             WHERE candidate_id = %d AND file_hash = %s",
+            intval($candidateID),
+            $this->_db->makeQueryString($fileHash)
+        );
+
+        try {
+            $rs = $this->_db->getAssoc($sql);
+            return (!empty($rs)) ? $rs : false;
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+
     public function saveDocument($candidateID, $tokenID, $docType, $originalFilename,
-                                  $storedFilename, $directoryName, $fileSizeKB, $contentType)
+                                  $storedFilename, $directoryName, $fileSizeKB, $contentType,
+                                  $fileHash = '')
     {
         $originalFilename = $this->_db->makeQueryString($originalFilename);
         $storedFilename = $this->_db->makeQueryString($storedFilename);
         $directoryName = $this->_db->makeQueryString($directoryName);
         $docType = $this->_db->makeQueryString($docType);
         $contentType = $this->_db->makeQueryString($contentType);
+        $fileHashVal = !empty($fileHash) ? $this->_db->makeQueryString($fileHash) : 'NULL';
 
         $sql = "INSERT INTO candidate_document
                     (candidate_id, site_id, token_id, document_type, original_filename,
-                     stored_filename, directory_name, file_size_kb, content_type, uploaded_date)
+                     stored_filename, directory_name, file_size_kb, content_type, file_hash, uploaded_date)
                 VALUES
                     ({$candidateID}, {$this->_siteID}, " . ($tokenID ? $tokenID : 'NULL') . ",
-                     '{$docType}', '{$originalFilename}', '{$storedFilename}',
-                     '{$directoryName}', {$fileSizeKB}, '{$contentType}', NOW())";
+                     {$docType}, {$originalFilename}, {$storedFilename},
+                     {$directoryName}, {$fileSizeKB}, {$contentType}, {$fileHashVal}, NOW())";
 
         $this->_db->query($sql);
         return $this->_db->getLastInsertID();
@@ -200,15 +200,7 @@ class CandidateDocuments
                 ORDER BY d.uploaded_date DESC";
 
         try {
-            $queryResult = $this->_db->query($sql);
-            if ($queryResult === false) {
-                return array();
-            }
-            $results = array();
-            while ($row = @mysqli_fetch_assoc($queryResult)) {
-                $results[] = $row;
-            }
-            return $results;
+            return $this->_db->getAllAssoc($sql);
         } catch (Exception $e) {
             return array();
         }
@@ -221,12 +213,8 @@ class CandidateDocuments
                 WHERE document_id = " . intval($documentID);
 
         try {
-            $queryResult = $this->_db->query($sql);
-            if ($queryResult === false) {
-                return null;
-            }
-            $row = @mysqli_fetch_assoc($queryResult);
-            return (!empty($row)) ? $row : null;
+            $rs = $this->_db->getAssoc($sql);
+            return (!empty($rs)) ? $rs : null;
         } catch (Exception $e) {
             return null;
         }

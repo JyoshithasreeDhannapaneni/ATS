@@ -48,6 +48,13 @@ foreach ($existingPipeline as $pipeline)
     }
 }
 
+// Check 3-month cooling period
+if ($pipelines->isInCoolingPeriod($candidateID, $jobOrderID))
+{
+    $interface->outputXMLErrorPage(-1, 'Candidate is within the 3-month cooling period for this job order. They can reapply after 90 days from their last application.');
+    die();
+}
+
 // Add candidate to pipeline
 $result = $pipelines->add($candidateID, $jobOrderID, $_SESSION['CATS']->getUserID());
 

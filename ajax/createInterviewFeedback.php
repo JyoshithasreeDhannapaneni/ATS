@@ -9,13 +9,13 @@ include_once(LEGACY_ROOT . '/lib/InterviewFeedback.php');
 $interface = new SecureAJAXInterface();
 $siteID = $interface->getSiteID();
 
-if (!isset($_REQUEST['calendarEventID']) || !isset($_REQUEST['candidateID']) || !isset($_REQUEST['interviewerUserID']))
+if (!isset($_REQUEST['candidateID']) || !isset($_REQUEST['interviewerUserID']))
 {
-    echo json_encode(array('error' => 'Missing required fields: calendarEventID, candidateID, interviewerUserID.'));
+    echo json_encode(array('error' => 'Missing required fields: candidateID, interviewerUserID.'));
     die();
 }
 
-$calendarEventID = intval($_REQUEST['calendarEventID']);
+$calendarEventID = isset($_REQUEST['calendarEventID']) ? intval($_REQUEST['calendarEventID']) : 0;
 $candidateID = intval($_REQUEST['candidateID']);
 $jobOrderID = isset($_REQUEST['joborderID']) ? intval($_REQUEST['joborderID']) : 0;
 $interviewerUserID = intval($_REQUEST['interviewerUserID']);

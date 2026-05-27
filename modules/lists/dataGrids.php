@@ -146,8 +146,6 @@ class ListsDataGrid extends DataGrid
             %s
             FROM
                 saved_list
-            LEFT JOIN user
-                ON user.user_id = saved_list.created_by
             %s
             WHERE
                 saved_list.site_id = %s

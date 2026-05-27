@@ -90,7 +90,7 @@ class Users
             $accessLevel, $eeoIsVisible = false, $userSiteID = -1)
     {
 
-        $md5pwd = $password == LDAPUSER_PASSWORD ? $password : md5($password);
+        $md5pwd = $password == LDAPUSER_PASSWORD ? $password : password_hash($password, PASSWORD_BCRYPT);
         $userSiteID = $userSiteID < 0 ? $this->_siteID : $userSiteID;
         $sql = sprintf(
                 "INSERT INTO user (
@@ -186,7 +186,7 @@ class Users
                 ($eeoIsVisible ? 1 : 0),
                 $accessLevelSQL,
                 $this->_db->makeQueryInteger($userID),
-                $this->_siteID
+                $this->_db->makeQueryInteger($this->_siteID)
                     );
 
         return (boolean) $this->_db->query($sql);
@@ -212,7 +212,7 @@ class Users
                 site_id = %s",
                 $this->_db->makeQueryString($email),
                 $this->_db->makeQueryInteger($userID),
-                $this->_siteID
+                $this->_db->makeQueryInteger($this->_siteID)
                 );
 
         return (boolean) $this->_db->query($sql);
@@ -238,7 +238,7 @@ class Users
                 site_id = %s",
                 $this->_db->makeQueryString($categories),
                 $this->_db->makeQueryInteger($userID),
-                $this->_siteID
+                $this->_db->makeQueryInteger($this->_siteID)
                 );
 
         return (boolean) $this->_db->query($sql);
@@ -264,7 +264,7 @@ class Users
                 AND
                 site_id = %s",
                 $this->_db->makeQueryInteger($userID),
-                $this->_siteID
+                $this->_db->makeQueryInteger($this->_siteID)
                 );
         $this->_db->query($sql);
     }
@@ -325,8 +325,8 @@ class Users
                     AND
                     user.user_id = %s
                     GROUP BY
-                    user.user_id",
-                $this->_siteID,
+                    user.user_id, access_level.access_level_id",
+                $this->_db->makeQueryInteger($this->_siteID),
                 $this->_db->makeQueryInteger($userID)
                     );
 
@@ -395,7 +395,7 @@ class Users
                     AND
                     user.user_id = %s
                     GROUP BY
-                    user.user_id",
+                    user.user_id, access_level.access_level_id, site.site_id",
                 $aspSiteRule,
                 $this->_db->makeQueryInteger($userID)
                     );
@@ -434,7 +434,7 @@ class Users
                 $this->_db->makeQueryString($phone_other),
                 $this->_db->makeQueryString($notes),
                 $this->_db->makeQueryInteger($userID),
-                $this->_siteID,
+                $this->_db->makeQueryInteger($this->_siteID),
                 $aspSiteRule
                     );
 
@@ -459,7 +459,7 @@ class Users
                 user.site_id = %s
                 AND
                 user.user_id = %s",
-                $this->_siteID,
+                $this->_db->makeQueryInteger($this->_siteID),
                 $this->_db->makeQueryInteger($userID)
                 );
 
@@ -511,12 +511,12 @@ class Users
                     WHERE
                     user.site_id = %s
                     GROUP BY
-                    user.user_id
+                    user.user_id, access_level.access_level_id
                     ORDER BY
                     user.access_level DESC,
                 user.last_name ASC,
                 user.first_name ASC",
-                $this->_siteID
+                $this->_db->makeQueryInteger($this->_siteID)
                     );
 
         return $this->_db->getAllAssoc($sql);
@@ -541,7 +541,7 @@ class Users
                 AND
                 site_id = %s",
                 $this->_db->makeQueryString($username),
-                $this->_siteID
+                $this->_db->makeQueryInteger($this->_siteID)
                 );
         $data = $this->_db->getAssoc($sql);
 
@@ -629,7 +629,7 @@ class Users
                 ORDER BY
                 user.last_name ASC,
                 user.first_name ASC",
-                $this->_siteID,
+                $this->_db->makeQueryInteger($this->_siteID),
                 ACCESS_LEVEL_DISABLED
                 );
 
@@ -675,8 +675,14 @@ class Users
             return LOGIN_INVALID_USER;
         }
 
-        /* Is the user's supplied password correct? */
-        if ($rs['password'] !== md5($currentPassword))
+        /* Is the user's supplied password correct? Support both bcrypt and legacy md5 */
+        $passwordValid = false;
+        if (password_get_info($rs['password'])['algo'] !== null && password_get_info($rs['password'])['algo'] !== 0) {
+            $passwordValid = password_verify($currentPassword, $rs['password']);
+        } else {
+            $passwordValid = ($rs['password'] === md5($currentPassword));
+        }
+        if (!$passwordValid)
         {
             return LOGIN_INVALID_PASSWORD;
         }
@@ -693,19 +699,19 @@ class Users
             return LOGIN_CANT_CHANGE_PASSWORD;
         }
 
-        /* Change the user's password. */
+        /* Change the user's password using bcrypt. */
+        $hashedPassword = password_hash($newPassword, PASSWORD_BCRYPT);
         $sql = sprintf(
                 "UPDATE
                 user
                 SET
-                password = md5(%s)
+                password = %s
                 WHERE
                 user.user_id = %s",
-                $this->_db->makeQueryString($newPassword),
+                $this->_db->makeQueryString($hashedPassword),
                 $this->_db->makeQueryInteger($userID)
                 );
         $this->_db->query($sql);
-        // FIXME: Did the above query succeed? If not, fail.
 
         return LOGIN_SUCCESS;
     }
@@ -747,19 +753,19 @@ class Users
             return false;
         }
 
-        /* Change the user's password. */
+        /* Change the user's password using bcrypt. */
+        $hashedPassword = password_hash($newPassword, PASSWORD_BCRYPT);
         $sql = sprintf(
                 "UPDATE
                 user
                 SET
-                password = md5(%s)
+                password = %s
                 WHERE
                 user.user_id = %s",
-                $this->_db->makeQueryString($newPassword),
+                $this->_db->makeQueryString($hashedPassword),
                 $this->_db->makeQueryInteger($userID)
                 );
         $this->_db->query($sql);
-        // FIXME: Did the above query succeed? If not, fail.
 
         return true;
     }
@@ -836,8 +842,18 @@ class Users
             /*  incorrect LDAP user in db */
             return LOGIN_INVALID_USER;
         } else {
-            /* Is the user's supplied password correct? */
-            if ($rs['password'] !== md5($password))
+            /* Is the user's supplied password correct? Support both bcrypt and legacy md5 */
+            $passwordValid = false;
+            if (password_get_info($rs['password'])['algo'] !== null && password_get_info($rs['password'])['algo'] !== 0) {
+                $passwordValid = password_verify($password, $rs['password']);
+            } else {
+                $passwordValid = ($rs['password'] === md5($password));
+                if ($passwordValid) {
+                    /* Upgrade legacy md5 hash to bcrypt on successful login */
+                    $this->_upgradePasswordHash($rs, $password);
+                }
+            }
+            if (!$passwordValid)
             {
                 return LOGIN_INVALID_PASSWORD;
             }
@@ -886,7 +902,7 @@ class Users
                 user.access_level > %s
                 GROUP BY
                 user.site_id",
-                $this->_siteID,
+                $this->_db->makeQueryInteger($this->_siteID),
                 ACCESS_LEVEL_READ
                 );
         $license = $this->_db->getAssoc($sql);
@@ -985,8 +1001,8 @@ class Users
                     %s,
                     NOW()
                     )",
-            $userID,
-            $siteID,
+            $this->_db->makeQueryInteger((int)$userID),
+            $this->_db->makeQueryInteger((int)$siteID),
             $this->_db->makeQueryString($ip),
             $this->_db->makeQueryString($userAgent),
             $this->_db->makeQueryString($hostname),
@@ -1250,7 +1266,17 @@ class Users
         
         return ($rs['password'] == LDAPUSER_PASSWORD);
     }
-    
+
+    private function _upgradePasswordHash($userRow, $plainPassword)
+    {
+        $hashedPassword = password_hash($plainPassword, PASSWORD_BCRYPT);
+        $sql = sprintf(
+                "UPDATE user SET password = %s WHERE user_name = %s",
+                $this->_db->makeQueryString($hashedPassword),
+                $this->_db->makeQueryString($userRow['username'])
+                );
+        $this->_db->query($sql);
+    }
 }
 
 ?>

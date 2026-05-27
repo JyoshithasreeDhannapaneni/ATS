@@ -1312,6 +1312,17 @@ class JobOrdersUI extends UserInterface
         if (!eval(Hooks::get('JO_ON_ADD_PIPELINE'))) return;
 
         $pipelines = new Pipelines($this->_siteID);
+
+        // 3-month cooling period check
+        if ($pipelines->isInCoolingPeriod($candidateID, $jobOrderID)) {
+            CommonErrors::fatalModal(
+                COMMONERROR_RECORDERROR,
+                $this,
+                'This candidate applied to this job within the last 3 months. The cooling period prevents reapplication before 90 days have passed.'
+            );
+            return;
+        }
+
         if (!$pipelines->add($candidateID, $jobOrderID, $this->_userID))
         {
             CommonErrors::fatal(COMMONERROR_RECORDERROR, $this, 'Failed to add candidate to job order.');

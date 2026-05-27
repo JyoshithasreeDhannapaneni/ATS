@@ -29,20 +29,23 @@ chmod -R 777 /var/www/html/temp /var/www/html/attachments /var/www/html/uploads
 # Log database configuration
 echo "--- Database Configuration ---"
 echo "  HOST: ${DATABASE_HOST:-NOT SET}"
-echo "  PORT: ${DATABASE_PORT:-3306}"
+echo "  PORT: ${DATABASE_PORT:-5432}"
 echo "  USER: ${DATABASE_USER:-NOT SET}"
 echo "  NAME: ${DATABASE_NAME:-NOT SET}"
 
-# Wait for MySQL to be reachable (up to 60 seconds)
+# Wait for PostgreSQL to be reachable (up to 60 seconds)
 if [ -n "$DATABASE_HOST" ]; then
-    echo "--- Waiting for MySQL at $DATABASE_HOST:${DATABASE_PORT:-3306} ---"
+    echo "--- Waiting for PostgreSQL at $DATABASE_HOST:${DATABASE_PORT:-5432} ---"
     for i in $(seq 1 30); do
         if php -r "
-            \$c = @new mysqli('${DATABASE_HOST}', '${DATABASE_USER}', '${DATABASE_PASS}', '', (int)'${DATABASE_PORT:-3306}');
-            if (\$c->connect_error) exit(1);
-            \$c->close(); exit(0);
+            try {
+                \$dsn = 'pgsql:host=${DATABASE_HOST};port=${DATABASE_PORT:-5432};dbname=${DATABASE_NAME}';
+                \$pdo = new PDO(\$dsn, '${DATABASE_USER}', '${DATABASE_PASS}');
+                \$pdo = null;
+                exit(0);
+            } catch (Exception \$e) { exit(1); }
         " 2>/dev/null; then
-            echo "  MySQL connection OK"
+            echo "  PostgreSQL connection OK"
             break
         fi
         echo "  Attempt $i/30 — waiting..."

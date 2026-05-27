@@ -31,6 +31,36 @@ class InterviewFeedback
     {
         $this->_siteID = $siteID;
         $this->_db = DatabaseConnection::getInstance();
+        $this->_ensureTableExists();
+    }
+
+    private function _ensureTableExists()
+    {
+        try {
+            $this->_db->query("CREATE TABLE IF NOT EXISTS interview_feedback (
+                feedback_id SERIAL PRIMARY KEY,
+                calendar_event_id INTEGER NOT NULL DEFAULT 0,
+                candidate_id INTEGER NOT NULL,
+                joborder_id INTEGER NOT NULL DEFAULT 0,
+                interviewer_user_id INTEGER NOT NULL,
+                interview_stage VARCHAR(20) NOT NULL DEFAULT 'L1',
+                overall_rating SMALLINT,
+                technical_rating SMALLINT,
+                communication_rating SMALLINT,
+                cultural_fit_rating SMALLINT,
+                problem_solving_rating SMALLINT,
+                strengths TEXT,
+                weaknesses TEXT,
+                notes TEXT,
+                recommendation VARCHAR(30),
+                status VARCHAR(20) NOT NULL DEFAULT 'pending',
+                site_id INTEGER NOT NULL DEFAULT 1,
+                date_created TIMESTAMP NOT NULL DEFAULT NOW(),
+                date_modified TIMESTAMP NOT NULL DEFAULT NOW()
+            )", true);
+        } catch (Exception $e) {
+            // Table may already exist
+        }
     }
 
     /**

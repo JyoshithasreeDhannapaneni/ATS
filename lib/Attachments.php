@@ -598,7 +598,7 @@ class Attachments
             WHERE
                 attachment_id = %s
             AND
-                (site_id = %s || content_type = 'catsbackup' || %s)",
+                (site_id = %s OR content_type = 'catsbackup' OR %s)",
             $this->_db->makeQueryInteger($attachmentID),
             $this->_siteID,
             ($verifySiteID ? 'false' : 'true')

@@ -783,6 +783,26 @@ class Candidates
         return $this->_db->getColumn(0, 0, $sql);
     }
 
+    public function getPortalCount()
+    {
+        $sql = sprintf(
+            "SELECT COUNT(*) AS cnt FROM candidate
+             WHERE site_id = %s AND source = 'Career Portal' AND is_admin_hidden = 0",
+            $this->_siteID
+        );
+        return (int)$this->_db->getColumn(0, 0, $sql);
+    }
+
+    public function getDirectCount()
+    {
+        $sql = sprintf(
+            "SELECT COUNT(*) AS cnt FROM candidate
+             WHERE site_id = %s AND (source IS NULL OR source != 'Career Portal') AND is_admin_hidden = 0",
+            $this->_siteID
+        );
+        return (int)$this->_db->getColumn(0, 0, $sql);
+    }
+
     /**
      * Returns the entire candidates list.
      *
@@ -1989,7 +2009,7 @@ class CandidatesDataGrid extends DataGrid
                                      'filterable' => false),
 
             'First Name' =>     array('select'         => 'candidate.first_name AS firstName',
-                                      'pagerRender'    => 'if ($rsData[\'isHot\'] == 1) $className =  \'jobLinkHot\'; else $className = \'jobLinkCold\'; return \'<a href="'.CATSUtility::getIndexName().'?m=candidates&amp;a=show&amp;candidateID=\'.$rsData[\'candidateID\'].\'" class="\'.$className.\'">\'.htmlspecialchars($rsData[\'firstName\']).\'</a>\';',
+                                      'pagerRender'    => 'if ($rsData[\'isHot\'] == 1) $className = \'jobLinkHot\'; else $className = \'jobLinkCold\'; $badge = (isset($rsData[\'source\']) && $rsData[\'source\'] == \'Career Portal\') ? \'<span style="display:inline-block;margin-left:5px;padding:1px 6px;background:#dbeafe;color:#1d4ed8;border-radius:4px;font-size:10px;font-weight:600;letter-spacing:.03em;vertical-align:middle;">Portal</span>\' : \'\'; return \'<a href="'.CATSUtility::getIndexName().'?m=candidates&amp;a=show&amp;candidateID=\'.$rsData[\'candidateID\'].\'" class="\'.$className.\'">\'.htmlspecialchars($rsData[\'firstName\']).\'</a>\'.$badge;',
                                       'sortableColumn' => 'firstName',
                                       'pagerWidth'     => 75,
                                       'pagerOptional'  => false,
@@ -2007,6 +2027,7 @@ class CandidatesDataGrid extends DataGrid
             'E-Mail' =>         array('select'   => 'candidate.email1 AS email1',
                                      'sortableColumn'     => 'email1',
                                      'pagerWidth'    => 80,
+                                     'pagerOptional' => false,
                                      'filter'         => 'candidate.email1'),
 
             '2nd E-Mail' =>     array('select'   => 'candidate.email2 AS email2',
@@ -2022,6 +2043,7 @@ class CandidatesDataGrid extends DataGrid
             'Cell Phone' =>     array('select'   => 'candidate.phone_cell AS phoneCell',
                                      'sortableColumn'     => 'phoneCell',
                                      'pagerWidth'    => 80,
+                                     'pagerOptional' => false,
                                      'filter'         => 'candidate.phone_cell'),
 
             'Work Phone' =>     array('select'   => 'candidate.phone_work AS phoneWork',
@@ -2038,6 +2060,7 @@ class CandidatesDataGrid extends DataGrid
             'City' =>           array('select'   => 'candidate.city AS city',
                                      'sortableColumn'     => 'city',
                                      'pagerWidth'    => 80,
+                                     'pagerOptional' => false,
                                      'alphaNavigation' => true,
                                      'filter'         => 'candidate.city'),
 
@@ -2066,9 +2089,10 @@ class CandidatesDataGrid extends DataGrid
                                      'filter'         => 'candidate.web_site'),
 
             'Key Skills' =>    array('select'  => 'candidate.key_skills AS keySkills',
-                                     'pagerRender' => 'return mb_substr(trim($rsData[\'keySkills\'] ?? \'\'), 0, 30) . (strlen(trim($rsData[\'keySkills\'] ?? \'\')) > 30 ? \'...\' : \'\');',
+                                     'pagerRender' => 'return mb_substr(trim($rsData[\'keySkills\'] ?? \'\'), 0, 40) . (strlen(trim($rsData[\'keySkills\'] ?? \'\')) > 40 ? \'...\' : \'\');',
                                      'sortableColumn'    => 'keySkills',
-                                     'pagerWidth'   => 210,
+                                     'pagerWidth'   => 200,
+                                     'pagerOptional' => false,
                                      'filter'         => 'candidate.key_skills'),
 
             'Recent Status' => array('select'  => '(
@@ -2215,6 +2239,29 @@ class CandidatesDataGrid extends DataGrid
                                      'filterable' => false,
                                      'exportable' => false),
 
+            'Candidate ID' =>  array('select'   => '',
+                                     'pagerRender'    => '$cid = isset($rsData[\'candidateID\']) ? (int)$rsData[\'candidateID\'] : 0; $fid = $cid > 0 ? \'CAND-\' . str_pad($cid, 4, \'0\', STR_PAD_LEFT) : \'\'; return \'<a href="'.CATSUtility::getIndexName().'?m=candidates&amp;a=show&amp;candidateID=\' . $cid . \'" style="font-family:monospace;font-weight:600;color:#4f46e5;text-decoration:none;">\' . $fid . \'</a>\';',
+                                     'sortableColumn' => 'candidateID',
+                                     'pagerWidth'     => 90,
+                                     'pagerOptional'  => false,
+                                     'filter'         => 'candidate.candidate_id'),
+
+            'Job ID' =>        array('select'   => 'MAX(cjo_display.joborder_id) AS latestJobID',
+                                     'join'     => 'LEFT JOIN candidate_joborder AS cjo_display ON cjo_display.candidate_id = candidate.candidate_id',
+                                     'pagerRender'    => '$jid = isset($rsData[\'latestJobID\']) && $rsData[\'latestJobID\'] ? $rsData[\'latestJobID\'] : \'\'; return $jid ? \'<a href="'.CATSUtility::getIndexName().'?m=joborders&amp;a=show&amp;jobOrderID=\'.$jid.\'">\'.htmlspecialchars($jid).\'</a>\' : \'\';',
+                                     'sortableColumn' => 'latestJobID',
+                                     'pagerWidth'     => 65,
+                                     'exportable'     => false,
+                                     'filterable'     => false),
+
+            'Applied Date' =>  array('select'   => 'DATE_FORMAT(MAX(cjo_appl.date_created), \'%m-%d-%y\') AS latestAppliedDate',
+                                     'join'     => 'LEFT JOIN candidate_joborder AS cjo_appl ON cjo_appl.candidate_id = candidate.candidate_id',
+                                     'pagerRender'    => 'return isset($rsData[\'latestAppliedDate\']) ? (string)$rsData[\'latestAppliedDate\'] : \'\';',
+                                     'sortableColumn' => 'latestAppliedDate',
+                                     'pagerWidth'     => 80,
+                                     'exportable'     => false,
+                                     'filterable'     => false),
+
             'OwnerID' =>       array('select'    => '',
                                      'filter'    => 'candidate.owner',
                                      'pagerOptional' => false,
@@ -2226,6 +2273,12 @@ class CandidatesDataGrid extends DataGrid
                                      'pagerOptional' => false,
                                      'filterable' => false,
                                      'filterDescription' => 'Only Hot Candidates'),
+
+            'PortalApplicant' => array('select'    => '',
+                                     'filter'    => 'candidate.source',
+                                     'pagerOptional' => false,
+                                     'filterable' => false,
+                                     'filterDescription' => 'Career Portal Applicants'),
         // Tags filtering
         	'Tags'	=>			array(
                                      'select'	=> '(
@@ -2321,6 +2374,7 @@ class CandidatesDataGrid extends DataGrid
                 candidate.candidate_id AS candidateID,
                 candidate.candidate_id AS exportID,
                 candidate.is_hot AS isHot,
+                candidate.source AS source,
                 candidate.date_modified AS dateModifiedSort,
                 candidate.date_created AS dateCreatedSort,
             %s

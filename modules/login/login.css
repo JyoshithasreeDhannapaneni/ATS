@@ -113,6 +113,19 @@
     to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
+@keyframes morphBlob {
+    0%, 100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+    25%      { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; }
+    50%      { border-radius: 50% 60% 30% 60% / 30% 50% 70% 50%; }
+    75%      { border-radius: 60% 30% 60% 40% / 70% 40% 50% 60%; }
+}
+
+@keyframes gradientRotate {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
 /* ===== Base Reset ===== */
 *, *::before, *::after { box-sizing: border-box; }
 
@@ -143,7 +156,9 @@ body::before {
     left: 0;
     right: 0;
     height: 55vh;
-    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 35%, #60a5fa 65%, #1d4ed8 100%);
+    background: linear-gradient(135deg, #0f1b3d 0%, #1e3a8a 20%, #2563eb 40%, #60a5fa 60%, #2563eb 80%, #1d4ed8 100%);
+    background-size: 300% 300%;
+    animation: gradientRotate 12s ease infinite;
     z-index: -2;
     transition: all 0.8s ease;
 }
@@ -183,7 +198,7 @@ body::after {
 .particle-1 {
     width: 90px; height: 90px;
     top: 10%; left: 10%;
-    animation: float 8s ease-in-out infinite;
+    animation: float 8s ease-in-out infinite, morphBlob 10s ease-in-out infinite;
     background: rgba(255,255,255,0.15);
     box-shadow: 0 0 40px rgba(255,255,255,0.1);
 }
@@ -198,7 +213,7 @@ body::after {
 .particle-3 {
     width: 140px; height: 140px;
     top: 30%; left: 60%;
-    animation: float 11s ease-in-out infinite 2s;
+    animation: float 11s ease-in-out infinite 2s, morphBlob 14s ease-in-out infinite reverse;
     background: rgba(255,255,255,0.08);
     box-shadow: 0 0 60px rgba(255,255,255,0.08);
 }
@@ -213,7 +228,7 @@ body::after {
 .particle-5 {
     width: 70px; height: 70px;
     top: 15%; left: 45%;
-    animation: float 10s ease-in-out infinite 3s;
+    animation: float 10s ease-in-out infinite 3s, morphBlob 12s ease-in-out infinite 1s;
     background: rgba(255,255,255,0.1);
     box-shadow: 0 0 30px rgba(255,255,255,0.08);
 }
@@ -310,12 +325,14 @@ div#formBlock {
     max-width: 440px;
     height: auto;
     border-radius: var(--radius-xl);
-    background: #fff;
-    box-shadow: 0 25px 60px rgba(37, 99, 235, 0.12), 0 10px 20px rgba(37, 99, 235, 0.06), inset 0 1px 0 rgba(255,255,255,0.6);
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    box-shadow: 0 25px 60px rgba(37, 99, 235, 0.15), 0 10px 20px rgba(37, 99, 235, 0.08), inset 0 1px 0 rgba(255,255,255,0.8);
     padding: 40px 36px;
     margin: 0 auto;
     float: none;
-    border: 1px solid rgba(37, 99, 235, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.5);
     position: relative;
     overflow: hidden;
     animation: rotateIn3D 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -325,8 +342,9 @@ div#formBlock {
 }
 
 div#formBlock:hover {
-    box-shadow: 0 35px 80px rgba(37, 99, 235, 0.18), 0 15px 30px rgba(37, 99, 235, 0.1), inset 0 1px 0 rgba(255,255,255,0.8);
-    transform: translateY(-6px);
+    box-shadow: 0 35px 80px rgba(37, 99, 235, 0.2), 0 15px 30px rgba(37, 99, 235, 0.12), 0 0 40px rgba(37, 99, 235, 0.06), inset 0 1px 0 rgba(255,255,255,0.9);
+    transform: translateY(-8px) scale(1.01);
+    border-color: rgba(255, 255, 255, 0.7);
 }
 
 div#formBlock::before {
@@ -517,13 +535,14 @@ form#loginForm .login-input-box::placeholder {
 }
 
 .button:hover {
-    box-shadow: 0 12px 32px rgba(37, 99, 235, 0.4), 0 6px 16px rgba(37, 99, 235, 0.2);
+    box-shadow: 0 12px 32px rgba(37, 99, 235, 0.4), 0 6px 16px rgba(37, 99, 235, 0.2), 0 0 20px rgba(37, 99, 235, 0.1);
     transform: translateY(-4px) scale(1.02);
 }
 
 .button:active {
-    transform: translateY(-2px) scale(0.98);
+    transform: translateY(-1px) scale(0.97);
     box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+    transition: all 0.1s ease;
 }
 
 /* Shimmer effect on hover */
@@ -599,10 +618,12 @@ div#headerBlock span#subMainLogo {
     position: relative;
     animation: fadeIn 1.2s ease 0.6s forwards;
     opacity: 0;
-    backdrop-filter: blur(10px);
-    background: rgba(255, 255, 255, 0.4);
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
 }
 
 #footerBlock a {

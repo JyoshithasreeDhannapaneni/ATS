@@ -123,10 +123,17 @@ class AttachmentsUI extends UserInterface
             );
         }
 
-        /* Set headers for sending the file. */
-        header('Content-Disposition: inline; filename="' . $fileName . '"');  //Disposition attachment was default, but forces download.
+        /* Use the original uploaded filename for the download. */
+        $downloadName = !empty($rs['originalFilename']) ? $rs['originalFilename'] : $fileName;
+
+        /* mode=view → inline (for PDF preview in <object> tag); default → attachment */
+        $viewMode = (isset($_GET['mode']) && $_GET['mode'] === 'view');
+        $disposition = $viewMode ? 'inline' : 'attachment';
+
+        header('Content-Disposition: ' . $disposition . '; filename="' . $downloadName . '"');
         header('Content-Type: ' . $contentType);
         header('Content-Length: ' . filesize($filePath));
+        header('Cache-Control: private, max-age=3600');
         header('Pragma: no-cache');
         header('Expires: 0');
         

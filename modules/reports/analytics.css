@@ -5,6 +5,7 @@
     margin: 0;
     padding: 0;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    box-sizing: border-box;
 }
 
 /* Dashboard Header */
@@ -183,6 +184,7 @@
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 24px;
+    width: 100%;
 }
 
 .analytics-card {

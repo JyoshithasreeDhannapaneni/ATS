@@ -136,6 +136,24 @@ if ($oldStatusID != $statusID)
     $emailAutomation->onStatusChange($candidateID, $jobOrderID, $statusID, $_SESSION['CATS']->getUserID());
 }
 
+// Auto-generate upload link when status changes to "Onboarded" (1060)
+$uploadLinkURL = '';
+if ($statusID == 1060 && $oldStatusID != 1060)
+{
+    include_once(LEGACY_ROOT . '/lib/CandidateDocuments.php');
+    $docs = new CandidateDocuments($siteID);
+
+    $existingToken = $docs->getActiveTokenForCandidate($candidateID);
+    if (!$existingToken)
+    {
+        $existingToken = $docs->generateToken($candidateID, $_SESSION['CATS']->getUserID(), 7);
+    }
+
+    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $baseURL = $protocol . '://' . $_SERVER['HTTP_HOST'] . dirname(dirname($_SERVER['SCRIPT_NAME']));
+    $uploadLinkURL = rtrim($baseURL, '/') . '/candidate-upload.php?token=' . $existingToken;
+}
+
 // Get the updated status for response
 $pipelineData = $pipelines->getCandidatePipeline($candidateID);
 $newStatus = '';
@@ -156,6 +174,7 @@ $output =
     "    <errormessage></errormessage>\n" .
     "    <newstatus>" . htmlspecialchars($newStatus) . "</newstatus>\n" .
     "    <newstatusid>" . $newStatusID . "</newstatusid>\n" .
+    "    <uploadlink>" . htmlspecialchars($uploadLinkURL) . "</uploadlink>\n" .
     "</data>\n";
 
 /* Send back the XML data. */

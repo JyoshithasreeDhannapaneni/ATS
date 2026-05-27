@@ -3,6 +3,10 @@
 <?php TemplateUtility::printHeaderBlock(); ?>
 <?php TemplateUtility::printTabs($this->active, $this->subActive); ?>
 
+<div id="main">
+    <?php TemplateUtility::printQuickSearch(); ?>
+    <div id="contents">
+
 <div id="analyticsDashboard">
     <!-- Period Selector -->
     <div class="analytics-controls">
@@ -301,5 +305,8 @@ async function loadSources() {
 // Load on page ready
 document.addEventListener('DOMContentLoaded', loadAllAnalytics);
 </script>
+
+    </div><!-- #contents -->
+</div><!-- #main -->
 
 <?php TemplateUtility::printFooter(); ?>

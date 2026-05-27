@@ -31,7 +31,7 @@ class JobOrderRepository
                 rate_max,
                 type,
                 is_hot,
-                public,
+                \"public\",
                 openings,
                 openings_available,
                 salary,

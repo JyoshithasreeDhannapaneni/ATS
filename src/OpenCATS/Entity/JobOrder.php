@@ -47,6 +47,7 @@ class JobOrder
         $this->status = $status;
         $this->city = $city;
         $this->state = $state;
+        $this->enteredBy = $enteredBy;
         $this->isPublic = $isPublic;
     }
     
@@ -195,6 +196,12 @@ class JobOrder
         return $this->departmentId;
     }
     
+    function setDepartmentId($value)
+    {
+        $this->departmentId = $value;
+    }
+
+    /** @deprecated Use setDepartmentId() */
     function setDepartmemtId($value)
     {
         $this->departmentId = $value;
@@ -305,7 +312,8 @@ class JobOrder
         $instance->setOpenings($openings);
         $instance->setAvailableOpenings($openings);
         $instance->setSalary($salary);
-        $instance->setDepartmemtId($departmentId);
+        $instance->setStartDate($startDate);
+        $instance->setDepartmentId($departmentId);
         $instance->setEnteredBy($enteredBy);
         $instance->setRecruiter($recruiter);
         $instance->setOwner($owner);

@@ -1189,7 +1189,28 @@ class JobOrdersDataGrid extends DataGrid
             'Public/Private' => array('select'  => 'IF(joborder.public, \'Public\', \'Private\') AS public',
                                     'sortableColumn'    => 'public',
                                     'pagerWidth'   => 50,
-                                    'filter'         => 'IF(joborder.public, \'Public\', \'Private\')')
+                                    'filter'         => 'IF(joborder.public, \'Public\', \'Private\')'),
+
+            'Actions'       => array('select'         => '',
+                                     'pagerRender'    => '
+                                        $html = \'<span style="white-space:nowrap;">\';
+                                        $html .= \'<a href="'.CATSUtility::getIndexName().'?m=joborders&amp;a=edit&amp;jobOrderID=\'.$rsData[\'jobOrderID\'].\'"\'.
+                                                  \' style="display:inline-flex;align-items:center;gap:3px;padding:3px 9px;background:#2563eb;color:#fff;border-radius:5px;font-size:11px;font-weight:600;text-decoration:none;margin-right:4px;">\'.
+                                                  \'<img src="images/actions/edit.gif" width="12" height="12" border="0" alt="edit" style="filter:brightness(0) invert(1);" /> Edit</a>\';
+                                        $html .= \'<a href="'.CATSUtility::getIndexName().'?m=joborders&amp;a=delete&amp;jobOrderID=\'.$rsData[\'jobOrderID\'].\'"\'.
+                                                  \' onclick="return confirm(\'.\'"\'."Delete this job order?".\'"\'.\')"\'.
+                                                  \' style="display:inline-flex;align-items:center;gap:3px;padding:3px 9px;background:#fff;color:#dc2626;border:1px solid #fca5a5;border-radius:5px;font-size:11px;font-weight:600;text-decoration:none;">\'.
+                                                  \'<img src="images/actions/delete.gif" width="12" height="12" border="0" alt="delete" /> Delete</a>\';
+                                        $html .= \'</span>\';
+                                        return $html;
+                                     ',
+                                     'pagerWidth'     => 120,
+                                     'pagerOptional'  => true,
+                                     'pagerNoTitle'   => false,
+                                     'sizable'        => false,
+                                     'exportable'     => false,
+                                     'filterable'     => false,
+                                     'sortableColumn' => false)
         );
 
         if (!eval(Hooks::get('JOBORDERS_DATAGRID_COLUMNS'))) return;

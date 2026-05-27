@@ -121,7 +121,7 @@ class CompanyRepository
             ORDER BY
                 %s %s",
             $wildCardString,
-            $siteId,
+            $this->databaseConnection->makeQueryInteger($siteId),
             'company.name',
             'ASC'
         );

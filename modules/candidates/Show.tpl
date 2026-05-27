@@ -14,12 +14,13 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
             <?php TemplateUtility::printQuickSearch(); ?>
 <?php endif; ?>
 
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
         <script type="text/javascript">
             window.CATSUserDateFormat = '<?php echo($_SESSION['CATS']->isDateDMY() ? 'DD-MM-YY' : 'MM-DD-YY'); ?>';
 
             // Initialize tabs on page load
             window.addEventListener('DOMContentLoaded', function() {
-                var allTabs = ['resumeTabContent', 'feedbackTabContent', 'emailTabContent', 'documentsTabContent'];
+                var allTabs = ['resumeTabContent', 'feedbackTabContent', 'emailTabContent', 'documentsTabContent', 'portalAppsTabContent', 'resumeUploadsTabContent', 'activityTabContent'];
                 allTabs.forEach(function(id) {
                     var el = document.getElementById(id);
                     if (el) el.style.setProperty('display', 'none', 'important');
@@ -31,8 +32,17 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                 resumeTab.style.setProperty('width', '100%', 'important');
             });
 
+            function toggleEmail(id) {
+                var panel   = document.getElementById(id);
+                var chevron = document.getElementById('chevron_' + id);
+                if (!panel) return;
+                var open = panel.style.display === 'block';
+                panel.style.display   = open ? 'none' : 'block';
+                if (chevron) chevron.style.transform = open ? '' : 'rotate(180deg)';
+            }
+
             function showTab(tabName) {
-                var allTabs = ['resume', 'feedback', 'email', 'documents'];
+                var allTabs = ['resume', 'feedback', 'email', 'documents', 'portalApps', 'resumeUploads', 'activity'];
                 allTabs.forEach(function(name) {
                     var content = document.getElementById(name + 'TabContent');
                     var tab = document.getElementById(name + 'Tab');
@@ -63,8 +73,117 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
             }
 
             function saveFeedback() {
-                // TODO: Implement feedback save functionality
-                alert('Feedback save functionality will be implemented.');
+                var form = document.getElementById('feedbackForm');
+                var stage = form.querySelector('[name="stage"]').value;
+                var overallRating = form.querySelector('[name="overallRating"]').value;
+                var technicalRating = form.querySelector('[name="technicalRating"]').value;
+                var communicationRating = form.querySelector('[name="communicationRating"]').value;
+                var notes = form.querySelector('[name="interviewNotes"]').value;
+                var recommendation = form.querySelector('[name="recommendation"]').value;
+
+                if (!stage || !overallRating || !recommendation) {
+                    alert('Please fill in Stage, Overall Rating, and Recommendation.');
+                    return;
+                }
+
+                var candidateID = <?php echo (int)$this->candidateID; ?>;
+                var jobOrderID = <?php echo isset($this->candidateJobOrderJobID) ? (int)$this->candidateJobOrderJobID : 0; ?>;
+                var userID = <?php echo (int)$_SESSION['CATS']->getUserID(); ?>;
+
+                var createXhr = new XMLHttpRequest();
+                createXhr.open('GET', 'ajax.php?f=createInterviewFeedback&candidateID=' + candidateID
+                    + '&joborderID=' + jobOrderID
+                    + '&interviewerUserID=' + userID
+                    + '&stage=' + encodeURIComponent(stage), true);
+                createXhr.onreadystatechange = function() {
+                    if (createXhr.readyState === 4 && createXhr.status === 200) {
+                        try {
+                            var resp = JSON.parse(createXhr.responseText);
+                            if (resp.error && resp.error !== 0) {
+                                alert('Error creating feedback: ' + resp.error);
+                                return;
+                            }
+                            var feedbackID = resp.feedbackID;
+                            var submitXhr = new XMLHttpRequest();
+                            submitXhr.open('GET', 'ajax.php?f=submitInterviewFeedback&feedbackID=' + feedbackID
+                                + '&overallRating=' + overallRating
+                                + '&technicalRating=' + (technicalRating || '')
+                                + '&communicationRating=' + (communicationRating || '')
+                                + '&notes=' + encodeURIComponent(notes)
+                                + '&recommendation=' + encodeURIComponent(recommendation), true);
+                            submitXhr.onreadystatechange = function() {
+                                if (submitXhr.readyState === 4 && submitXhr.status === 200) {
+                                    form.reset();
+                                    loadFeedbackList();
+                                }
+                            };
+                            submitXhr.send(null);
+                        } catch(e) {
+                            alert('Error saving feedback.');
+                        }
+                    }
+                };
+                createXhr.send(null);
+            }
+
+            function loadFeedbackList() {
+                var candidateID = <?php echo (int)$this->candidateID; ?>;
+                var container = document.getElementById('feedbackListContainer');
+                if (!container) return;
+                container.innerHTML = '<p style="color: #9ca3af; text-align: center; padding: 20px;">Loading feedback...</p>';
+
+                var xhr = new XMLHttpRequest();
+                xhr.open('GET', 'ajax.php?f=getInterviewFeedback&candidateID=' + candidateID, true);
+                xhr.onreadystatechange = function() {
+                    if (xhr.readyState === 4 && xhr.status === 200) {
+                        try {
+                            var resp = JSON.parse(xhr.responseText);
+                            if (!resp.feedback || resp.feedback.length === 0) {
+                                container.innerHTML = '<p style="color: #9ca3af; text-align: center; padding: 40px; font-size: 13px;">No feedback submitted yet.</p>';
+                                return;
+                            }
+                            var html = '';
+                            for (var i = 0; i < resp.feedback.length; i++) {
+                                var fb = resp.feedback[i];
+                                var name = (fb.interviewerFirstName || '') + ' ' + (fb.interviewerLastName || '');
+                                var recLabel = (fb.recommendation || '').replace(/_/g, ' ');
+                                var recColor = '#6b7280';
+                                if (fb.recommendation === 'strong_hire' || fb.recommendation === 'hire') recColor = '#059669';
+                                else if (fb.recommendation === 'no_hire' || fb.recommendation === 'strong_no_hire') recColor = '#dc2626';
+                                else if (fb.recommendation === 'maybe') recColor = '#d97706';
+
+                                var stars = '';
+                                var rating = parseInt(fb.overall_rating) || 0;
+                                for (var s = 1; s <= 5; s++) {
+                                    stars += '<span style="color:' + (s <= rating ? '#f59e0b' : '#d1d5db') + '; font-size: 16px;">&#9733;</span>';
+                                }
+
+                                html += '<div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; margin-bottom: 12px;">';
+                                html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">';
+                                html += '<div style="font-weight: 600; font-size: 14px; color: #111827;">' + name.trim() + '</div>';
+                                html += '<span style="background: #f0f4ff; color: #3b82f6; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;">' + (fb.interview_stage || '') + '</span>';
+                                html += '</div>';
+                                html += '<div style="margin-bottom: 6px;">' + stars + ' <span style="color: #6b7280; font-size: 12px; margin-left: 4px;">(' + rating + '/5)</span></div>';
+                                if (fb.technical_rating) {
+                                    html += '<div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">Technical: ' + fb.technical_rating + '/5 &nbsp; Communication: ' + (fb.communication_rating || 'N/A') + '/5</div>';
+                                }
+                                html += '<div style="font-size: 12px; font-weight: 600; color: ' + recColor + '; margin-bottom: 8px; text-transform: capitalize;">' + recLabel + '</div>';
+                                if (fb.notes) {
+                                    html += '<div style="padding: 10px; background: #f8fafc; border-radius: 8px; font-size: 13px; line-height: 1.6; color: #374151;">' + fb.notes.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>';
+                                }
+                                var dateStr = fb.date_created || '';
+                                if (dateStr) {
+                                    html += '<div style="font-size: 11px; color: #9ca3af; margin-top: 8px;">' + dateStr + '</div>';
+                                }
+                                html += '</div>';
+                            }
+                            container.innerHTML = html;
+                        } catch(e) {
+                            container.innerHTML = '<p style="color: #ef4444; text-align: center; padding: 20px;">Error loading feedback.</p>';
+                        }
+                    }
+                };
+                xhr.send(null);
             }
 
             function showEmailDetail(index) {
@@ -99,6 +218,20 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                             var dropdown = document.getElementById('profileStatusDropdown');
                             var selectedText = dropdown.options[dropdown.selectedIndex].text.trim();
                             dropdown.title = 'Current: ' + selectedText;
+
+                            // If status changed to Onboarded, show the auto-generated upload link
+                            var linkMatch = xhr.responseText.match(/<uploadlink>(.*?)<\/uploadlink>/);
+                            if (linkMatch && linkMatch[1]) {
+                                var uploadURL = linkMatch[1];
+                                var linkField = document.getElementById('uploadLinkURL');
+                                var linkResult = document.getElementById('uploadLinkResult');
+                                if (linkField) linkField.value = uploadURL;
+                                if (linkResult) linkResult.style.display = 'block';
+
+                                // Switch to Documents tab to show the link
+                                var docTab = document.querySelector('[onclick*="documentsTab"]');
+                                if (docTab) docTab.click();
+                            }
                         } else {
                             alert('Failed to update status. Please try again.');
                         }
@@ -107,38 +240,234 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                 xhr.send();
             }
 
+            // Full template data: body text, title (used as subject), possible variables
             var candidateEmailTemplates = {
                 <?php if (!empty($this->emailTemplatesRS)): ?>
                     <?php foreach ($this->emailTemplatesRS as $tpl): ?>
-                        <?php echo json_encode($tpl['emailTemplateID']); ?>: <?php echo json_encode($tpl['text'] ?? ''); ?>,
+                        <?php echo json_encode($tpl['emailTemplateID']); ?>: {
+                            text: <?php echo json_encode($tpl['text'] ?? ''); ?>,
+                            subject: <?php echo json_encode(!empty($tpl['subject']) ? $tpl['subject'] : $tpl['emailTemplateTitle']); ?>,
+                            vars: <?php echo json_encode($tpl['possibleVariables'] ?? ''); ?>
+                        },
                     <?php endforeach; ?>
                 <?php endif; ?>
             };
 
             function loadCandidateTemplate(templateId) {
+                var varHints = document.getElementById('emailVarHints');
+                var subjectEl = document.getElementById('candidateEmailSubject');
+                var bodyEl = document.getElementById('candidateEmailBody');
+
                 if (templateId == '-1' || templateId === '') {
-                    document.getElementById('candidateEmailBody').value = '';
+                    bodyEl.value = '';
+                    subjectEl.value = '';
+                    if (varHints) varHints.innerHTML = '';
                     return;
                 }
 
-                var text = candidateEmailTemplates[templateId] || '';
-                var plainText = text.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '');
-                document.getElementById('candidateEmailBody').value = plainText;
+                var tpl = candidateEmailTemplates[templateId];
+                if (!tpl) return;
+
+                // Fill body — convert <br> to newlines, strip remaining HTML
+                var plainText = (tpl.text || '')
+                    .replace(/<br\s*\/?>/gi, '\n')
+                    .replace(/&nbsp;/gi, ' ')
+                    .replace(/<[^>]+>/g, '')
+                    .replace(/\r\n/g, '\n')
+                    .trim();
+                bodyEl.value = plainText;
+
+                // Pre-fill subject from template (subject field or title as fallback)
+                if (!subjectEl.value.trim()) {
+                    subjectEl.value = tpl.subject || '';
+                }
+
+                // Show clickable variable chips
+                if (varHints) {
+                    var vars = (tpl.vars || '').match(/%[A-Z0-9_]+%/g) || [];
+                    if (vars.length > 0) {
+                        var html = '<span style="font-size:11px;color:#6b7280;font-weight:600;margin-right:6px;">Insert:</span>';
+                        vars.forEach(function(v) {
+                            html += '<button type="button" onclick="insertTemplateVar(\'' + v + '\')" style="display:inline-flex;align-items:center;padding:3px 8px;background:#f0f4ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;margin:2px;font-family:monospace;">' + v + '</button>';
+                        });
+                        varHints.innerHTML = html;
+                    } else {
+                        varHints.innerHTML = '';
+                    }
+                }
             }
+
+            function insertTemplateVar(varName) {
+                var el = document.getElementById('candidateEmailBody');
+                var start = el.selectionStart;
+                var end = el.selectionEnd;
+                var text = el.value;
+                el.value = text.substring(0, start) + varName + text.substring(end);
+                el.selectionStart = el.selectionEnd = start + varName.length;
+                el.focus();
+            }
+
+            function validateCandidateEmail() {
+                var subject = document.getElementById('candidateEmailSubject').value.trim();
+                var body = document.getElementById('candidateEmailBody').value.trim();
+                if (!subject || !body) {
+                    alert('Please enter both a subject and a message body.');
+                    return false;
+                }
+                return true;
+            }
+
+            function buildEmailPreviewHTML(recipientName, subject, bodyText) {
+                var lines = bodyText.split('\n');
+                var bodyHTML = '';
+                for (var i = 0; i < lines.length; i++) {
+                    var line = lines[i].replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').trim();
+                    if (line === '') {
+                        bodyHTML += '<br>';
+                    } else {
+                        bodyHTML += '<p style="margin:0 0 12px 0;color:#374151;font-size:15px;line-height:1.7;">' + line + '</p>';
+                    }
+                }
+                return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>' + subject.replace(/</g,'&lt;') + '</title></head>'
+                    + '<body style="margin:0;padding:0;background:#f1f5f9;font-family:Segoe UI,Arial,sans-serif;">'
+                    + '<table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 0;"><tr><td align="center">'
+                    + '<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);max-width:600px;width:100%;">'
+                    + '<tr><td style="background:#ffffff;padding:24px 40px 18px;border-bottom:1px solid #e5e7eb;">'
+                    + '<table width="100%" cellpadding="0" cellspacing="0"><tr>'
+                    + '<td><table cellpadding="0" cellspacing="0"><tr>'
+                    + '<td style="background:#2563eb;border-radius:10px;width:40px;height:40px;text-align:center;vertical-align:middle;">'
+                    + '<span style="color:#ffffff;font-size:22px;font-weight:900;font-family:Georgia,serif;line-height:40px;display:block;">N</span></td>'
+                    + '<td style="padding-left:12px;"><div style="font-size:18px;font-weight:800;color:#1e293b;line-height:1.1;">Neutara ATS</div>'
+                    + '<div style="font-size:11px;color:#64748b;margin-top:2px;">Applicant Tracking System</div></td>'
+                    + '</tr></table></td>'
+                    + '<td align="right" style="vertical-align:middle;"><div style="text-align:right;">'
+                    + '<span style="display:inline-block;background:#eff6ff;border-radius:50%;width:36px;height:36px;line-height:36px;text-align:center;margin-bottom:4px;">'
+                    + '<span style="color:#2563eb;font-size:16px;">&#128101;</span></span>'
+                    + '<div style="font-size:11px;color:#64748b;white-space:nowrap;">Empowering Careers, Driving Growth</div>'
+                    + '</div></td></tr></table></td></tr>'
+                    + '<tr><td style="padding:36px 40px 28px;">' + bodyHTML
+                    + '<table width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;"><tr>'
+                    + '<td style="background:#eff6ff;border-radius:10px;padding:16px 20px;">'
+                    + '<table cellpadding="0" cellspacing="0"><tr>'
+                    + '<td style="vertical-align:middle;padding-right:12px;"><span style="display:inline-block;background:#2563eb;color:#fff;border-radius:50%;width:24px;height:24px;text-align:center;line-height:24px;font-size:13px;font-weight:700;">i</span></td>'
+                    + '<td style="color:#1e40af;font-size:13px;line-height:1.5;">If you have any questions in the meantime, please feel free to reply to this email.</td>'
+                    + '</tr></table></td></tr></table>'
+                    + '<p style="margin:0;color:#374151;font-size:15px;line-height:1.7;">We look forward to working with you and wish you great success in your journey with us.</p>'
+                    + '</td></tr>'
+                    + '<tr><td style="padding:0 40px 32px;">'
+                    + '<p style="margin:0;color:#374151;font-size:14px;">Best regards,</p>'
+                    + '<p style="margin:4px 0 0;font-weight:700;color:#1e293b;font-size:14px;">Neutara ATS Recruitment Team</p>'
+                    + '</td></tr>'
+                    + '<tr><td style="background:#f8fafc;border-top:1px solid #e5e7eb;padding:20px 40px;">'
+                    + '<table width="100%" cellpadding="0" cellspacing="0"><tr>'
+                    + '<td style="font-size:12px;color:#64748b;">&#9993; <a href="mailto:careers@neutaraats.com" style="color:#2563eb;text-decoration:none;">careers@neutaraats.com</a></td>'
+                    + '<td align="center" style="font-size:12px;color:#64748b;">&#127760; <a href="https://www.neutaraats.com" style="color:#2563eb;text-decoration:none;">www.neutaraats.com</a></td>'
+                    + '<td align="right">'
+                    + '<span style="display:inline-block;border:1px solid #cbd5e1;border-radius:50%;width:28px;height:28px;text-align:center;line-height:26px;margin-left:6px;color:#64748b;font-size:13px;">in</span>'
+                    + '<span style="display:inline-block;border:1px solid #cbd5e1;border-radius:50%;width:28px;height:28px;text-align:center;line-height:26px;margin-left:4px;color:#64748b;font-size:13px;">&#120139;</span>'
+                    + '<span style="display:inline-block;border:1px solid #cbd5e1;border-radius:50%;width:28px;height:28px;text-align:center;line-height:26px;margin-left:4px;color:#64748b;font-size:13px;">f</span>'
+                    + '</td></tr></table></td></tr>'
+                    + '</table></td></tr></table></body></html>';
+            }
+
+            function previewCandidateEmail() {
+                var subject = document.getElementById('candidateEmailSubject').value.trim();
+                var body = document.getElementById('candidateEmailBody').value.trim();
+                var recipientName = '<?php echo addslashes($this->data['firstName'] . ' ' . $this->data['lastName']); ?>';
+                if (!subject && !body) {
+                    alert('Please compose your email first.');
+                    return;
+                }
+                var html = buildEmailPreviewHTML(recipientName, subject || '(No subject)', body || '(No message)');
+                var frame = document.getElementById('emailPreviewFrame');
+                frame.srcdoc = html;
+                var modal = document.getElementById('emailPreviewModal');
+                modal.style.display = 'flex';
+            }
+
+            function closeEmailPreview() {
+                document.getElementById('emailPreviewModal').style.display = 'none';
+            }
+
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') closeEmailPreview();
+            });
+
+            // DOCX extraction state
+            var _docxTextExtracted = false;
+            var _docxExtracting = false;
 
             function toggleResumeView() {
                 var textView = document.getElementById('resumeTextView');
                 var fileView = document.getElementById('resumeFileView');
                 var toggleBtn = document.getElementById('resumeViewToggle');
-                if (!textView || !fileView || !toggleBtn) return;
+                if (!fileView || !toggleBtn) return;
 
-                var textHidden = (textView.style.display === 'none');
-                if (textHidden) {
+                var showingFile = (fileView.style.display !== 'none');
+
+                if (showingFile) {
+                    // Switch to text view
+                    var docxUrl = fileView.getAttribute('data-docx-url');
+                    if (docxUrl && !_docxTextExtracted && !_docxExtracting) {
+                        // Client-side DOCX extraction via mammoth
+                        _docxExtracting = true;
+                        toggleBtn.textContent = 'Extracting…';
+                        toggleBtn.style.pointerEvents = 'none';
+                        if (!textView) {
+                            textView = document.createElement('div');
+                            textView.id = 'resumeTextView';
+                            textView.className = 'resume-viewer-text resume-document';
+                            textView.style.display = 'none';
+                            fileView.parentNode.insertBefore(textView, fileView.nextSibling);
+                        }
+                        fetch(docxUrl)
+                            .then(function(r) {
+                                if (!r.ok) throw new Error('HTTP ' + r.status);
+                                return r.arrayBuffer();
+                            })
+                            .then(function(buf) {
+                                return mammoth.convertToHtml({ arrayBuffer: buf }, {
+                                    styleMap: [
+                                        "p[style-name='Heading 1'] => h1:fresh",
+                                        "p[style-name='Heading 2'] => h2:fresh",
+                                        "p[style-name='Heading 3'] => h3:fresh",
+                                        "p[style-name='Title']     => h1.doc-title:fresh",
+                                        "b => strong"
+                                    ]
+                                });
+                            })
+                            .then(function(result) {
+                                var html = (result.value || '').trim();
+                                if (!html) {
+                                    textView.innerHTML = '<p style="color:#9ca3af;text-align:center;padding:40px 20px;">Could not extract text from this document.</p>';
+                                } else {
+                                    textView.innerHTML = '<div class="docx-rendered">' + html + '</div>';
+                                }
+                                _docxTextExtracted = true;
+                                _docxExtracting = false;
+                                fileView.style.display = 'none';
+                                textView.style.display = '';
+                                toggleBtn.textContent = 'Show File';
+                                toggleBtn.style.pointerEvents = '';
+                            })
+                            .catch(function(err) {
+                                textView.innerHTML = '<p style="color:#9ca3af;text-align:center;padding:40px 20px;">Could not extract text from this document.</p>';
+                                _docxTextExtracted = true;
+                                _docxExtracting = false;
+                                fileView.style.display = 'none';
+                                textView.style.display = '';
+                                toggleBtn.textContent = 'Show File';
+                                toggleBtn.style.pointerEvents = '';
+                            });
+                        return;
+                    }
+                    // PDF or already-extracted text: just swap views
                     fileView.style.display = 'none';
-                    textView.style.display = '';
+                    if (textView) textView.style.display = '';
                     toggleBtn.textContent = 'Show File';
                 } else {
-                    textView.style.display = 'none';
+                    // Switch back to file view
+                    if (textView) textView.style.display = 'none';
                     fileView.style.display = '';
                     toggleBtn.textContent = 'Show Text';
                 }
@@ -164,6 +493,8 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                         indicator.style.width = activeTab.offsetWidth + 'px';
                     }
                 }, 100);
+
+                // DOCX text is extracted only when user clicks "Show Text" — no auto-extract on load
             });
 
             function generateUploadLink() {
@@ -426,20 +757,26 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                             html += '<th style="padding: 10px 14px; text-align: left; font-weight: 600; color: #374151;">Size</th>';
                             html += '<th style="padding: 10px 14px; text-align: left; font-weight: 600; color: #374151;">Uploaded</th>';
                             html += '<th style="padding: 10px 14px; text-align: left; font-weight: 600; color: #374151;">Status</th>';
-                            html += '<th style="padding: 10px 14px; text-align: center; font-weight: 600; color: #374151;">Action</th>';
+                            html += '<th style="padding: 10px 14px; text-align: center; font-weight: 600; color: #374151;">Actions</th>';
                             html += '</tr>';
 
                             for (var i = 0; i < resp.documents.length; i++) {
                                 var d = resp.documents[i];
                                 var statusColor = d.status === 'approved' ? '#059669' : (d.status === 'rejected' ? '#dc2626' : '#d97706');
                                 var statusBg = d.status === 'approved' ? '#ecfdf5' : (d.status === 'rejected' ? '#fef2f2' : '#fffbeb');
+                                var baseUrl = 'ajax/downloadDocument.php?id=' + d.document_id;
                                 html += '<tr style="border-bottom: 1px solid #f3f4f6;">';
-                                html += '<td style="padding: 10px 14px;"><div style="font-weight: 600; color: #1f2937;">' + escapeHtml(d.original_filename) + '</div></td>';
+                                html += '<td style="padding: 10px 14px;"><div style="font-weight: 600; color: #1f2937; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + escapeHtml(d.original_filename) + '">' + escapeHtml(d.original_filename) + '</div></td>';
                                 html += '<td style="padding: 10px 14px; color: #6b7280;">' + escapeHtml(d.typeLabel) + '</td>';
-                                html += '<td style="padding: 10px 14px; color: #6b7280;">' + d.file_size_kb + ' KB</td>';
-                                html += '<td style="padding: 10px 14px; color: #6b7280;">' + escapeHtml(d.uploadedDateFormatted) + '</td>';
+                                html += '<td style="padding: 10px 14px; color: #6b7280; white-space:nowrap;">' + d.file_size_kb + ' KB</td>';
+                                html += '<td style="padding: 10px 14px; color: #6b7280; white-space:nowrap;">' + escapeHtml(d.uploadedDateFormatted) + '</td>';
                                 html += '<td style="padding: 10px 14px;"><span style="padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; background: ' + statusBg + '; color: ' + statusColor + ';">' + d.status + '</span></td>';
-                                html += '<td style="padding: 10px 14px; text-align: center;"><a href="ajax/downloadDocument.php?id=' + d.document_id + '" target="_blank" style="color: #2563eb; font-weight: 600; text-decoration: none;">View</a></td>';
+                                html += '<td style="padding: 10px 14px; text-align: center; white-space:nowrap;">';
+                                html += '<a href="' + baseUrl + '&mode=view" target="_blank" style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none;margin-right:6px;">';
+                                html += '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>View</a>';
+                                html += '<a href="' + baseUrl + '" target="_blank" style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none;">';
+                                html += '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download</a>';
+                                html += '</td>';
                                 html += '</tr>';
                             }
                             html += '</table>';
@@ -1165,6 +1502,8 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                 padding: 0;
                 gap: 0;
                 position: relative;
+                white-space: nowrap;
+                flex-wrap: nowrap;
             }
             .cand-tab {
                 margin: 0;
@@ -1359,7 +1698,6 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
             }
             .resume-viewer-text {
                 padding: 28px 32px;
-                white-space: pre-wrap;
                 overflow-y: auto;
                 max-height: 70vh;
                 min-height: 400px;
@@ -1376,7 +1714,83 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                 font: normal 13.5px/1.9 'Inter', 'Georgia', serif;
                 color: #111827;
                 letter-spacing: 0.01em;
+                white-space: normal;
             }
+            /* Mammoth-rendered DOCX document styles */
+            .docx-rendered {
+                font-family: 'Georgia', 'Times New Roman', serif;
+                font-size: 13.5px;
+                line-height: 1.75;
+                color: #111827;
+                max-width: 100%;
+            }
+            .docx-rendered h1.doc-title {
+                font-size: 26px;
+                font-weight: 700;
+                text-align: center;
+                margin: 0 0 6px;
+                color: #111827;
+                letter-spacing: 0.01em;
+            }
+            .docx-rendered h1 {
+                font-size: 15px;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.06em;
+                color: #111827;
+                border-bottom: 1.5px solid #111827;
+                padding-bottom: 3px;
+                margin: 20px 0 8px;
+            }
+            .docx-rendered h2 {
+                font-size: 14px;
+                font-weight: 700;
+                color: #1f2937;
+                margin: 16px 0 4px;
+                border-bottom: 1px solid #e5e7eb;
+                padding-bottom: 2px;
+            }
+            .docx-rendered h3 {
+                font-size: 13.5px;
+                font-weight: 600;
+                color: #374151;
+                margin: 12px 0 4px;
+            }
+            .docx-rendered p {
+                margin: 0 0 6px;
+                line-height: 1.75;
+            }
+            .docx-rendered strong, .docx-rendered b {
+                font-weight: 700;
+                color: #111827;
+            }
+            .docx-rendered em, .docx-rendered i {
+                font-style: italic;
+            }
+            .docx-rendered ul, .docx-rendered ol {
+                margin: 4px 0 8px 22px;
+                padding: 0;
+            }
+            .docx-rendered li {
+                margin-bottom: 3px;
+                line-height: 1.7;
+            }
+            .docx-rendered table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 12px 0;
+                font-size: 13px;
+            }
+            .docx-rendered td, .docx-rendered th {
+                padding: 5px 8px;
+                border: 1px solid #e5e7eb;
+                vertical-align: top;
+            }
+            .docx-rendered a {
+                color: #2563eb;
+                text-decoration: underline;
+            }
+
             .resume-viewer iframe,
             .resume-viewer embed {
                 width: 100%;
@@ -1884,23 +2298,25 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                                 <?php echo strtoupper(substr($this->data['firstName'], 0, 1) . substr($this->data['lastName'], 0, 1)); ?>
                             </div>
                             <div class="profile-info">
-                                <h1 class="profile-name"><?php $this->_($this->data['firstName']); ?> <?php $this->_($this->data['middleName']); ?> <?php $this->_($this->data['lastName']); ?></h1>
+                                <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+                                    <h1 class="profile-name" style="margin:0;"><?php $this->_($this->data['firstName']); ?> <?php $this->_($this->data['middleName']); ?> <?php $this->_($this->data['lastName']); ?></h1>
+                                    <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.18);color:#fff;font-size:11px;font-weight:700;letter-spacing:0.06em;padding:3px 10px;border-radius:20px;border:1px solid rgba(255,255,255,0.35);white-space:nowrap;">
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="8" r="5"/><path d="M3 21v-1a9 9 0 0 1 18 0v1"/></svg>
+                                        CAND-<?php echo str_pad((int)$this->candidateID, 4, '0', STR_PAD_LEFT); ?>
+                                    </span>
+                                    <?php if (!empty($this->data['source']) && ($this->data['source'] === 'Career Portal' || $this->data['source'] === 'Online Careers Website')): ?>
+                                    <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(52,211,153,0.25);color:#6ee7b7;font-size:11px;font-weight:700;letter-spacing:0.05em;padding:3px 10px;border-radius:20px;border:1px solid rgba(52,211,153,0.4);white-space:nowrap;">
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8zm-1-5h2v2h-2zm0-8h2v6h-2z"/></svg>
+                                        Applied via Career Portal
+                                    </span>
+                                    <?php endif; ?>
+
+                                </div>
                                 <div class="profile-meta">
                                     <?php if (!empty($this->pipelinesRS)): ?>
                                         <select class="profile-status-dropdown" id="profileStatusDropdown" onchange="updateCandidateStatus(this.value)">
                                             <?php
                                                 $statusOptions = array(
-                                                    100 => 'No Contact',
-                                                    200 => 'Contacted',
-                                                    250 => 'Candidate Responded',
-                                                    300 => 'Qualifying',
-                                                    400 => 'Submitted',
-                                                    500 => 'Interviewing',
-                                                    600 => 'Offered',
-                                                    700 => 'Client Declined',
-                                                    800 => 'Placed',
-                                                    900 => 'Selected',
-                                                    950 => 'Rejected',
                                                     1000 => 'Screen Select',
                                                     1010 => 'Screen Reject',
                                                     1020 => 'L1 Select',
@@ -1908,7 +2324,8 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                                                     1040 => 'L3 Select',
                                                     1050 => 'Offer Release',
                                                     1060 => 'Onboarded',
-                                                    1070 => 'No Show'
+                                                    1070 => 'No Show',
+                                                    1080 => 'Hired'
                                                 );
                                                 foreach ($statusOptions as $statusVal => $statusLabel):
                                             ?>
@@ -2009,6 +2426,33 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                                     Documents
                                 </a>
                             </li>
+                            <li id="portalAppsTab" class="cand-tab">
+                                <a href="javascript:void(0);" onclick="showTab('portalApps');">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg>
+                                    Portal Applications
+                                    <?php $portalCount = count($this->portalPipelinesRS ?? []); if ($portalCount > 0): ?>
+                                    <span style="display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;background:#2563eb;color:#fff;border-radius:8px;font-size:10px;font-weight:700;padding:0 4px;margin-left:4px;"><?php echo $portalCount; ?></span>
+                                    <?php endif; ?>
+                                </a>
+                            </li>
+                            <li id="resumeUploadsTab" class="cand-tab">
+                                <a href="javascript:void(0);" onclick="showTab('resumeUploads');">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                    Resume Uploads
+                                    <?php $uploadCount = count($this->resumeAttachmentsRS ?? []); if ($uploadCount > 0): ?>
+                                    <span style="display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;background:#7c3aed;color:#fff;border-radius:8px;font-size:10px;font-weight:700;padding:0 4px;margin-left:4px;"><?php echo $uploadCount; ?></span>
+                                    <?php endif; ?>
+                                </a>
+                            </li>
+                            <li id="activityTab" class="cand-tab">
+                                <a href="javascript:void(0);" onclick="showTab('activity');">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                                    Activity
+                                    <?php $actCount = count($this->activityRS ?? []); if ($actCount > 0): ?>
+                                    <span style="display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;background:#6b7280;color:#fff;border-radius:8px;font-size:10px;font-weight:700;padding:0 4px;margin-left:4px;"><?php echo $actCount; ?></span>
+                                    <?php endif; ?>
+                                </a>
+                            </li>
                             <div id="tabIndicator" class="tab-indicator"></div>
                         </ul>
                     </div>
@@ -2029,6 +2473,7 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                                     $resumeExt = $hasResumeFile ? strtolower(pathinfo($this->resumeFileName, PATHINFO_EXTENSION)) : '';
                                     $isPDF = ($resumeExt === 'pdf');
                                     $resumeDownloadURL = $hasResumeFile ? str_replace('&amp;', '&', $this->resumeFileURL) : '';
+                                    $resumeViewURL = $hasResumeFile ? $resumeDownloadURL . '&mode=view' : '';
                                 ?>
                                 <?php if ($hasResumeFile || $hasResumeText): ?>
                                     <div class="resume-viewer">
@@ -2037,8 +2482,8 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                                                 <span class="resume-file-name"><?php echo htmlspecialchars($this->resumeFileName); ?></span>
                                                 <div class="resume-actions">
                                                     <a href="<?php echo $resumeDownloadURL; ?>" target="_blank">Download</a>
-                                                    <?php if ($hasResumeText): ?>
-                                                        <a href="#" onclick="toggleResumeView(); return false;" id="resumeViewToggle"><?php echo $isPDF ? 'Show Text' : 'Show File'; ?></a>
+                                                    <?php if ($hasResumeFile && ($hasResumeText || in_array($resumeExt, ['docx', 'doc']))): ?>
+                                                        <a href="#" onclick="toggleResumeView(); return false;" id="resumeViewToggle">Show Text</a>
                                                     <?php endif; ?>
                                                 </div>
                                             </div>
@@ -2047,7 +2492,7 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                                         <?php if ($isPDF): ?>
                                             <!-- PDF: embed with object tag + fallback -->
                                             <div id="resumeFileView">
-                                                <object data="<?php echo $resumeDownloadURL; ?>" type="application/pdf" width="100%" style="min-height:550px; border-radius:0 0 8px 8px;">
+                                                <object data="<?php echo $resumeViewURL; ?>" type="application/pdf" width="100%" style="min-height:550px; border-radius:0 0 8px 8px;">
                                                     <div style="text-align:center; padding:40px 20px;">
                                                         <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="1.5" style="display:block; margin:0 auto 16px;"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
                                                         <p style="font-weight:600; color:#1f2937; margin:0 0 6px;">PDF Resume</p>
@@ -2059,17 +2504,30 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                                             <?php if ($hasResumeText): ?>
                                                 <div class="resume-viewer-text resume-document" id="resumeTextView" style="display:none;"><?php echo nl2br(htmlspecialchars($this->resumeText)); ?></div>
                                             <?php endif; ?>
-                                        <?php elseif ($hasResumeText): ?>
-                                            <!-- Non-PDF: show extracted text as formatted resume document -->
-                                            <div class="resume-viewer-text resume-document" id="resumeTextView"><?php echo nl2br(htmlspecialchars($this->resumeText)); ?></div>
-                                        <?php elseif ($hasResumeFile): ?>
-                                            <!-- File exists but no text extracted -->
-                                            <div style="text-align:center; padding:50px 20px;">
-                                                <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5" style="display:block; margin:0 auto 16px;"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
-                                                <p style="font-weight:600; color:#374151; margin:0 0 6px;"><?php echo htmlspecialchars($this->resumeFileName); ?></p>
-                                                <p style="color:#6b7280; font-size:13px; margin:0 0 16px;">Preview not available for this file type</p>
-                                                <a href="<?php echo $resumeDownloadURL; ?>" target="_blank" style="display:inline-block; padding:10px 28px; background:#2563eb; color:#fff; border-radius:8px; text-decoration:none; font-weight:600;">Download File</a>
+                                        <?php else: ?>
+                                            <!-- Non-PDF (DOCX, DOC, etc): show download card first, text toggled in -->
+                                            <?php if ($hasResumeFile): ?>
+                                            <div id="resumeFileView" <?php if (in_array($resumeExt, ['docx','doc'])): ?>data-docx-url="<?php echo htmlspecialchars($resumeViewURL); ?>"<?php endif; ?>>
+                                                <div style="text-align:center; padding:40px 20px;">
+                                                    <?php
+                                                        $docColor = ($resumeExt === 'docx' || $resumeExt === 'doc') ? '#2563eb' : '#6b7280';
+                                                        $docLabel = strtoupper($resumeExt ?: 'FILE') . ' Resume';
+                                                    ?>
+                                                    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="<?php echo $docColor; ?>" stroke-width="1.5" style="display:block; margin:0 auto 16px;"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>
+                                                    <p style="font-weight:600; color:#1f2937; margin:0 0 6px;"><?php echo htmlspecialchars($docLabel); ?></p>
+                                                    <p style="color:#6b7280; font-size:13px; margin:0 0 16px;"><?php echo htmlspecialchars($this->resumeFileName); ?></p>
+                                                    <a href="<?php echo $resumeDownloadURL; ?>" target="_blank" style="display:inline-block; padding:10px 28px; background:<?php echo $docColor; ?>; color:#fff; border-radius:8px; text-decoration:none; font-weight:600; font-size:14px;">Download <?php echo strtoupper($resumeExt ?: 'File'); ?></a>
+                                                </div>
                                             </div>
+                                            <?php endif; ?>
+                                            <?php if ($hasResumeText): ?>
+                                                <div class="resume-viewer-text resume-document" id="resumeTextView" style="display:none;"><?php echo nl2br(htmlspecialchars($this->resumeText)); ?></div>
+                                            <?php elseif (in_array($resumeExt, ['docx','doc'])): ?>
+                                                <!-- Empty container — mammoth will fill this when user clicks Show Text -->
+                                                <div class="resume-viewer-text resume-document" id="resumeTextView" style="display:none;"></div>
+                                            <?php elseif (!$hasResumeFile): ?>
+                                                <div style="text-align:center; padding:50px 20px; color:#9ca3af; font-size:14px;">No resume content available.</div>
+                                            <?php endif; ?>
                                         <?php endif; ?>
                                     </div>
                                 <?php else: ?>
@@ -2189,8 +2647,41 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                                         <h4 style="margin-top: 0; margin-bottom: 15px; font-weight: 700; font-family: 'Inter', system-ui, sans-serif;">Add Feedback</h4>
                                         <form id="feedbackForm">
                                             <div class="form-group">
-                                                <label>Rating (1-5)</label>
-                                                <select name="rating">
+                                                <label>Interview Stage</label>
+                                                <select name="stage">
+                                                    <option value="">Select Stage</option>
+                                                    <option value="L1">L1</option>
+                                                    <option value="L2">L2</option>
+                                                    <option value="L3">L3</option>
+                                                    <option value="HR">HR</option>
+                                                    <option value="Final">Final</option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Overall Rating (1-5)</label>
+                                                <select name="overallRating">
+                                                    <option value="">Select Rating</option>
+                                                    <option value="1">1 - Poor</option>
+                                                    <option value="2">2 - Below Average</option>
+                                                    <option value="3">3 - Average</option>
+                                                    <option value="4">4 - Good</option>
+                                                    <option value="5">5 - Excellent</option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Technical Rating (1-5)</label>
+                                                <select name="technicalRating">
+                                                    <option value="">Select Rating</option>
+                                                    <option value="1">1</option>
+                                                    <option value="2">2</option>
+                                                    <option value="3">3</option>
+                                                    <option value="4">4</option>
+                                                    <option value="5">5</option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Communication Rating (1-5)</label>
+                                                <select name="communicationRating">
                                                     <option value="">Select Rating</option>
                                                     <option value="1">1</option>
                                                     <option value="2">2</option>
@@ -2201,42 +2692,34 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                                             </div>
                                             <div class="form-group">
                                                 <label>Interview Notes</label>
-                                                <textarea name="interviewNotes" placeholder="Enter interview notes..."></textarea>
+                                                <textarea name="interviewNotes" placeholder="Enter interview notes, strengths, areas of improvement..."></textarea>
                                             </div>
                                             <div class="form-group">
-                                                <label>
-                                                    <input type="checkbox" name="recommendHire" value="1" /> Recommend: Hire
-                                                </label>
+                                                <label>Recommendation</label>
+                                                <select name="recommendation">
+                                                    <option value="">Select Recommendation</option>
+                                                    <option value="strong_hire">Strong Hire</option>
+                                                    <option value="hire">Hire</option>
+                                                    <option value="maybe">Maybe</option>
+                                                    <option value="no_hire">No Hire</option>
+                                                    <option value="strong_no_hire">Strong No Hire</option>
+                                                </select>
                                             </div>
-                                            <button type="button" class="btn-primary" onclick="saveFeedback();">Save Feedback</button>
+                                            <button type="button" class="btn-primary" onclick="saveFeedback();">Submit Feedback</button>
                                         </form>
                                     </div>
 
-                                    <!-- Right Column: Displayed Feedback -->
+                                    <!-- Right Column: All Feedback from All Interviewers -->
                                     <div class="feedback-display-column">
-                                        <h4 style="margin-top: 0; margin-bottom: 15px; font-weight: 700; font-family: 'Inter', system-ui, sans-serif;">Previous Feedback</h4>
-                                        <?php if (!empty($this->feedbackRS)): ?>
-                                            <?php $latestFeedback = $this->feedbackRS[0]; ?>
-                                            <div class="form-group">
-                                                <label>
-                                                    <input type="checkbox" checked disabled /> Recommend: Hire
-                                                </label>
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Rating (1-5)</label>
-                                                <div style="padding: 10px; background: #f8fafc; border-radius: 8px; font-weight: 600; color: #2563eb;">4</div>
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Interview Notes</label>
-                                                <div style="padding: 10px; background: #f8fafc; border-radius: 8px; min-height: 100px; line-height: 1.6; font-size: 13px;">
-                                                    <?php echo htmlspecialchars(substr($latestFeedback['notes'], 0, 200)); ?>...
-                                                </div>
-                                            </div>
-                                        <?php else: ?>
-                                            <p style="color: #9ca3af; text-align: center; padding: 40px; font-size: 13px;">No previous feedback available.</p>
-                                        <?php endif; ?>
+                                        <h4 style="margin-top: 0; margin-bottom: 15px; font-weight: 700; font-family: 'Inter', system-ui, sans-serif;">All Interview Feedback</h4>
+                                        <div id="feedbackListContainer">
+                                            <p style="color: #9ca3af; text-align: center; padding: 40px; font-size: 13px;">Loading feedback...</p>
+                                        </div>
                                     </div>
                                 </div>
+                                <script>
+                                    document.addEventListener('DOMContentLoaded', function() { loadFeedbackList(); });
+                                </script>
                             </div>
                         </div>
 
@@ -2299,36 +2782,132 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                                     <div style="margin-bottom: 14px;">
                                         <label for="candidateEmailBody" style="display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 5px;">Body</label>
                                         <textarea id="candidateEmailBody" name="emailBody" rows="8" placeholder="Compose your email or select a template above..." style="width: 100%; padding: 10px 14px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; resize: vertical; box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif;" required></textarea>
+                                        <div id="emailVarHints" style="margin-top: 6px; display: flex; flex-wrap: wrap; align-items: center; gap: 2px; min-height: 24px;"></div>
+                                        <div style="margin-top: 6px; font-size: 11px; color: #9ca3af;">
+                                            Available variables: <code style="background:#f3f4f6;padding:1px 4px;border-radius:3px;">%CANDFIRSTNAME%</code> <code style="background:#f3f4f6;padding:1px 4px;border-radius:3px;">%CANDFULLNAME%</code> <code style="background:#f3f4f6;padding:1px 4px;border-radius:3px;">%CANDOWNER%</code> <code style="background:#f3f4f6;padding:1px 4px;border-radius:3px;">%DATETIME%</code>
+                                        </div>
                                     </div>
 
-                                    <button type="submit" onclick="return validateCandidateEmail();" style="width: 100%; padding: 12px 16px; background: #2563eb; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: 'Inter', system-ui, sans-serif;">
-                                        <span style="display: inline-flex; align-items: center; gap: 8px; justify-content: center;">
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" x2="11" y1="2" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                                            Send Email
-                                        </span>
-                                    </button>
+                                    <div style="display: flex; gap: 10px;">
+                                        <button type="button" onclick="previewCandidateEmail(); return false;" style="flex: 1; padding: 12px 16px; background: #f1f5f9; color: #374151; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: 'Inter', system-ui, sans-serif;">
+                                            <span style="display: inline-flex; align-items: center; gap: 8px; justify-content: center;">
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                                Preview
+                                            </span>
+                                        </button>
+                                        <button type="submit" onclick="return validateCandidateEmail();" style="flex: 2; padding: 12px 16px; background: #2563eb; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: 'Inter', system-ui, sans-serif;">
+                                            <span style="display: inline-flex; align-items: center; gap: 8px; justify-content: center;">
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" x2="11" y1="2" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                                                Send Email
+                                            </span>
+                                        </button>
+                                    </div>
                                 </form>
+
+                                <!-- Email Preview Modal -->
+                                <div id="emailPreviewModal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(15,23,42,0.55); align-items:center; justify-content:center;">
+                                    <div style="background:#fff; border-radius:16px; width:680px; max-width:95vw; max-height:90vh; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,0.25);">
+                                        <div style="display:flex; align-items:center; justify-content:space-between; padding:18px 24px; border-bottom:1px solid #e5e7eb; flex-shrink:0;">
+                                            <span style="font-size:16px; font-weight:700; color:#1e293b; font-family:'Inter',system-ui,sans-serif;">Email Preview</span>
+                                            <button onclick="closeEmailPreview();" style="background:none; border:none; cursor:pointer; color:#6b7280; padding:4px;">
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                            </button>
+                                        </div>
+                                        <div style="flex:1; overflow-y:auto; padding:0; background:#f1f5f9;">
+                                            <iframe id="emailPreviewFrame" style="width:100%; min-height:560px; border:none; display:block;" srcdoc=""></iframe>
+                                        </div>
+                                        <div style="padding:16px 24px; border-top:1px solid #e5e7eb; display:flex; justify-content:flex-end; gap:10px; flex-shrink:0;">
+                                            <button onclick="closeEmailPreview();" style="padding:10px 20px; background:#f1f5f9; color:#374151; border:1px solid #d1d5db; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; font-family:'Inter',system-ui,sans-serif;">Close</button>
+                                            <button onclick="closeEmailPreview(); document.getElementById('candidateEmailForm').submit();" style="padding:10px 20px; background:#2563eb; color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; font-family:'Inter',system-ui,sans-serif;">
+                                                Send Now
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- Right Column: Email History -->
                             <div class="email-detail-column">
-                                <h4 style="margin-top: 0; margin-bottom: 15px; font-weight: 700; font-family: 'Inter', system-ui, sans-serif;">Email History</h4>
-                                <?php if (!empty($this->emailRS)): ?>
-                                    <?php foreach ($this->emailRS as $index => $email): ?>
-                                        <div class="email-list-item" style="margin-bottom: 10px; padding: 14px; border: 1px solid #e5e7eb; border-radius: 10px; background: #fff;">
-                                            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                                                <span style="font-weight: 600; font-size: 12px; color: #1f2937;"><?php echo htmlspecialchars($email['enteredByAbbrName']); ?></span>
-                                                <span style="font-size: 11px; color: #9ca3af;"><?php $this->_($email['dateCreated']); ?></span>
+                                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                                    <h4 style="margin:0;font-size:14px;font-weight:700;color:#111827;">
+                                        Email History
+                                        <?php $ehCount = !empty($this->emailHistoryRS) ? count($this->emailHistoryRS) : 0; ?>
+                                        <?php if ($ehCount > 0): ?>
+                                        <span style="margin-left:6px;background:#eff6ff;color:#2563eb;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;"><?php echo $ehCount; ?></span>
+                                        <?php endif; ?>
+                                    </h4>
+                                </div>
+
+                                <?php if (!empty($this->emailHistoryRS)): ?>
+                                <!-- Email thread list -->
+                                <div style="display:flex;flex-direction:column;gap:8px;">
+                                    <?php foreach ($this->emailHistoryRS as $i => $eh): ?>
+                                    <?php
+                                        $subj    = !empty($eh['subject']) ? $eh['subject'] : '(No subject)';
+                                        $preview = !empty($eh['text'])    ? trim(preg_replace('/\s+/', ' ', strip_tags($eh['text']))) : '';
+                                        $preview = strlen($preview) > 100 ? substr($preview, 0, 100) . '…' : $preview;
+                                        $dateStr = !empty($eh['date'])    ? date('M j, Y · g:i A', strtotime($eh['date'])) : '';
+                                        $from    = !empty($eh['from_address']) ? $eh['from_address'] : 'System';
+                                        $to      = !empty($eh['recipients'])   ? $eh['recipients']   : '';
+                                        $fullMsg = !empty($eh['text'])    ? htmlspecialchars(strip_tags($eh['text'])) : '';
+                                        $ehId    = 'eh_' . $i;
+                                    ?>
+                                    <div style="border:1.5px solid #e5e7eb;border-radius:10px;background:#fff;overflow:hidden;">
+                                        <!-- Collapsed header -->
+                                        <div onclick="toggleEmail('<?php echo $ehId; ?>')"
+                                             style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;transition:background .12s;"
+                                             onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='#fff'">
+                                            <!-- Avatar -->
+                                            <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#3b82f6);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                                             </div>
-                                            <div style="font-size: 13px; font-weight: 500; color: #374151; margin-bottom: 2px;"><?php echo !empty($email['regarding']) ? htmlspecialchars($email['regarding']) : 'Email'; ?></div>
-                                            <div style="font-size: 12px; color: #6b7280; line-height: 1.5;"><?php echo htmlspecialchars(substr($email['notes'], 0, 120)); ?></div>
+                                            <!-- Subject + preview -->
+                                            <div style="flex:1;min-width:0;">
+                                                <div style="font-size:13px;font-weight:700;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><?php echo htmlspecialchars($subj); ?></div>
+                                                <div style="font-size:11px;color:#6b7280;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><?php echo htmlspecialchars($preview); ?></div>
+                                            </div>
+                                            <!-- Date + chevron -->
+                                            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+                                                <span style="font-size:11px;color:#9ca3af;white-space:nowrap;"><?php echo $dateStr; ?></span>
+                                                <svg id="chevron_<?php echo $ehId; ?>" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2.5" stroke-linecap="round" style="transition:transform .2s;"><polyline points="6 9 12 15 18 9"/></svg>
+                                            </div>
                                         </div>
+                                        <!-- Expanded body -->
+                                        <div id="<?php echo $ehId; ?>" style="display:none;border-top:1px solid #f3f4f6;">
+                                            <!-- Meta row -->
+                                            <div style="background:#f9fafb;padding:10px 14px;font-size:11px;color:#6b7280;border-bottom:1px solid #f3f4f6;">
+                                                <div><span style="font-weight:600;color:#374151;">From:</span> <?php echo htmlspecialchars($from); ?></div>
+                                                <div style="margin-top:2px;"><span style="font-weight:600;color:#374151;">To:</span> <?php echo htmlspecialchars($to); ?></div>
+                                                <div style="margin-top:2px;"><span style="font-weight:600;color:#374151;">Sent:</span> <?php echo $dateStr; ?></div>
+                                            </div>
+                                            <!-- Body -->
+                                            <div style="padding:14px;font-size:13px;color:#374151;line-height:1.7;white-space:pre-wrap;max-height:260px;overflow-y:auto;"><?php echo $fullMsg; ?></div>
+                                        </div>
+                                    </div>
                                     <?php endforeach; ?>
+                                </div>
+
+                                <?php elseif (!empty($this->emailRS)): ?>
+                                <!-- Fallback: activity-based email log -->
+                                <div style="display:flex;flex-direction:column;gap:8px;">
+                                    <?php foreach ($this->emailRS as $email): ?>
+                                    <div style="padding:12px 14px;border:1.5px solid #e5e7eb;border-radius:10px;background:#fff;">
+                                        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                                            <span style="font-size:12px;font-weight:700;color:#111827;"><?php echo htmlspecialchars($email['enteredByAbbrName']); ?></span>
+                                            <span style="font-size:11px;color:#9ca3af;"><?php $this->_($email['dateCreated']); ?></span>
+                                        </div>
+                                        <div style="font-size:13px;font-weight:600;color:#374151;margin-bottom:2px;"><?php echo !empty($email['regarding']) ? htmlspecialchars($email['regarding']) : 'Email'; ?></div>
+                                        <div style="font-size:12px;color:#6b7280;line-height:1.5;"><?php echo htmlspecialchars(substr($email['notes'], 0, 140)); ?></div>
+                                    </div>
+                                    <?php endforeach; ?>
+                                </div>
+
                                 <?php else: ?>
-                                    <p style="color: #9ca3af; text-align: center; padding: 40px 20px; font-size: 13px;">
-                                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5" style="display: block; margin: 0 auto 10px;"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-                                        No emails sent yet.
-                                    </p>
+                                <div style="text-align:center;padding:44px 20px;color:#9ca3af;">
+                                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.2" style="display:block;margin:0 auto 12px;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                                    <div style="font-size:13px;font-weight:600;color:#6b7280;margin-bottom:4px;">No emails sent yet</div>
+                                    <div style="font-size:12px;">Emails you send to this candidate will appear here.</div>
+                                </div>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -2366,135 +2945,268 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                             </div>
                         </div>
 
+                        <!-- ===== PORTAL APPLICATIONS TAB ===== -->
+                        <div id="portalAppsTabContent" style="display:none;flex-direction:column;width:100%;padding:24px;">
+                            <?php if (empty($this->portalPipelinesRS)): ?>
+                            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;text-align:center;color:#9ca3af;">
+                                <div style="width:64px;height:64px;background:linear-gradient(135deg,#eff6ff,#dbeafe);border-radius:16px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;">
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg>
+                                </div>
+                                <div style="font-size:15px;font-weight:700;color:#374151;margin-bottom:6px;">No Portal Applications</div>
+                                <div style="font-size:13px;max-width:320px;line-height:1.6;">This candidate has not submitted any applications through the career portal.</div>
+                            </div>
+                            <?php else: ?>
+                            <div style="display:flex;flex-direction:column;gap:12px;">
+                                <?php foreach ($this->portalPipelinesRS as $pa): ?>
+                                <?php
+                                    $paStatusID = $pa['statusID'] ?? 0;
+                                    $paStatusColors = [
+                                        100=>'#dbeafe:#2563eb', 200=>'#dcfce7:#16a34a', 300=>'#fef9c3:#d97706',
+                                        400=>'#ffedd5:#ea580c', 500=>'#dcfce7:#15803d', 1000=>'#dbeafe:#2563eb', 1010=>'#fee2e2:#dc2626'
+                                    ];
+                                    $paSC = isset($paStatusColors[$paStatusID]) ? explode(':', $paStatusColors[$paStatusID]) : ['#f3f4f6','#6b7280'];
+                                    $paLocation = trim(($pa['jobCity'] ?? '') . ($pa['jobState'] ? ', '.$pa['jobState'] : ''));
+                                ?>
+                                <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:18px 20px;display:flex;align-items:flex-start;gap:16px;transition:box-shadow .15s;"
+                                     onmouseover="this.style.boxShadow='0 4px 14px rgba(37,99,235,.08)';" onmouseout="this.style.boxShadow='';">
+                                    <div style="width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#eff6ff,#dbeafe);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg>
+                                    </div>
+                                    <div style="flex:1;min-width:0;">
+                                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+                                            <a href="<?php echo CATSUtility::getIndexName(); ?>?m=joborders&amp;a=show&amp;jobOrderID=<?php echo (int)$pa['jobOrderID']; ?>"
+                                               style="font-size:15px;font-weight:700;color:#111827;text-decoration:none;"><?php echo htmlspecialchars($pa['title']); ?></a>
+                                            <?php if (!empty($pa['clientJobID'])): ?>
+                                            <span style="font-size:11px;color:#6b7280;font-family:monospace;background:#f3f4f6;padding:2px 6px;border-radius:4px;">ID: <?php echo htmlspecialchars($pa['clientJobID']); ?></span>
+                                            <?php endif; ?>
+                                            <span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;background:#dbeafe;color:#1d4ed8;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.03em;">
+                                                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg>
+                                                Portal
+                                            </span>
+                                        </div>
+                                        <div style="display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:#6b7280;margin-bottom:8px;">
+                                            <?php if (!empty($pa['companyName'])): ?>
+                                            <span style="display:flex;align-items:center;gap:4px;">
+                                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+                                                <?php echo htmlspecialchars($pa['companyName']); ?>
+                                            </span>
+                                            <?php endif; ?>
+                                            <?php if (!empty($pa['department'])): ?>
+                                            <span style="display:flex;align-items:center;gap:4px;">
+                                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                                                <?php echo htmlspecialchars($pa['department']); ?>
+                                            </span>
+                                            <?php endif; ?>
+                                            <?php if (!empty($paLocation)): ?>
+                                            <span style="display:flex;align-items:center;gap:4px;">
+                                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                                <?php echo htmlspecialchars($paLocation); ?>
+                                            </span>
+                                            <?php endif; ?>
+                                            <?php if (!empty($pa['applicationDate'])): ?>
+                                            <span style="display:flex;align-items:center;gap:4px;">
+                                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                                Applied: <?php echo htmlspecialchars($pa['applicationDate']); ?>
+                                            </span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                    <div style="flex-shrink:0;">
+                                        <?php if ($this->getUserAccessLevel('pipelines.addActivityChangeStatus') >= ACCESS_LEVEL_EDIT): ?>
+                                        <select onchange="updatePipelineStatus(<?php echo (int)$pa['candidateJobOrderID']; ?>, <?php echo (int)$this->candidateID; ?>, <?php echo (int)$pa['jobOrderID']; ?>, this.value, '<?php echo $this->sessionCookie; ?>');"
+                                                style="font-size:11px;font-weight:600;padding:5px 10px;border-radius:8px;border:1.5px solid <?php echo $paSC[0]; ?>;background:<?php echo $paSC[0]; ?>;color:<?php echo $paSC[1]; ?>;cursor:pointer;outline:none;">
+                                            <?php foreach ($this->statusesRS as $st): ?>
+                                            <option value="<?php echo $st['statusID']; ?>" <?php if ($st['statusID'] == $pa['statusID']): ?>selected<?php endif; ?>><?php echo htmlspecialchars($st['status']); ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                        <?php else: ?>
+                                        <span style="font-size:11px;font-weight:600;padding:5px 10px;border-radius:8px;background:<?php echo $paSC[0]; ?>;color:<?php echo $paSC[1]; ?>;"><?php echo htmlspecialchars($pa['status']); ?></span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+                            <?php endif; ?>
+                        </div>
+
+                        <!-- ===== RESUME UPLOADS TAB ===== -->
+                        <div id="resumeUploadsTabContent" style="display:none;flex-direction:column;width:100%;padding:24px;">
+                            <?php
+                            $ruStatusColors = [
+                                100=>'#dbeafe:#2563eb', 200=>'#dcfce7:#16a34a', 300=>'#fef9c3:#d97706',
+                                400=>'#ffedd5:#ea580c', 500=>'#dcfce7:#15803d', 1000=>'#dbeafe:#2563eb', 1010=>'#fee2e2:#dc2626'
+                            ];
+                            ?>
+                            <?php if (empty($this->resumeAttachmentsRS)): ?>
+                            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;text-align:center;color:#9ca3af;">
+                                <div style="width:64px;height:64px;background:linear-gradient(135deg,#f5f3ff,#ede9fe);border-radius:16px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;">
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                </div>
+                                <div style="font-size:15px;font-weight:700;color:#374151;margin-bottom:6px;">No Resume Uploads</div>
+                                <div style="font-size:13px;max-width:320px;line-height:1.6;">No resumes have been uploaded for this candidate yet.</div>
+                            </div>
+                            <?php else: ?>
+                            <?php
+                                // Build a map of jobOrderID → pipeline info for linking uploads to jobs
+                                $joMap = [];
+                                foreach (($this->manualPipelinesRS ?? []) as $mp) {
+                                    $joMap[$mp['jobOrderID']] = $mp;
+                                }
+                            ?>
+                            <div style="display:flex;flex-direction:column;gap:12px;">
+                                <?php foreach ($this->resumeAttachmentsRS as $ra): ?>
+                                <?php
+                                    $raExt  = strtolower(pathinfo($ra['originalFilename'], PATHINFO_EXTENSION));
+                                    $extColors = ['pdf'=>'#dc2626','doc'=>'#2563eb','docx'=>'#2563eb','txt'=>'#6b7280','rtf'=>'#059669'];
+                                    $extColor = $extColors[$raExt] ?? '#6b7280';
+                                    $raUrl = str_replace('&amp;','&', $ra['retrievalURL']);
+                                    $raSizeKB = !empty($ra['fileSizeKB']) ? $ra['fileSizeKB'] . ' KB' : '';
+                                ?>
+                                <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:18px 20px;display:flex;align-items:flex-start;gap:16px;transition:box-shadow .15s;"
+                                     onmouseover="this.style.boxShadow='0 4px 14px rgba(124,58,237,.07)';" onmouseout="this.style.boxShadow='';">
+                                    <!-- File type icon -->
+                                    <div style="width:44px;height:44px;border-radius:10px;background:#f5f3ff;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;border:1px solid #ede9fe;">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="<?php echo $extColor; ?>" stroke-width="2"><path d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                        <span style="font-size:8px;font-weight:800;color:<?php echo $extColor; ?>;letter-spacing:.05em;margin-top:2px;"><?php echo strtoupper($raExt); ?></span>
+                                    </div>
+                                    <div style="flex:1;min-width:0;">
+                                        <div style="font-size:14px;font-weight:700;color:#111827;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                                            <?php echo htmlspecialchars($ra['originalFilename']); ?>
+                                        </div>
+                                        <div style="display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:#6b7280;margin-bottom:8px;">
+                                            <?php if (!empty($ra['dateCreated'])): ?>
+                                            <span style="display:flex;align-items:center;gap:4px;">
+                                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                                Uploaded: <?php echo htmlspecialchars($ra['dateCreated']); ?>
+                                            </span>
+                                            <?php endif; ?>
+                                            <?php if ($raSizeKB): ?>
+                                            <span style="display:flex;align-items:center;gap:4px;">
+                                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+                                                <?php echo htmlspecialchars($raSizeKB); ?>
+                                            </span>
+                                            <?php endif; ?>
+                                            <?php
+                                                // Show recruiter-added job orders as context
+                                                $linkedJobs = [];
+                                                foreach ($this->manualPipelinesRS as $mp) {
+                                                    $linkedJobs[] = '<a href="' . CATSUtility::getIndexName() . '?m=joborders&amp;a=show&amp;jobOrderID=' . (int)$mp['jobOrderID'] . '" style="color:#7c3aed;text-decoration:none;">' . htmlspecialchars($mp['title']) . '</a>';
+                                                }
+                                                if (!empty($linkedJobs)):
+                                            ?>
+                                            <span style="display:flex;align-items:center;gap:4px;">
+                                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+                                                Against: <?php echo implode(', ', $linkedJobs); ?>
+                                            </span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                    <div style="display:flex;gap:6px;flex-shrink:0;">
+                                        <a href="<?php echo htmlspecialchars($raUrl); ?>" target="_blank"
+                                           style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;border-radius:7px;font-size:12px;font-weight:600;text-decoration:none;transition:all .15s;"
+                                           onmouseover="this.style.opacity='.85';" onmouseout="this.style.opacity='1';">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                            Download
+                                        </a>
+                                    </div>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+                            <!-- Also show manually-added pipeline entries below resumes -->
+                            <?php if (!empty($this->manualPipelinesRS)): ?>
+                            <div style="margin-top:28px;">
+                                <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #f3f4f6;">
+                                    Manually Added to Job Orders (<?php echo count($this->manualPipelinesRS); ?>)
+                                </div>
+                                <div style="display:flex;flex-direction:column;gap:8px;">
+                                <?php foreach ($this->manualPipelinesRS as $mp): ?>
+                                <?php
+                                    $mpStatusID = $mp['statusID'] ?? 0;
+                                    $mpSC = isset($ruStatusColors[$mpStatusID]) ? explode(':', $ruStatusColors[$mpStatusID]) : ['#f3f4f6','#6b7280'];
+                                    $mpLocation = trim(($mp['jobCity'] ?? '') . ($mp['jobState'] ? ', '.$mp['jobState'] : ''));
+                                ?>
+                                <div style="background:#fafafa;border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                                    <div style="min-width:0;">
+                                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                                            <a href="<?php echo CATSUtility::getIndexName(); ?>?m=joborders&amp;a=show&amp;jobOrderID=<?php echo (int)$mp['jobOrderID']; ?>"
+                                               style="font-size:13px;font-weight:600;color:#111827;text-decoration:none;"><?php echo htmlspecialchars($mp['title']); ?></a>
+                                            <?php if (!empty($mp['clientJobID'])): ?><span style="font-size:11px;color:#9ca3af;font-family:monospace;">#<?php echo htmlspecialchars($mp['clientJobID']); ?></span><?php endif; ?>
+                                        </div>
+                                        <div style="font-size:11px;color:#9ca3af;display:flex;gap:10px;flex-wrap:wrap;">
+                                            <?php if (!empty($mp['companyName'])): ?><span><?php echo htmlspecialchars($mp['companyName']); ?></span><?php endif; ?>
+                                            <?php if ($mpLocation): ?><span><?php echo htmlspecialchars($mpLocation); ?></span><?php endif; ?>
+                                            <?php if (!empty($mp['addedByAbbrName'])): ?><span>Added by: <?php echo htmlspecialchars($mp['addedByAbbrName']); ?></span><?php endif; ?>
+                                            <?php if (!empty($mp['dateCreated'])): ?><span><?php echo htmlspecialchars($mp['dateCreated']); ?></span><?php endif; ?>
+                                        </div>
+                                    </div>
+                                    <span style="font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;white-space:nowrap;background:<?php echo $mpSC[0]; ?>;color:<?php echo $mpSC[1]; ?>;"><?php echo htmlspecialchars($mp['status']); ?></span>
+                                </div>
+                                <?php endforeach; ?>
+                                </div>
+                            </div>
+                            <?php endif; ?>
+                            <?php endif; ?>
+                        </div>
+
+                        <!-- ===== ACTIVITY TAB ===== -->
+                        <div id="activityTabContent" style="display:none;flex-direction:column;width:100%;padding:24px;">
+                            <?php if (empty($this->activityRS)): ?>
+                            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;text-align:center;color:#9ca3af;">
+                                <div style="width:64px;height:64px;background:#f9fafb;border-radius:16px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;border:2px dashed #e5e7eb;">
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                                </div>
+                                <div style="font-size:15px;font-weight:700;color:#374151;margin-bottom:6px;">No Activity Yet</div>
+                                <div style="font-size:13px;line-height:1.6;">Activity will appear here as recruiters interact with this candidate.</div>
+                            </div>
+                            <?php else: ?>
+                            <div style="position:relative;">
+                                <!-- Timeline line -->
+                                <div style="position:absolute;left:20px;top:0;bottom:0;width:2px;background:linear-gradient(to bottom,#e5e7eb,transparent);"></div>
+                                <div style="display:flex;flex-direction:column;gap:0;">
+                                <?php foreach ($this->activityRS as $act): ?>
+                                <?php
+                                    $actType = $act['typeDescription'] ?? 'Activity';
+                                    $actNote = $act['notes'] ?? '';
+                                    if ($actNote === '(No Notes)') $actNote = '';
+                                    $actIconColors = [
+                                        'Call'=>['#dcfce7','#16a34a'], 'Email'=>['#dbeafe','#2563eb'],
+                                        'Meeting'=>['#fef9c3','#d97706'], 'Other'=>['#f3f4f6','#6b7280'],
+                                        'Call (Talked)'=>['#dcfce7','#16a34a'], 'Call (LVM)'=>['#ede9fe','#7c3aed'],
+                                        'Call (Missed)'=>['#fee2e2','#dc2626']
+                                    ];
+                                    $actIC = $actIconColors[$actType] ?? ['#f3f4f6','#6b7280'];
+                                ?>
+                                <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 0 14px 0;margin-left:8px;">
+                                    <!-- Timeline dot -->
+                                    <div style="width:24px;height:24px;border-radius:50%;background:<?php echo $actIC[0]; ?>;border:2px solid <?php echo $actIC[1]; ?>;display:flex;align-items:center;justify-content:center;flex-shrink:0;z-index:1;margin-top:2px;">
+                                        <div style="width:7px;height:7px;border-radius:50%;background:<?php echo $actIC[1]; ?>;"></div>
+                                    </div>
+                                    <div style="flex:1;min-width:0;background:#fff;border:1px solid #f3f4f6;border-radius:10px;padding:12px 14px;">
+                                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:<?php echo $actNote ? '8' : '0'; ?>px;">
+                                            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                                                <span style="font-size:12px;font-weight:700;padding:2px 8px;border-radius:4px;background:<?php echo $actIC[0]; ?>;color:<?php echo $actIC[1]; ?>;"><?php echo htmlspecialchars($actType); ?></span>
+                                                <?php if (!empty($act['regarding']) && $act['regarding'] !== 'General'): ?>
+                                                <span style="font-size:12px;color:#374151;font-weight:500;"><?php echo htmlspecialchars($act['regarding']); ?></span>
+                                                <?php endif; ?>
+                                            </div>
+                                            <div style="font-size:11px;color:#9ca3af;display:flex;align-items:center;gap:8px;white-space:nowrap;">
+                                                <?php if (!empty($act['enteredByAbbrName'])): ?><span><?php echo htmlspecialchars($act['enteredByAbbrName']); ?></span><?php endif; ?>
+                                                <?php if (!empty($act['dateCreated'])): ?><span><?php echo htmlspecialchars($act['dateCreated']); ?></span><?php endif; ?>
+                                            </div>
+                                        </div>
+                                        <?php if ($actNote): ?>
+                                        <div style="font-size:13px;color:#374151;line-height:1.6;padding-top:6px;border-top:1px solid #f3f4f6;"><?php echo nl2br(htmlspecialchars($actNote)); ?></div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                <?php endforeach; ?>
+                                </div>
+                            </div>
+                            <?php endif; ?>
+                        </div>
+
                     </div>
                 </div>
-            </div>
-
-
-            <!-- ==================== JOB ORDERS SECTION ==================== -->
-            <div class="section-card anim-fade-up-4">
-                <div class="section-card-header">
-                    <span class="section-card-title">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-                        Job Orders for Candidate
-                    </span>
-                </div>
-            <table class="sortablepair">
-                <tr>
-                    <th></th>
-                    <th align="left">Match</th>
-                    <th align="left">Ref. Number</th>
-                    <th align="left">Title</th>
-                    <th align="left">Company</th>
-                    <th align="left">Owner</th>
-                    <th align="left">Added</th>
-                    <th align="left">Entered By</th>
-                    <th align="left">Status</th>
-<?php if (!$this->isPopup): ?>
-                    <th align="center">Action</th>
-<?php endif; ?>
-                </tr>
-
-                <?php foreach ($this->pipelinesRS as $rowNumber => $pipelinesData): ?>
-                    <tr class="<?php TemplateUtility::printAlternatingRowClass($rowNumber); ?>" id="pipelineRow<?php echo($rowNumber); ?>">
-                        <td valign="top">
-                            <span id="pipelineOpen<?php echo($rowNumber); ?>">
-                                <a href="javascript:void(0);" onclick="document.getElementById('pipelineDetails<?php echo($rowNumber); ?>').style.display=''; document.getElementById('pipelineClose<?php echo($rowNumber); ?>').style.display = ''; document.getElementById('pipelineOpen<?php echo($rowNumber); ?>').style.display = 'none'; PipelineDetails_populate(<?php echo($pipelinesData['candidateJobOrderID']); ?>, 'pipelineInner<?php echo($rowNumber); ?>', '<?php echo($this->sessionCookie); ?>');">
-                                    <img src="images/arrow_next.png" alt="" border="0" title="Show History" />
-                                </a>
-                            </span>
-                            <span id="pipelineClose<?php echo($rowNumber); ?>" style="display: none;">
-                                <a href="javascript:void(0);" onclick="document.getElementById('pipelineDetails<?php echo($rowNumber); ?>').style.display = 'none'; document.getElementById('pipelineClose<?php echo($rowNumber); ?>').style.display = 'none'; document.getElementById('pipelineOpen<?php echo($rowNumber); ?>').style.display = '';">
-                                    <img src="images/arrow_down.png" alt="" border="0" title="Hide History" />
-                                </a>
-                            </span>
-                        </td>
-                        <td valign="top">
-                            <?php echo($pipelinesData['ratingLine']); ?>
-                        </td>
-                        <td valign="top">
-                            <?php $this->_($pipelinesData['clientJobID']) ?>
-                        </td>
-                        <td valign="top">
-                            <a href="<?php echo(CATSUtility::getIndexName()); ?>?m=joborders&amp;a=show&amp;jobOrderID=<?php echo($pipelinesData['jobOrderID']); ?>" class="<?php $this->_($pipelinesData['linkClass']) ?>">
-                                <?php $this->_($pipelinesData['title']) ?>
-                            </a>
-                        </td>
-                        <td valign="top">
-                            <a href="<?php echo(CATSUtility::getIndexName()); ?>?m=companies&amp;companyID=<?php echo($pipelinesData['companyID']); ?>&amp;a=show">
-                                <?php $this->_($pipelinesData['companyName']) ?>
-                            </a>
-                        </td>
-                        <td valign="top"><?php $this->_($pipelinesData['ownerAbbrName']) ?></td>
-                        <td valign="top"><?php $this->_($pipelinesData['dateCreated']) ?></td>
-                        <td valign="top"><?php $this->_($pipelinesData['addedByAbbrName']) ?></td>
-                        <td valign="top" nowrap="nowrap">
-                            <?php if ($this->getUserAccessLevel('pipelines.addActivityChangeStatus') >= ACCESS_LEVEL_EDIT): ?>
-                                <select id="statusSelect<?php echo($pipelinesData['candidateJobOrderID']); ?>"
-                                        onchange="updatePipelineStatus(<?php echo($pipelinesData['candidateJobOrderID']); ?>, <?php echo($this->candidateID); ?>, <?php echo($pipelinesData['jobOrderID']); ?>, this.value, '<?php echo($this->sessionCookie); ?>');"
-                                        style="font-size: 11px; padding: 2px;">
-                                    <?php foreach ($this->statusesRS as $status): ?>
-                                        <option value="<?php echo($status['statusID']); ?>" <?php if ($status['statusID'] == $pipelinesData['statusID']): ?>selected="selected"<?php endif; ?>>
-                                            <?php $this->_($status['status']); ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            <?php else: ?>
-                                <?php $this->_($pipelinesData['status']); ?>
-                            <?php endif; ?>
-                        </td>
-<?php if (!$this->isPopup): ?>
-                        <td align="center" nowrap="nowrap">
-                            <?php eval(Hooks::get('CANDIDATE_TEMPLATE_SHOW_PIPELINE_ACTION')); ?>
-                            <?php if ($this->getUserAccessLevel('pipelines.screening') >= ACCESS_LEVEL_EDIT && !$_SESSION['CATS']->hasUserCategory('sourcer')): ?>
-                                <?php if ($pipelinesData['ratingValue'] < 0): ?>
-                                    <a href="#" id="screenLink<?php echo($pipelinesData['candidateJobOrderID']); ?>" onclick="moImageValue<?php echo($pipelinesData['candidateJobOrderID']); ?> = 0; setRating(<?php echo($pipelinesData['candidateJobOrderID']); ?>, 0, 'moImage<?php echo($pipelinesData['candidateJobOrderID']); ?>', '<?php echo($_SESSION['CATS']->getCookie()); ?> '); return false;">
-                                        <img id="screenImage<?php echo($pipelinesData['candidateJobOrderID']); ?>" src="images/actions/screen.gif" width="16" height="16" class="absmiddle" alt="" border="0" title="Mark as Screened" />
-                                    </a>
-                                <?php else: ?>
-                                    <img src="images/actions/blank.gif" width="16" height="16" class="absmiddle" alt="" border="0" />
-                                <?php endif; ?>
-                            <?php endif; ?>
-                            <?php if ($this->getUserAccessLevel('pipelines.addActivityChangeStatus') >= ACCESS_LEVEL_EDIT): ?>
-                                <a href="#" onclick="showPopWin('<?php echo(CATSUtility::getIndexName()); ?>?m=candidates&amp;a=addActivityChangeStatus&amp;candidateID=<?php echo($this->candidateID); ?>&amp;jobOrderID=<?php echo($pipelinesData['jobOrderID']); ?>', 600, 480, null); return false;" >
-                                    <img src="images/actions/edit.gif" width="16" height="16" class="absmiddle" alt="" border="0" title="Log an Activity / Change Status"/>
-                                </a>
-                            <?php endif; ?>
-                            <?php if ($this->getUserAccessLevel('pipelines.removeFromPipeline') >= ACCESS_LEVEL_DELETE): ?>
-                                <a href="<?php echo(CATSUtility::getIndexName()); ?>?m=candidates&amp;a=removeFromPipeline&amp;candidateID=<?php echo($this->candidateID); ?>&amp;jobOrderID=<?php echo($pipelinesData['jobOrderID']); ?>"  onclick="javascript:return confirm('Delete from <?php $this->_(str_replace('\'', '\\\'', $pipelinesData['title'])); ?> (<?php $this->_(str_replace('\'', '\\\'', $pipelinesData['companyName'])); ?>) pipeline?')">
-                                    <img src="images/actions/delete.gif" width="16" height="16" class="absmiddle" alt="" border="0" title="Remove from Job Order"/>
-                                </a>
-                            <?php endif; ?>
-                        </td>
-<?php endif; ?>
-                    </tr>
-                    <tr class="<?php TemplateUtility::printAlternatingRowClass($rowNumber); ?>" id="pipelineDetails<?php echo($rowNumber); ?>" style="display:none;">
-                        <td colspan="11" align="center">
-                            <table width="98%" border="1" class="detailsOutside" style="margin: 5px;">
-                                <tr>
-                                    <td align="left" style="padding: 6px 6px 6px 6px; background-color: white; clear: both;">
-                                        <div style="overflow: auto; height: 200px;" id="pipelineInner<?php echo($rowNumber); ?>">
-                                            <img src="images/indicator.gif" alt="" />&nbsp;&nbsp;Loading pipeline details...
-                                        </div>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-
-                <?php endforeach; ?>
-            </table>
-
-<?php if (!$this->isPopup): ?>
-                <div class="section-card-footer">
-                    <?php if ($this->getUserAccessLevel('candidates.considerForJobSearch') >= ACCESS_LEVEL_EDIT): ?>
-                    <a href="#" onclick="showPopWin('<?php echo(CATSUtility::getIndexName()); ?>?m=candidates&amp;a=considerForJobSearch&amp;candidateID=<?php echo($this->candidateID); ?>', 750, 390, null); return false;">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
-                        Add This Candidate to Job Order
-                    </a>
-                    <?php endif; ?>
-                </div>
-<?php endif; ?>
             </div>
 
             <!-- ==================== ACTIVITY SECTION ==================== -->

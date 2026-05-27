@@ -481,7 +481,8 @@ class ModuleUtility
                 VALUES (
                     %s,
                     0
-                )",
+                )
+                ON CONFLICT DO NOTHING",
                 $db->makeQueryString($moduleName)
             );
             $db->query($sql);

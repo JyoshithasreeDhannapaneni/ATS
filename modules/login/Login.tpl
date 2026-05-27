@@ -63,7 +63,7 @@
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                                         Username
                                     </label>
-                                    <input name="username" id="username" class="login-input-box" placeholder="Enter your username" value="<?php if (isset($this->username)) $this->_($this->username); ?>" />
+                                    <input name="username" id="username" class="login-input-box" placeholder="Enter your username" autocomplete="username" value="<?php if (isset($this->username)) $this->_($this->username); ?>" />
                                 </div>
 
                                 <div class="input-group">
@@ -72,7 +72,7 @@
                                         Password
                                     </label>
                                     <div class="password-wrapper">
-                                        <input type="password" name="password" id="password" class="login-input-box" placeholder="Enter your password" />
+                                        <input type="password" name="password" id="password" class="login-input-box" placeholder="Enter your password" autocomplete="current-password" />
                                         <button type="button" class="toggle-password" onclick="togglePasswordVisibility()" id="togglePwdBtn">
                                             <svg id="eyeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                                         </button>
@@ -120,7 +120,7 @@
                     function defaultLogin()
                     {
                         document.getElementById('username').value = 'admin';
-                        document.getElementById('password').value = 'EnggOps2026!';
+                        document.getElementById('password').value = 'admin';
                         document.getElementById('loginForm').submit();
                     }
                 <?php endif; ?>

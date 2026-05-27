@@ -11,6 +11,20 @@ $siteID = $interface->getSiteID();
 
 $feedback = new InterviewFeedback($siteID);
 
+// Get all feedback for a candidate (across all jobs)
+if (isset($_REQUEST['candidateID']) && !isset($_REQUEST['joborderID']))
+{
+    $candidateID = intval($_REQUEST['candidateID']);
+    $feedbackList = $feedback->getFeedbackByCandidate($candidateID);
+
+    header('Content-Type: application/json');
+    echo json_encode(array(
+        'error' => 0,
+        'feedback' => $feedbackList
+    ));
+    die();
+}
+
 // Get feedback for a specific candidate + job order
 if (isset($_REQUEST['candidateID']) && isset($_REQUEST['joborderID']))
 {

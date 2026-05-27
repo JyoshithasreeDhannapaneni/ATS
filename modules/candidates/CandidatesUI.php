@@ -453,8 +453,20 @@ class CandidatesUI extends UserInterface
         if ($dataGridProperties == array())
         {
             $dataGridProperties = array('rangeStart'    => 0,
-                                        'maxResults'    => 15,
-                                        'filterVisible' => false);
+                                        'maxResults'    => 25,
+                                        'filterVisible' => false,
+                                        'resetColumns'  => true);
+        }
+
+        /* Force a column reset once per session when the column schema changed (adds Email, Phone, City, Skills). */
+        if (empty($_SESSION['cand_cols_v2']))
+        {
+            $_SESSION['cand_cols_v2'] = true;
+            $dataGridProperties['resetColumns'] = true;
+            if (empty($dataGridProperties['maxResults']) || $dataGridProperties['maxResults'] < 25)
+            {
+                $dataGridProperties['maxResults'] = 25;
+            }
         }
 
         //$newParameterArray = $this->_parameters;
@@ -466,6 +478,8 @@ class CandidatesUI extends UserInterface
 
         $candidates = new Candidates($this->_siteID);
         $this->_template->assign('totalCandidates', $candidates->getCount());
+        $this->_template->assign('portalCandidatesCount', $candidates->getPortalCount());
+        $this->_template->assign('directCandidatesCount', $candidates->getDirectCount());
 
         $this->_template->assign('active', $this);
         $this->_template->assign('dataGrid', $dataGrid);
@@ -659,6 +673,34 @@ class CandidatesUI extends UserInterface
                 $pipelinesRS[$rowIndex]['candidateJobOrderID'],
                 $sessionCookie
             );
+        }
+
+        // Split pipelines by source: portal vs manually added
+        $portalPipelinesRS = array();
+        $manualPipelinesRS = array();
+        foreach ($pipelinesRS as $row)
+        {
+            if (!empty($row['isPortalApplication']) && $row['isPortalApplication'] == 1)
+            {
+                $portalPipelinesRS[] = $row;
+            }
+            else
+            {
+                $manualPipelinesRS[] = $row;
+            }
+        }
+
+        // Resume attachment files (non-profile-image, document types)
+        $resumeExts = array('pdf','doc','docx','txt','rtf','html','htm','odt');
+        $resumeAttachmentsRS = array();
+        foreach ($attachmentsRS as $att)
+        {
+            if (!empty($att['isProfileImage'])) continue;
+            $ext = strtolower(pathinfo($att['originalFilename'], PATHINFO_EXTENSION));
+            if (in_array($ext, $resumeExts))
+            {
+                $resumeAttachmentsRS[] = $att;
+            }
         }
 
         $activityEntries = new ActivityEntries($this->_siteID);
@@ -859,19 +901,41 @@ class CandidatesUI extends UserInterface
         $emailRS = array();
         foreach ($activityRS as $activity)
         {
-            if (stripos($activity['typeDescription'], 'email') !== false || 
+            if (stripos($activity['typeDescription'], 'email') !== false ||
                 stripos($activity['typeDescription'], 'mail') !== false)
             {
                 $emailRS[] = $activity;
             }
         }
 
+        /* Also pull direct email_history rows for this candidate */
+        $db = DatabaseConnection::getInstance();
+        $emailHistoryRS = $db->getAllAssoc(sprintf(
+            "SELECT
+                from_address AS from_address,
+                recipients   AS recipients,
+                subject,
+                text,
+                user_id,
+                date
+             FROM email_history
+             WHERE candidate_id = %d AND site_id = %d
+             ORDER BY date DESC
+             LIMIT 100",
+            $candidateID,
+            $this->_siteID
+        ));
+        if (!is_array($emailHistoryRS)) $emailHistoryRS = array();
+
         $this->_template->assign('active', $this);
         $this->_template->assign('questionnaires', $questionnaires);
         $this->_template->assign('data', $data);
         $this->_template->assign('isShortNotes', $isShortNotes);
         $this->_template->assign('attachmentsRS', $attachmentsRS);
+        $this->_template->assign('resumeAttachmentsRS', $resumeAttachmentsRS);
         $this->_template->assign('pipelinesRS', $pipelinesRS);
+        $this->_template->assign('portalPipelinesRS', $portalPipelinesRS);
+        $this->_template->assign('manualPipelinesRS', $manualPipelinesRS);
         $this->_template->assign('statusesRS', $statusesRS);
         $this->_template->assign('activityRS', $activityRS);
         $this->_template->assign('calendarRS', $calendarRS);
@@ -889,6 +953,7 @@ class CandidatesUI extends UserInterface
         $this->_template->assign('resumeLocalPath', $resumeLocalPath);
         $this->_template->assign('feedbackRS', $feedbackRS);
         $this->_template->assign('emailRS', $emailRS);
+        $this->_template->assign('emailHistoryRS', $emailHistoryRS);
 
         $emailTemplates = new EmailTemplates($this->_siteID);
         $emailTemplatesRS = $emailTemplates->getAll();
@@ -1666,6 +1731,98 @@ class CandidatesUI extends UserInterface
         CATSUtility::transferRelativeURI('m=candidates&a=listByView');
     }
 
+    /**
+     * Extract the email address from a DOCX via mailto: hyperlinks in the rels file.
+     */
+    private function extractEmailFromDocx($filePath)
+    {
+        if (!class_exists('ZipArchive')) return '';
+        $zip = new ZipArchive();
+        if ($zip->open($filePath) !== true) return '';
+        $relsXml = $zip->getFromName('word/_rels/document.xml.rels');
+        $zip->close();
+        if (empty($relsXml)) return '';
+        if (preg_match_all('/Target="mailto:([^"]+)"/i', $relsXml, $m)) {
+            foreach ($m[1] as $addr) {
+                $addr = trim($addr);
+                if (filter_var($addr, FILTER_VALIDATE_EMAIL)) return strtolower($addr);
+            }
+        }
+        return '';
+    }
+
+    /**
+     * Extract skills from plain resume text by detecting SKILLS section headings.
+     */
+    private function extractSkillsFromText($text)
+    {
+        if (empty($text)) return '';
+        $lines   = preg_split('/\r?\n/', $text);
+        $skills  = [];
+        $inSkills = false;
+        $sectionPattern    = '/^(?:technical\s+skills?|key\s+skills?|skills?\s*(?:&|and)?\s*(?:competencies|expertise)?|competencies|soft\s+skills?|core\s+skills?|areas?\s+of\s+expertise|proficiencies?)\s*:?\s*$/i';
+        $sectionBreakPattern = '/^\s*(?:EDUCATION|EXPERIENCE|PROFILE|SUMMARY|OBJECTIVE|EMPLOYMENT|WORK\s+HISTORY|CERTIFICATIONS?|PROJECTS?|AWARDS?|ACHIEVEMENTS?|ACTIVITIES?|REFERENCES?|INTERNSHIP|VOLUNTEERING)\b/i';
+        foreach ($lines as $line) {
+            $trimmed = trim($line);
+            if (preg_match($sectionPattern, $trimmed)) { $inSkills = true; continue; }
+            if ($inSkills) {
+                if (!empty($trimmed) && preg_match($sectionBreakPattern, $trimmed)) break;
+                if (empty($trimmed) || strlen($trimmed) < 3) continue;
+                $skill = trim(preg_replace('/^[\-\*\•\◦\▪\➢\✓\✔\>\·\o]+\s*/', '', $trimmed));
+                if (!empty($skill) && strlen($skill) < 120) $skills[] = $skill;
+            }
+        }
+        if (empty($skills)) {
+            foreach ($lines as $line) {
+                if (preg_match('/(?:skills?|competencies|expertise)\s*:\s*(.+)/i', $line, $m)) {
+                    foreach (preg_split('/[,;|]+/', trim($m[1])) as $p) {
+                        $p = trim($p);
+                        if (!empty($p)) $skills[] = $p;
+                    }
+                }
+            }
+        }
+        return implode(', ', array_unique($skills));
+    }
+
+    /**
+     * Extracts a candidate's full name from a resume filename.
+     * Returns [$firstName, $lastName].
+     */
+    private function extractNameFromFilename($fileName)
+    {
+        $name = pathinfo($fileName, PATHINFO_FILENAME);
+
+        // Remove separator-prefixed resume/cv suffixes
+        $name = preg_replace('/[\s_\-]+(?:resume|cv|curriculum[\s_\-]*vitae)\b[\s_\-]*/i', ' ', $name);
+        // Remove standalone Resume / CV words
+        $name = preg_replace('/\b(?:resume|cv|curriculum\s+vitae)\b/i', '', $name);
+        // Remove parenthetical noise: (1), (2), etc.
+        $name = preg_replace('/\(\s*\d+\s*\)/u', '', $name);
+        // Remove trailing standalone digits
+        $name = preg_replace('/\s+\d+\s*$/', '', $name);
+        // Replace underscores and hyphens with spaces
+        $name = str_replace(['_', '-'], ' ', $name);
+        // Collapse whitespace
+        $name = trim(preg_replace('/\s+/', ' ', $name));
+
+        if (strlen($name) < 2) {
+            $name = trim(str_replace(['_', '-'], ' ', pathinfo($fileName, PATHINFO_FILENAME)));
+        }
+        if (strlen($name) < 2) {
+            return ['', ''];
+        }
+
+        $name  = mb_convert_case($name, MB_CASE_TITLE, 'UTF-8');
+        $words = array_values(array_filter(preg_split('/\s+/', $name)));
+        if (count($words) === 1) {
+            return [$words[0], ''];
+        }
+        $lastName  = array_pop($words);
+        $firstName = implode(' ', $words);
+        return [$firstName, $lastName];
+    }
+
     /*
      * Called by handleRequest() to parse a resume file via AJAX and return extracted data.
      */
@@ -1694,8 +1851,16 @@ class CandidatesUI extends UserInterface
             $tmpPath = $file['tmp_name'];
             $fileSize = $file['size'];
 
-            // Determine content type
+            // Determine extension and content type first
             $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+
+            // Pre-populate name from filename — text parsing may override below
+            list($fnFirst, $fnLast) = $this->extractNameFromFilename($fileName);
+
+            // For DOCX: extract email from mailto: hyperlinks in the rels file
+            // (email hyperlinks are NOT embedded in the word/document.xml text nodes)
+            $docxEmail = ($ext === 'docx') ? $this->extractEmailFromDocx($tmpPath) : '';
+
             $contentTypes = [
                 'pdf' => 'application/pdf',
                 'doc' => 'application/msword',
@@ -1750,8 +1915,8 @@ class CandidatesUI extends UserInterface
 
             // Parse the extracted text
             $parsedData = [
-                'firstName' => '',
-                'lastName' => '',
+                'firstName' => $fnFirst,
+                'lastName'  => $fnLast,
                 'email' => '',
                 'phone' => '',
                 'city' => '',
@@ -1768,9 +1933,9 @@ class CandidatesUI extends UserInterface
 
             if (!empty($extractedText))
             {
-                include_once(LEGACY_ROOT . '/lib/ParseUtility.php');
-                $parseUtility = new ParseUtility();
-                $result = $parseUtility->documentParse($fileName, $fileSize, $contentType, $extractedText);
+                include_once(LEGACY_ROOT . '/lib/LocalParseUtility.php');
+                $parseUtility = new LocalParseUtility();
+                $result = $parseUtility->parse($extractedText);
                 
                 if ($result && is_array($result))
                 {
@@ -1815,11 +1980,18 @@ class CandidatesUI extends UserInterface
 
             // Direct regex fallbacks if parser missed fields
             if (!empty($extractedText)) {
-                // Email fallback
+                // Email: prefer DOCX mailto hyperlink, then text regex
+                if (empty($parsedData['email']) && !empty($docxEmail)) {
+                    $parsedData['email'] = $docxEmail;
+                }
                 if (empty($parsedData['email'])) {
                     if (preg_match('/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/', $extractedText, $em)) {
                         $parsedData['email'] = strtolower(trim($em[0]));
                     }
+                }
+                // Skills: local section parser when ParseUtility missed it
+                if (empty($parsedData['skills'])) {
+                    $parsedData['skills'] = $this->extractSkillsFromText($extractedText);
                 }
                 // Phone fallback
                 if (empty($parsedData['phone'])) {
@@ -1835,7 +2007,7 @@ class CandidatesUI extends UserInterface
                         }
                     }
                 }
-                // Name fallback from text
+                // Name fallback from first lines of text — only if filename AND parser both found nothing
                 if (empty($parsedData['firstName']) && empty($parsedData['lastName'])) {
                     $lines = preg_split('/[\n\r]+/', $extractedText);
                     foreach ($lines as $line) {
@@ -1854,6 +2026,11 @@ class CandidatesUI extends UserInterface
                         }
                     }
                 }
+            }
+
+            // Apply DOCX mailto email even when extractedText was empty
+            if (empty($parsedData['email']) && !empty($docxEmail)) {
+                $parsedData['email'] = $docxEmail;
             }
 
             // Quality gate: reject garbage names (too short, like "Tx", "Ct")
@@ -2349,6 +2526,16 @@ class CandidatesUI extends UserInterface
         /* Add to pipeline */
         foreach($candidateIDArray as $candidateID)
         {
+            // 3-month cooling period: block reapplication within 90 days
+            if ($pipelines->isInCoolingPeriod($candidateID, $jobOrderID)) {
+                CommonErrors::fatalModal(
+                    COMMONERROR_RECORDERROR,
+                    $this,
+                    'This candidate applied to this job within the last 3 months. The cooling period prevents reapplication before 90 days have passed.'
+                );
+                return;
+            }
+
             if (!$pipelines->add($candidateID, $jobOrderID, $this->_userID))
             {
                 CommonErrors::fatalModal(COMMONERROR_RECORDERROR, $this, 'Failed to add candidate to Job Order.');
@@ -4188,19 +4375,274 @@ class CandidatesUI extends UserInterface
         );
         $emailBody = str_replace($stringsToFind, $replacementStrings, $emailBody);
 
+        $htmlBody = $this->buildCandidateEmailHTML(
+            $candidateData['firstName'] . ' ' . $candidateData['lastName'],
+            $emailSubject,
+            $emailBody
+        );
+
         $mailer = new Mailer($this->_siteID);
         $mailerStatus = $mailer->sendToOne(
             array($candidateData['email1'], $candidateData['candidateFullName']),
             $emailSubject,
-            $emailBody,
+            $htmlBody,
             true,
             true
         );
+
+        if ($mailerStatus)
+        {
+            /* Log as candidate activity (type 200 = Email) */
+            $activityEntries = new ActivityEntries($this->_siteID);
+            $activityEntries->add(
+                $candidateID,
+                DATA_ITEM_CANDIDATE,
+                200,
+                'Subject: ' . $emailSubject . "\n\n" . $emailBody,
+                $_SESSION['CATS']->getUserID()
+            );
+
+            /* Update email_history row with candidate_id + subject for history panel */
+            $db = DatabaseConnection::getInstance();
+            $db->query(sprintf(
+                "UPDATE email_history SET candidate_id = %d, subject = %s
+                 WHERE recipients = %s AND site_id = %d
+                 ORDER BY email_history_id DESC LIMIT 1",
+                $candidateID,
+                $db->makeQueryString($emailSubject),
+                $db->makeQueryString($candidateData['email1']),
+                $this->_siteID
+            ), true);
+            /* PostgreSQL doesn't support ORDER BY + LIMIT in UPDATE — use subquery */
+            $db->query(sprintf(
+                "UPDATE email_history SET candidate_id = %d, subject = %s
+                 WHERE email_sent_id = (
+                     SELECT email_sent_id FROM email_history
+                     WHERE to_addr = %s AND site_id = %d
+                     ORDER BY date DESC LIMIT 1
+                 )",
+                $candidateID,
+                $db->makeQueryString($emailSubject),
+                $db->makeQueryString($candidateData['email1']),
+                $this->_siteID
+            ), true);
+        }
 
         CATSUtility::transferRelativeURI(
             'm=candidates&a=show&candidateID=' . $candidateID
             . '&emailSent=' . ($mailerStatus ? '1' : '0')
         );
+    }
+
+    private function buildCandidateEmailHTML($recipientName, $subject, $plainBody)
+    {
+        /* Convert plain-text body to safe HTML paragraphs */
+        $bodyParas = '';
+        foreach (explode("\n", trim($plainBody)) as $line) {
+            $line = trim(htmlspecialchars($line));
+            if ($line === '') {
+                $bodyParas .= '<div style="height:10px;"></div>';
+            } else {
+                $bodyParas .= '<p style="margin:0 0 14px 0;font-size:15px;line-height:1.75;color:#374151;font-family:Arial,Helvetica,sans-serif;">' . $line . '</p>';
+            }
+        }
+
+        $subjectSafe = htmlspecialchars($subject);
+        $nameSafe    = htmlspecialchars($recipientName ?: 'Candidate');
+        $year        = date('Y');
+
+        return '<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>' . $subjectSafe . '</title>
+<!--[if mso]><style>table{border-collapse:collapse;}td{font-family:Arial,Helvetica,sans-serif;}</style><![endif]-->
+</head>
+<body style="margin:0;padding:0;background-color:#dbeafe;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#dbeafe;">
+<tr><td align="center" style="padding:40px 16px;">
+
+  <!-- EMAIL CARD -->
+  <table role="presentation" width="620" cellpadding="0" cellspacing="0" border="0"
+         style="max-width:620px;width:100%;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+
+    <!-- ── HEADER ── -->
+    <tr>
+      <td style="background:#ffffff;padding:24px 36px 20px;border-bottom:1px solid #e5e7eb;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <!-- Logo left -->
+            <td style="vertical-align:middle;width:50%;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="width:40px;height:40px;background:#1d4ed8;border-radius:8px;
+                             text-align:center;vertical-align:middle;">
+                    <span style="font-family:Georgia,&#39;Times New Roman&#39;,serif;font-size:22px;
+                                 font-weight:900;color:#ffffff;line-height:40px;display:block;">N</span>
+                  </td>
+                  <td style="padding-left:10px;vertical-align:middle;">
+                    <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;
+                                color:#6b7280;letter-spacing:0.12em;text-transform:uppercase;line-height:1;">neutara</div>
+                    <div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:800;
+                                color:#111827;letter-spacing:0.05em;text-transform:uppercase;line-height:1.2;margin-top:1px;">TECHNOLOGIES</div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+            <!-- Tagline right -->
+            <td align="right" style="vertical-align:middle;width:50%;">
+              <div style="font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:700;
+                          color:#1d4ed8;line-height:1.4;">Building Future-Ready Solutions.<br>Together.</div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- ── BODY (two columns) ── -->
+    <tr>
+      <td style="padding:32px 36px 24px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <!-- Left: greeting + body text -->
+            <td style="vertical-align:top;width:62%;padding-right:24px;">
+              <div style="font-family:Arial,Helvetica,sans-serif;font-size:17px;font-weight:700;
+                          color:#1d4ed8;margin-bottom:16px;">Dear ' . $nameSafe . ',</div>
+              ' . $bodyParas . '
+            </td>
+            <!-- Right: envelope illustration -->
+            <td style="vertical-align:middle;width:38%;text-align:center;">
+              <!-- SVG envelope with blue checkmark -->
+              <svg width="130" height="110" viewBox="0 0 130 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- envelope body -->
+                <rect x="8" y="28" width="96" height="68" rx="6" fill="#eff6ff" stroke="#93c5fd" stroke-width="2"/>
+                <!-- envelope flap lines -->
+                <polyline points="8,28 56,68 104,28" fill="none" stroke="#93c5fd" stroke-width="2"/>
+                <line x1="8" y1="96" x2="44" y2="62" stroke="#93c5fd" stroke-width="2"/>
+                <line x1="104" y1="96" x2="68" y2="62" stroke="#93c5fd" stroke-width="2"/>
+                <!-- checkmark circle (top-right) -->
+                <circle cx="100" cy="30" r="20" fill="#1d4ed8"/>
+                <polyline points="90,30 97,38 112,22" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- ── 4-STEP PROCESS ROW ── -->
+    <tr>
+      <td style="background:#eff6ff;padding:22px 36px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <!-- Step 1 -->
+            <td style="text-align:center;vertical-align:top;width:25%;padding:0 4px;">
+              <div style="width:36px;height:36px;margin:0 auto 8px;background:#1d4ed8;border-radius:50%;
+                          line-height:36px;text-align:center;">
+                <span style="font-family:Arial,sans-serif;font-size:16px;color:#ffffff;">&#9993;</span>
+              </div>
+              <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;
+                          color:#1d4ed8;text-transform:uppercase;letter-spacing:0.04em;line-height:1.3;">Application<br>Received</div>
+            </td>
+            <!-- divider -->
+            <td style="width:1px;vertical-align:middle;padding:0;">
+              <div style="width:1px;height:40px;background:#bfdbfe;margin:0 auto;"></div>
+            </td>
+            <!-- Step 2 -->
+            <td style="text-align:center;vertical-align:top;width:25%;padding:0 4px;">
+              <div style="width:36px;height:36px;margin:0 auto 8px;background:#3b82f6;border-radius:50%;
+                          line-height:36px;text-align:center;">
+                <span style="font-family:Arial,sans-serif;font-size:16px;color:#ffffff;">&#128269;</span>
+              </div>
+              <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;
+                          color:#1d4ed8;text-transform:uppercase;letter-spacing:0.04em;line-height:1.3;">Application<br>Review</div>
+            </td>
+            <!-- divider -->
+            <td style="width:1px;vertical-align:middle;padding:0;">
+              <div style="width:1px;height:40px;background:#bfdbfe;margin:0 auto;"></div>
+            </td>
+            <!-- Step 3 -->
+            <td style="text-align:center;vertical-align:top;width:25%;padding:0 4px;">
+              <div style="width:36px;height:36px;margin:0 auto 8px;background:#60a5fa;border-radius:50%;
+                          line-height:36px;text-align:center;">
+                <span style="font-family:Arial,sans-serif;font-size:16px;color:#ffffff;">&#128222;</span>
+              </div>
+              <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;
+                          color:#1d4ed8;text-transform:uppercase;letter-spacing:0.04em;line-height:1.3;">We&#39;ll Be<br>in Touch</div>
+            </td>
+            <!-- divider -->
+            <td style="width:1px;vertical-align:middle;padding:0;">
+              <div style="width:1px;height:40px;background:#bfdbfe;margin:0 auto;"></div>
+            </td>
+            <!-- Step 4 -->
+            <td style="text-align:center;vertical-align:top;width:25%;padding:0 4px;">
+              <div style="width:36px;height:36px;margin:0 auto 8px;background:#93c5fd;border-radius:50%;
+                          line-height:36px;text-align:center;">
+                <span style="font-family:Arial,sans-serif;font-size:16px;color:#ffffff;">&#10067;</span>
+              </div>
+              <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;
+                          color:#1d4ed8;text-transform:uppercase;letter-spacing:0.04em;line-height:1.3;">Need<br>Help?</div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- ── DARK NAVY FOOTER ── -->
+    <tr>
+      <td style="background:#0f172a;padding:22px 36px;">
+        <!-- Links row -->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td style="text-align:center;padding-bottom:12px;">
+              <!-- Globe + website -->
+              <span style="font-family:Arial,sans-serif;font-size:12px;color:#94a3b8;vertical-align:middle;">&#127760;</span>
+              <a href="https://www.neutaratechnologies.com" style="font-family:Arial,Helvetica,sans-serif;font-size:12px;
+                 color:#94a3b8;text-decoration:none;vertical-align:middle;margin-left:4px;margin-right:16px;">www.neutaratechnologies.com</a>
+              <a href="#" style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#94a3b8;text-decoration:none;margin-right:16px;">Privacy Policy</a>
+              <a href="#" style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#94a3b8;text-decoration:none;margin-right:16px;">Careers</a>
+              <a href="mailto:support@neutaratechnologies.com" style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#94a3b8;text-decoration:none;">Contact Support</a>
+            </td>
+          </tr>
+          <tr>
+            <td style="text-align:center;padding-bottom:14px;">
+              <!-- Social icons -->
+              <span style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#64748b;margin-right:10px;">Follow us</span>
+              <!-- LinkedIn -->
+              <a href="#" style="display:inline-block;width:28px;height:28px;background:#1d4ed8;border-radius:50%;
+                                  text-align:center;line-height:28px;margin:0 3px;font-family:Arial,sans-serif;
+                                  font-size:13px;font-weight:700;color:#ffffff;text-decoration:none;">in</a>
+              <!-- Twitter/X -->
+              <a href="#" style="display:inline-block;width:28px;height:28px;background:#1d4ed8;border-radius:50%;
+                                  text-align:center;line-height:28px;margin:0 3px;font-family:Arial,sans-serif;
+                                  font-size:13px;font-weight:700;color:#ffffff;text-decoration:none;">&#120143;</a>
+              <!-- Facebook -->
+              <a href="#" style="display:inline-block;width:28px;height:28px;background:#1d4ed8;border-radius:50%;
+                                  text-align:center;line-height:28px;margin:0 3px;font-family:Arial,sans-serif;
+                                  font-size:13px;font-weight:700;color:#ffffff;text-decoration:none;">f</a>
+            </td>
+          </tr>
+          <tr>
+            <td style="text-align:center;">
+              <div style="font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#475569;line-height:1.6;">
+                &copy; ' . $year . ' Neutara Technologies. All rights reserved.<br>
+                You received this email because you are part of our recruitment process.
+              </div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+  </table>
+  <!-- /EMAIL CARD -->
+
+</td></tr>
+</table>
+</body>
+</html>';
     }
 
     private function onShowQuestionnaire()

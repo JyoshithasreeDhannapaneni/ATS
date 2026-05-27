@@ -52,7 +52,7 @@ class ListsUI extends UserInterface
         $this->_authenticationRequired = true;
         $this->_moduleDirectory = 'lists';
         $this->_moduleName = 'lists';
-        $this->_moduleTabText = 'Lists';
+        $this->_moduleTabText = '';
         $this->_subTabs = array(
             'Show Lists'     => CATSUtility::getIndexName() . '?m=lists'
            /* 'New Static List' => CATSUtility::getIndexName() . '?m=lists&a=newListStatic*al=' . ACCESS_LEVEL_EDIT  . '@lists.newListStatic', */

@@ -54,17 +54,14 @@ class EmailTemplates
         $sql = sprintf(
             "DELETE FROM
                 email_template
-            WHERE 
+            WHERE
                 site_id = %s
             AND
-                email_template_id = %s
-            AND
-                tag = %s",
+                email_template_id = %s",
             $this->_db->makeQueryInteger($this->_siteID),
-            $this->_db->makeQueryInteger($templateID),
-            $this->_db->makeQueryString("CUSTOM")
+            $this->_db->makeQueryInteger($templateID)
         );
-        
+
         $this->_db->query($sql);
     }
     
@@ -113,15 +110,16 @@ class EmailTemplates
      * @param string template text
      * @return boolean True if successful; false otherwise.
      */
-    public function update($emailTemplateID, $title, $text, $disabled)
+    public function update($emailTemplateID, $title, $text, $disabled, $subject = '')
     {
-        if($title != "")
+        if ($title != '')
         {
             $sql = sprintf(
                 "UPDATE
                     email_template
                 SET
                     title = %s,
+                    subject = %s,
                     text = %s,
                     disabled = %s
                 WHERE
@@ -129,24 +127,27 @@ class EmailTemplates
                 AND
                     site_id = %s",
                 $this->_db->makeQueryStringOrNULL($title),
+                $this->_db->makeQueryStringOrNULL($subject),
                 $this->_db->makeQueryStringOrNULL($text),
                 $disabled,
                 $emailTemplateID,
                 $this->_siteID
             );
         }
-        else 
+        else
         {
             $sql = sprintf(
                 "UPDATE
                     email_template
                 SET
+                    subject = %s,
                     text = %s,
                     disabled = %s
                 WHERE
                     email_template_id = %s
                 AND
                     site_id = %s",
+                $this->_db->makeQueryStringOrNULL($subject),
                 $this->_db->makeQueryStringOrNULL($text),
                 $disabled,
                 $emailTemplateID,
@@ -379,6 +380,7 @@ class EmailTemplates
                 email_template.title AS emailTemplateTitle,
                 email_template.tag AS emailTemplateTag,
                 email_template.text AS text,
+                COALESCE(email_template.subject, '') AS subject,
                 email_template.possible_variables AS possibleVariables,
                 email_template.allow_substitution AS allowSubstitution,
                 email_template.disabled AS disabled
@@ -391,7 +393,7 @@ class EmailTemplates
 
         return $this->_db->getAllAssoc($sql);
     }
-    
+
     public function getAllCustom()
     {
         $sql = sprintf(
@@ -400,6 +402,7 @@ class EmailTemplates
                 email_template.title AS emailTemplateTitle,
                 email_template.tag AS emailTemplateTag,
                 email_template.text AS text,
+                COALESCE(email_template.subject, '') AS subject,
                 email_template.possible_variables AS possibleVariables,
                 email_template.allow_substitution AS allowSubstitution,
                 email_template.disabled AS disabled

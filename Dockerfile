@@ -15,7 +15,8 @@ RUN apt-get update && apt-get install -y \
     poppler-utils \
     html2text \
     unrtf \
-    && docker-php-ext-install pdo pdo_mysql mysqli mbstring exif pcntl bcmath gd zip \
+    libpq-dev \
+    && docker-php-ext-install pdo pdo_pgsql mbstring exif pcntl bcmath gd zip \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer

@@ -114,7 +114,7 @@ class GoogleMeet
         );
         
         $result = @$this->_db->query($sql);
-        if ($result && @mysqli_num_rows($result) > 0) {
+        if ($result && ($result && $result->rowCount() > 0)) {
             $row = $this->_db->getAssoc();
             $this->_refreshToken = $row['value'];
         }
@@ -139,7 +139,7 @@ class GoogleMeet
         
         $result = @$this->_db->query($sql);
         
-        if ($result && @mysqli_num_rows($result) > 0) {
+        if ($result && ($result && $result->rowCount() > 0)) {
             $sql = sprintf(
                 "UPDATE settings SET value = %s 
                  WHERE setting = 'google_meet_refresh_token' 

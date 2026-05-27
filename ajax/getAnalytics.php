@@ -7,6 +7,13 @@
 include_once(LEGACY_ROOT . '/lib/Analytics.php');
 
 $interface = new SecureAJAXInterface();
+
+if (!isset($_SESSION['CATS']) || $_SESSION['CATS']->getAccessLevel() < ACCESS_LEVEL_READ)
+{
+    echo json_encode(['error' => 'Access denied.']);
+    die();
+}
+
 $siteID = $interface->getSiteID();
 
 $analytics = new Analytics($siteID);

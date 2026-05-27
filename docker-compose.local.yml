@@ -1,19 +1,18 @@
 services:
-  ats-mysql:
-    image: mariadb:10.7
-    container_name: ats-mysql
+  ats-postgres:
+    image: postgres:16-alpine
+    container_name: ats-postgres
     ports:
-      - "3307:3306"
+      - "5433:5432"
     environment:
-      MYSQL_ROOT_PASSWORD: Root@12345
-      MYSQL_DATABASE: opencats
-      MYSQL_USER: atsuser
-      MYSQL_PASSWORD: AtsUser@12345
+      POSTGRES_DB: cats_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Joshi@515
     volumes:
-      - ats_db_data:/var/lib/mysql
-      - ./db/cats_schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ats_db_data:/var/lib/postgresql/data
+      - ./db/cats_schema_postgresql.sql:/docker-entrypoint-initdb.d/01-schema.sql
     healthcheck:
-      test: ["CMD", "mariadb", "-u", "root", "-pRoot@12345", "-e", "SELECT 1"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d cats_dev"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -30,13 +29,13 @@ services:
       - "8080:80"
     environment:
       PORT: "80"
-      DATABASE_HOST: ats-mysql
-      DATABASE_PORT: "3306"
-      DATABASE_USER: atsuser
-      DATABASE_PASS: AtsUser@12345
-      DATABASE_NAME: opencats
+      DATABASE_HOST: ats-postgres
+      DATABASE_PORT: "5432"
+      DATABASE_USER: postgres
+      DATABASE_PASS: Joshi@515
+      DATABASE_NAME: cats_dev
     depends_on:
-      ats-mysql:
+      ats-postgres:
         condition: service_healthy
     volumes:
       - ats_attachments:/var/www/html/attachments
@@ -46,17 +45,16 @@ services:
     networks:
       - ats-network
 
-  ats-phpmyadmin:
-    image: phpmyadmin/phpmyadmin
-    container_name: ats-phpmyadmin
+  ats-pgadmin:
+    image: dpage/pgadmin4
+    container_name: ats-pgadmin
     ports:
       - "8081:80"
     environment:
-      PMA_HOST: ats-mysql
-      PMA_USER: root
-      PMA_PASSWORD: Root@12345
+      PGADMIN_DEFAULT_EMAIL: admin@ats.local
+      PGADMIN_DEFAULT_PASSWORD: Admin@12345
     depends_on:
-      - ats-mysql
+      - ats-postgres
     restart: unless-stopped
     networks:
       - ats-network

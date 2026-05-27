@@ -49,7 +49,7 @@ if ($existingToken)
         'token'   => $existingToken,
         'url'     => $uploadURL,
         'reused'  => true
-    ));
+    ), JSON_UNESCAPED_SLASHES);
     exit;
 }
 
@@ -64,4 +64,4 @@ echo json_encode(array(
     'token'   => $token,
     'url'     => $uploadURL,
     'reused'  => false
-));
+), JSON_UNESCAPED_SLASHES);

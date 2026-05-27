@@ -821,7 +821,7 @@ class CATSSession
                 $this->_userLicenses           = $rs['userLicenses'];
                 $this->_accessLevel            = $rs['accessLevel'];
                 $this->_realAccessLevel        = $rs['accessLevel'];
-                $this->_categories             = explode(',', $rs['categories']);
+                $this->_categories             = explode(',', $rs['categories'] ?? '');
                 $this->_isASP                  = ($rs['companyID'] != 0 ? true : false);
                 $this->_isHrMode               = ($rs['isHrMode'] != 0 ? true : false);
                 $this->_siteCompanyID          = ($rs['companyID'] != 0 ? $rs['companyID'] : -1);
@@ -872,7 +872,7 @@ class CATSSession
                     $this->_accessLevel = ACCESS_LEVEL_DISABLED;
                 }
 
-                if (strlen($rs['columnPreferences']) > 0 && $this->_isDemo == false)
+                if (!empty($rs['columnPreferences']) && $this->_isDemo == false)
                 {
                     $this->_dataGridColumnPreferences = unserialize($rs['columnPreferences']);
                 }
@@ -1334,8 +1334,8 @@ class CATSSession
             $siteID
         );
         $rs = $db->getAssoc($sql);
-        
-        if (!$rs || $db->isEOF()) {
+
+        if (empty($rs)) {
             $this->_isLoggedIn = false;
             $this->_loginError = 'User not found.';
             return;

@@ -65,6 +65,29 @@ class TemplateUtility
     {
         self::_printCommonHeader($pageTitle, $headIncludes);
         echo '<body style="background: #fff">', "\n";
+        echo '
+<div id="neutara-page-loader" style="position:fixed;inset:0;z-index:99999;background:#0f1623;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity 0.4s ease,visibility 0.4s ease;">
+  <div style="display:flex;flex-direction:column;align-items:center;gap:20px;">
+    <div style="width:64px;height:64px;background:linear-gradient(135deg,#2563eb,#1d4ed8);border-radius:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 32px rgba(37,99,235,0.45);">
+      <span style="color:#fff;font-size:32px;font-weight:900;font-family:\'Segoe UI\',sans-serif;letter-spacing:-1px;">N</span>
+    </div>
+    <div style="width:180px;height:3px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden;">
+      <div id="neutara-loader-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#2563eb,#60a5fa);border-radius:3px;transition:width 0.3s ease;animation:neutara-load 1.6s ease-in-out infinite;"></div>
+    </div>
+    <span style="color:rgba(255,255,255,0.45);font-size:12px;letter-spacing:0.08em;font-family:\'Segoe UI\',sans-serif;">NEUTARA ATS</span>
+  </div>
+</div>
+<style>@keyframes neutara-load{0%{width:0%;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0%;margin-left:100%}}</style>
+<script>
+(function(){
+  var loader = document.getElementById("neutara-page-loader");
+  function hideLoader(){if(loader){loader.style.opacity="0";loader.style.visibility="hidden";setTimeout(function(){if(loader)loader.style.display="none";},420);}}
+  if(document.readyState==="complete"){setTimeout(hideLoader,200);}
+  else{window.addEventListener("load",function(){setTimeout(hideLoader,200);});}
+  setTimeout(hideLoader,3000);
+})();
+</script>
+', "\n";
         self::_printQuickActionMenuHolder();
         self::printPopupContainer();
     }
@@ -1243,6 +1266,7 @@ document.addEventListener("DOMContentLoaded", function() {
         echo '<script type="text/javascript">CATSIndexName = "'.CATSUtility::getIndexName().'";</script>', "\n";
 
        $headIncludes[] = 'main.css';
+        $headIncludes[] = 'js/ats3d.js';
 
         foreach ($headIncludes as $key => $filename)
         {

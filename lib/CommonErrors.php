@@ -283,8 +283,8 @@ class CommonErrors
     {
         $db = DatabaseConnection::getInstance();
         $tables = array();
-        $rs = $db->query('show tables');
-        while ($tbl = mysqli_fetch_array($rs)) $tables[] = $tbl[0];
+        $rs = $db->query("SELECT tablename FROM pg_tables WHERE schemaname='public'");
+        while ($tbl = ($rs ? $rs->fetch(PDO::FETCH_NUM) : null)) $tables[] = $tbl[0];
         if (in_array('exceptions', $tables)) return true;
         else return false;
     }

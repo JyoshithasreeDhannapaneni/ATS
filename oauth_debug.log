@@ -1,0 +1,92 @@
+2026-05-11 08:06:39 - === OAuth process started ===
+2026-05-11 08:06:39 - Email extracted: jyoshitha.dhannapaneni@cloudfuze.com
+2026-05-11 08:06:39 - Name: Jyoshitha Dhannapaneni
+2026-05-11 08:06:39 - DB connection obtained
+2026-05-11 08:06:39 - User lookup SQL: SELECT user_id, site_id, access_level, user_name FROM "user" WHERE email = 'jyoshitha.dhannapaneni@cloudfuze.com' LIMIT 1
+2026-05-11 08:06:39 - User lookup result: [{"user_id":1252,"site_id":1,"access_level":400,"user_name":"jyoshithadhannapaneni_cloudfuzecom"}]
+2026-05-11 08:06:39 - User resolved: userID=1252 siteID=1
+2026-05-11 08:06:39 - Using existing CATSSession
+2026-05-11 08:06:39 - ssoLogin() called successfully
+2026-05-11 08:06:39 - isLoggedIn: NO
+2026-05-11 08:06:39 - Login verification FAILED
+2026-05-11 08:06:57 - === OAuth process started ===
+2026-05-11 08:06:57 - Email extracted: jyoshitha.dhannapaneni@cloudfuze.com
+2026-05-11 08:06:57 - Name: Jyoshitha Dhannapaneni
+2026-05-11 08:06:57 - DB connection obtained
+2026-05-11 08:06:57 - User lookup SQL: SELECT user_id, site_id, access_level, user_name FROM "user" WHERE email = 'jyoshitha.dhannapaneni@cloudfuze.com' LIMIT 1
+2026-05-11 08:06:57 - User lookup result: [{"user_id":1252,"site_id":1,"access_level":400,"user_name":"jyoshithadhannapaneni_cloudfuzecom"}]
+2026-05-11 08:06:57 - User resolved: userID=1252 siteID=1
+2026-05-11 08:06:57 - Using existing CATSSession
+2026-05-11 08:06:57 - ssoLogin() called successfully
+2026-05-11 08:06:57 - isLoggedIn: NO
+2026-05-11 08:06:57 - Login verification FAILED
+2026-05-11 08:07:11 - === OAuth process started ===
+2026-05-11 08:07:11 - Email extracted: jyoshitha.dhannapaneni@cloudfuze.com
+2026-05-11 08:07:11 - Name: Jyoshitha Dhannapaneni
+2026-05-11 08:07:11 - DB connection obtained
+2026-05-11 08:07:11 - User lookup SQL: SELECT user_id, site_id, access_level, user_name FROM "user" WHERE email = 'jyoshitha.dhannapaneni@cloudfuze.com' LIMIT 1
+2026-05-11 08:07:11 - User lookup result: [{"user_id":1252,"site_id":1,"access_level":400,"user_name":"jyoshithadhannapaneni_cloudfuzecom"}]
+2026-05-11 08:07:11 - User resolved: userID=1252 siteID=1
+2026-05-11 08:07:11 - Using existing CATSSession
+2026-05-11 08:07:11 - ssoLogin() called successfully
+2026-05-11 08:07:11 - isLoggedIn: NO
+2026-05-11 08:07:11 - Login verification FAILED
+2026-05-14 08:53:06 - === OAuth process started ===
+2026-05-14 08:53:06 - Email extracted: jyoshitha.dhannapaneni@cloudfuze.com
+2026-05-14 08:53:06 - Name: Jyoshitha Dhannapaneni
+2026-05-14 08:53:06 - DB connection obtained
+2026-05-14 08:53:06 - User lookup SQL: SELECT user_id, site_id, access_level, user_name FROM "user" WHERE email = 'jyoshitha.dhannapaneni@cloudfuze.com' LIMIT 1
+2026-05-14 08:53:06 - User lookup result: [{"user_id":1252,"site_id":1,"access_level":400,"user_name":"jyoshithadhannapaneni_cloudfuzecom"}]
+2026-05-14 08:53:06 - User resolved: userID=1252 siteID=1
+2026-05-14 08:53:06 - Using existing CATSSession
+2026-05-14 08:53:06 - ssoLogin() called successfully
+2026-05-14 08:53:06 - isLoggedIn: NO
+2026-05-14 08:53:06 - Login verification FAILED
+2026-05-19 08:28:36 - === OAuth process started ===
+2026-05-19 08:28:36 - Email extracted: jyoshitha.dhannapaneni@cloudfuze.com
+2026-05-19 08:28:36 - Name: Jyoshitha Dhannapaneni
+2026-05-19 08:28:36 - DB connection obtained
+2026-05-19 08:28:36 - User lookup SQL: SELECT user_id, site_id, access_level, user_name FROM "user" WHERE email = 'jyoshitha.dhannapaneni@cloudfuze.com' LIMIT 1
+2026-05-19 08:28:36 - User lookup result: [{"user_id":1252,"site_id":1,"access_level":400,"user_name":"jyoshithadhannapaneni_cloudfuzecom"}]
+2026-05-19 08:28:36 - User resolved: userID=1252 siteID=1
+2026-05-19 08:28:36 - Using existing CATSSession
+2026-05-19 08:28:36 - ssoLogin() called successfully
+2026-05-19 08:28:36 - isLoggedIn: NO
+2026-05-19 08:28:36 - Login verification FAILED
+2026-05-19 08:29:29 - === OAuth process started ===
+2026-05-19 08:29:29 - Email extracted: jyoshitha.dhannapaneni@cloudfuze.com
+2026-05-19 08:29:29 - Name: Jyoshitha Dhannapaneni
+2026-05-19 08:29:29 - DB connection obtained
+2026-05-19 08:29:29 - User lookup SQL: SELECT user_id, site_id, access_level, user_name FROM "user" WHERE email = 'jyoshitha.dhannapaneni@cloudfuze.com' LIMIT 1
+2026-05-19 08:29:29 - User lookup result: [{"user_id":1252,"site_id":1,"access_level":400,"user_name":"jyoshithadhannapaneni_cloudfuzecom"}]
+2026-05-19 08:29:29 - User resolved: userID=1252 siteID=1
+2026-05-19 08:29:29 - Using existing CATSSession
+2026-05-19 08:29:29 - ssoLogin() called successfully
+2026-05-19 08:29:29 - isLoggedIn: NO
+2026-05-19 08:29:29 - Login verification FAILED
+2026-05-19 09:49:54 - === OAuth process started ===
+2026-05-19 09:49:54 - Email extracted: jyoshitha.dhannapaneni@cloudfuze.com
+2026-05-19 09:49:54 - Name: Jyoshitha Dhannapaneni
+2026-05-19 09:49:54 - DB connection obtained
+2026-05-19 09:49:54 - User lookup SQL: SELECT user_id, site_id, access_level, user_name FROM "user" WHERE email = 'jyoshitha.dhannapaneni@cloudfuze.com' LIMIT 1
+2026-05-19 09:49:54 - User lookup result: [{"user_id":1252,"site_id":1,"access_level":400,"user_name":"jyoshithadhannapaneni_cloudfuzecom"}]
+2026-05-19 09:49:54 - User resolved: userID=1252 siteID=1
+2026-05-19 09:49:54 - Using existing CATSSession
+2026-05-19 09:49:54 - ssoLogin() called successfully
+2026-05-19 09:49:54 - isLoggedIn: YES
+2026-05-19 09:49:54 - Session ID: fmmt9b3veqk6v7u55l602icbdi
+2026-05-19 09:49:54 - Login SUCCESSFUL - redirecting to home
+2026-05-19 09:49:54 - User role: recruiter
+2026-05-27 07:43:21 - === OAuth process started ===
+2026-05-27 07:43:21 - Email extracted: jyoshitha.dhannapaneni@cloudfuze.com
+2026-05-27 07:43:21 - Name: Jyoshitha Dhannapaneni
+2026-05-27 07:43:21 - DB connection obtained
+2026-05-27 07:43:21 - User lookup SQL: SELECT user_id, site_id, access_level, user_name FROM "user" WHERE email = 'jyoshitha.dhannapaneni@cloudfuze.com' LIMIT 1
+2026-05-27 07:43:21 - User lookup result: [{"user_id":1252,"site_id":1,"access_level":400,"user_name":"jyoshithadhannapaneni_cloudfuzecom"}]
+2026-05-27 07:43:21 - User resolved: userID=1252 siteID=1
+2026-05-27 07:43:21 - Using existing CATSSession
+2026-05-27 07:43:21 - ssoLogin() called successfully
+2026-05-27 07:43:21 - isLoggedIn: YES
+2026-05-27 07:43:21 - Session ID: 6jgs981v7e8k8rvjhdvos06an2
+2026-05-27 07:43:21 - Login SUCCESSFUL - redirecting to home
+2026-05-27 07:43:21 - User role: recruiter

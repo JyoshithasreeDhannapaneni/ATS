@@ -53,7 +53,7 @@ class JobOrdersListByViewDataGrid extends JobOrdersDataGrid
    
         $this->_defaultColumns = array(
             array('name' => 'Attachments', 'width' => 10),
-            array('name' => 'ID', 'width' => 26),   
+            array('name' => 'ID', 'width' => 26),
             array('name' => 'Title', 'width' => 170),
             array('name' => 'Company', 'width' => 135),
             array('name' => 'Type', 'width' => 30),
@@ -64,10 +64,11 @@ class JobOrdersListByViewDataGrid extends JobOrdersDataGrid
             array('name' => 'Pipeline', 'width' => 18),
             array('name' => 'Recruiter', 'width' => 65),
             array('name' => 'Owner', 'width' => 55),
+            array('name' => 'Actions', 'width' => 120),
         );
-   
+
         if (!eval(Hooks::get('JOBORDERS_DATAGRID_DEFAULTS'))) return;
-   
+
         parent::__construct("joborders:JobOrdersListByViewDataGrid", 
                              $siteID, $parameters, $misc
                         );
@@ -112,7 +113,7 @@ class joborderSavedListByViewDataGrid extends JobOrdersDataGrid
    
         $this->_defaultColumns = array(
             array('name' => 'Attachments', 'width' => 10),
-            array('name' => 'ID', 'width' => 26),   
+            array('name' => 'ID', 'width' => 26),
             array('name' => 'Title', 'width' => 170),
             array('name' => 'Company', 'width' => 135),
             array('name' => 'Type', 'width' => 30),
@@ -123,10 +124,11 @@ class joborderSavedListByViewDataGrid extends JobOrdersDataGrid
             array('name' => 'Pipeline', 'width' => 18),
             array('name' => 'Recruiter', 'width' => 65),
             array('name' => 'Owner', 'width' => 55),
+            array('name' => 'Actions', 'width' => 120),
         );
-   
+
         if (!eval(Hooks::get('JOBORDERS_DATAGRID_DEFAULTS'))) return;
-   
+
         parent::__construct("joborders:joborderSavedListByViewDataGrid", 
                              $siteID, $parameters, $misc
                         );

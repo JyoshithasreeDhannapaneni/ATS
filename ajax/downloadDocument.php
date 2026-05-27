@@ -49,8 +49,12 @@ if (!file_exists($filePath))
     exit;
 }
 
+// mode=view → inline preview (PDF/images); default → force download
+$viewMode = (isset($_GET['mode']) && $_GET['mode'] === 'view');
+$disposition = $viewMode ? 'inline' : 'attachment';
+
 header('Content-Type: ' . $doc['content_type']);
-header('Content-Disposition: inline; filename="' . basename($doc['original_filename']) . '"');
+header('Content-Disposition: ' . $disposition . '; filename="' . basename($doc['original_filename']) . '"');
 header('Content-Length: ' . filesize($filePath));
 header('Cache-Control: private, max-age=3600');
 

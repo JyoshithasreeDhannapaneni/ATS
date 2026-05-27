@@ -604,15 +604,20 @@ function removeColumnFromFilter(filterElementID, columnName)
 {
     var arguments = document.getElementById(filterElementID).value.split(',');
     var newArguments = '';
-    
+
     for (var i = 0; i < arguments.length; i++)
-    {   
-        if ((arguments[i].indexOf('=') == -1 || urlDecode(arguments[i].substr(0, arguments[i].indexOf('='))) != columnName) && arguments[i] != '')
+    {
+        if (arguments[i] == '') continue;
+        var eqPos = arguments[i].indexOf('=');
+        if (eqPos == -1) { newArguments += arguments[i] + ','; continue; }
+        // Strip trailing '!' to handle '!=' operator (column stored as 'ColName!=value')
+        var rawCol = arguments[i].substr(0, eqPos).replace(/!$/, '');
+        if (urlDecode(rawCol) != columnName)
         {
             newArguments += arguments[i] + ',';
         }
     }
-    
+
     document.getElementById(filterElementID).value = newArguments;
 }
 

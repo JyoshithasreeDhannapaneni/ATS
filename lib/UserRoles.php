@@ -34,26 +34,23 @@ class UserRoles
         // Check if role column exists
         if (!self::roleColumnExists()) {
             // Infer role from access level
-            $sql = sprintf("SELECT access_level FROM user WHERE user_id = %d LIMIT 1", $userID);
-            $rs = $db->query($sql);
-            if ($rs && mysqli_num_rows($rs) > 0) {
-                $row = mysqli_fetch_assoc($rs);
+            $sql = sprintf("SELECT access_level FROM \"user\" WHERE user_id = %d LIMIT 1", $userID);
+            $row = $db->getAssoc($sql);
+            if (!empty($row)) {
                 return ($row['access_level'] >= 400) ? self::ROLE_ADMIN : self::ROLE_RECRUITER;
             }
             return self::ROLE_RECRUITER;
         }
-        
+
         $sql = sprintf(
-            "SELECT role, access_level FROM user WHERE user_id = %d LIMIT 1",
+            "SELECT role, access_level FROM \"user\" WHERE user_id = %d LIMIT 1",
             $userID
         );
-        $rs = $db->query($sql);
-        if ($rs && mysqli_num_rows($rs) > 0) {
-            $row = mysqli_fetch_assoc($rs);
+        $row = $db->getAssoc($sql);
+        if (!empty($row)) {
             if (!empty($row['role'])) {
                 return $row['role'];
             }
-            // Fallback to access level
             return ($row['access_level'] >= 400) ? self::ROLE_ADMIN : self::ROLE_RECRUITER;
         }
         return self::ROLE_RECRUITER;
@@ -66,15 +63,11 @@ class UserRoles
     {
         $db = DatabaseConnection::getInstance();
         $sql = sprintf(
-            "SELECT interviewer_type FROM user WHERE user_id = %d LIMIT 1",
+            "SELECT interviewer_type FROM \"user\" WHERE user_id = %d LIMIT 1",
             $userID
         );
-        $rs = $db->query($sql);
-        if ($rs && mysqli_num_rows($rs) > 0) {
-            $row = mysqli_fetch_assoc($rs);
-            return $row['interviewer_type'];
-        }
-        return null;
+        $row = $db->getAssoc($sql);
+        return !empty($row) ? $row['interviewer_type'] : null;
     }
     
     /**
@@ -162,38 +155,28 @@ class UserRoles
         $db = DatabaseConnection::getInstance();
         
         // Get user's email to match with calendar events
-        $userSql = sprintf("SELECT email, first_name, last_name FROM user WHERE user_id = %d", $userID);
-        $userRs = $db->query($userSql);
-        if (!$userRs || mysqli_num_rows($userRs) == 0) {
+        $userSql = sprintf("SELECT email, first_name, last_name FROM \"user\" WHERE user_id = %d", $userID);
+        $userData = $db->getAssoc($userSql);
+        if (empty($userData)) {
             return array();
         }
-        $userData = mysqli_fetch_assoc($userRs);
         $userEmail = $userData['email'];
-        
+
         // Get calendar events where this user is the entered_by or attendee
         $sql = sprintf(
             "SELECT ce.*, cet.short_description as event_type_name
              FROM calendar_event ce
              LEFT JOIN calendar_event_type cet ON ce.event_type = cet.calendar_event_type_id
-             WHERE ce.site_id = %d 
+             WHERE ce.site_id = %d
              AND (ce.entered_by = %d OR ce.description LIKE %s)
-             AND ce.date >= CURDATE()
+             AND ce.date >= CURRENT_DATE
              ORDER BY ce.date ASC, ce.all_day DESC",
             $this->_siteID,
             $userID,
             $db->makeQueryString('%' . $userEmail . '%')
         );
-        
-        $rs = $db->query($sql);
-        $events = array();
-        
-        if ($rs) {
-            while ($row = mysqli_fetch_assoc($rs)) {
-                $events[] = $row;
-            }
-        }
-        
-        return $events;
+
+        return $db->getAllAssoc($sql) ?: array();
     }
     
     /**
@@ -202,9 +185,9 @@ class UserRoles
     public static function roleColumnExists()
     {
         $db = DatabaseConnection::getInstance();
-        $sql = "SHOW COLUMNS FROM user LIKE 'role'";
-        $rs = $db->query($sql);
-        return ($rs && mysqli_num_rows($rs) > 0);
+        $sql = "SELECT column_name FROM information_schema.columns WHERE table_name = 'user' AND column_name = 'role'";
+        $rs = $db->getAssoc($sql);
+        return !empty($rs);
     }
 }
 ?>

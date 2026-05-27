@@ -432,6 +432,7 @@ class CareersUI extends UserInterface
             $keySkills = isset($_POST[$id='keySkills']) ? $_POST[$id] : '';
             $source = isset($_POST[$id='source']) ? $_POST[$id] : '';
             $employer = isset($_POST[$id='employer']) ? $_POST[$id] : '';
+            $extraNotes = isset($_POST[$id='extraNotes']) ? $_POST[$id] : '';
             // for <input-resumeUploadPreview>
             $resumeContents = isset($_POST[$id='resumeContents']) ? $_POST[$id] : '';
             $resumeFileLocation = isset($_POST[$id='file']) ? $_POST[$id] : '';
@@ -557,19 +558,293 @@ class CareersUI extends UserInterface
                 }
             }
 
-            $template['Content'] = $template['Content - Apply for Position'];
-
             // Force integer
-            // FIXME: Input validation, and use isRequiredIDValid() to check for / force integer.
             $jobID = intval(isset($_GET['ID']) ? $_GET['ID'] : $_POST['ID']);
 
             $jobOrderData = $jobOrders->get($jobID);
             if (!isset($jobOrderData['public']) || $jobOrderData['public'] == 0)
             {
-                // FIXME: Generate valid XHTML error pages. Create an error/fatal method!
                 echo '<html><body>This position is no longer available.  Please wait while we direct you to the job list...<script>setTimeout("document.location.href=\'?m=careers&&p=showAll\';", 1500);</script></body></html>';
                 die();
             }
+
+            // Build state dropdown HTML
+            $states = ['AL'=>'Alabama','AK'=>'Alaska','AZ'=>'Arizona','AR'=>'Arkansas','CA'=>'California','CO'=>'Colorado','CT'=>'Connecticut','DE'=>'Delaware','FL'=>'Florida','GA'=>'Georgia','HI'=>'Hawaii','ID'=>'Idaho','IL'=>'Illinois','IN'=>'Indiana','IA'=>'Iowa','KS'=>'Kansas','KY'=>'Kentucky','LA'=>'Louisiana','ME'=>'Maine','MD'=>'Maryland','MA'=>'Massachusetts','MI'=>'Michigan','MN'=>'Minnesota','MS'=>'Mississippi','MO'=>'Missouri','MT'=>'Montana','NE'=>'Nebraska','NV'=>'Nevada','NH'=>'New Hampshire','NJ'=>'New Jersey','NM'=>'New Mexico','NY'=>'New York','NC'=>'North Carolina','ND'=>'North Dakota','OH'=>'Ohio','OK'=>'Oklahoma','OR'=>'Oregon','PA'=>'Pennsylvania','RI'=>'Rhode Island','SC'=>'South Carolina','SD'=>'South Dakota','TN'=>'Tennessee','TX'=>'Texas','UT'=>'Utah','VT'=>'Vermont','VA'=>'Virginia','WA'=>'Washington','WV'=>'West Virginia','WI'=>'Wisconsin','WY'=>'Wyoming'];
+            $stateOptions = '<option value="">Select your state</option>';
+            foreach ($states as $code => $label) {
+                $stateOptions .= '<option value="'.htmlspecialchars($code).'"'.($state==$code?' selected':'').'>'.htmlspecialchars($label).'</option>';
+            }
+            $sourceOptions = '<option value="">Select an option</option><option value="LinkedIn">LinkedIn</option><option value="Indeed">Indeed</option><option value="Glassdoor">Glassdoor</option><option value="Company Website">Company Website</option><option value="Referral">Employee Referral</option><option value="Job Fair">Job Fair</option><option value="Social Media">Social Media</option><option value="Career Portal">Career Portal</option><option value="Other">Other</option>';
+
+            $indexUrl = CATSUtility::getIndexName();
+            $backUrl  = $indexUrl . '?m=careers&amp;p=showJob&amp;ID=' . $jobID;
+            $jobTitle = htmlspecialchars($jobOrderData['title'] ?? 'Position');
+
+            $modernApplyForm = <<<HTML
+<a href="{$backUrl}" class="cp-back">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+  Back to Jobs
+</a>
+<div class="cp-page-title">Apply for {$jobTitle}</div>
+<p class="cp-page-subtitle">Fields marked <span style="color:#ef4444;">*</span> are required.</p>
+
+<div class="cp-progress-wrap">
+  <div class="cp-progress-label"><span id="progressLabel">0% complete</span></div>
+  <div class="cp-progress-bar"><div class="cp-progress-fill" id="progressFill" style="width:0%"></div></div>
+</div>
+
+<div class="cp-steps">
+  <div class="cp-step active">
+    <div class="cp-step-circle">1</div>
+    <div class="cp-step-label">Personal Information</div>
+  </div>
+  <div class="cp-step-line"></div>
+  <div class="cp-step">
+    <div class="cp-step-circle">2</div>
+    <div class="cp-step-label">Professional Background</div>
+  </div>
+  <div class="cp-step-line"></div>
+  <div class="cp-step">
+    <div class="cp-step-circle">3</div>
+    <div class="cp-step-label">Resume &amp; Documents</div>
+  </div>
+  <div class="cp-step-line"></div>
+  <div class="cp-step">
+    <div class="cp-step-circle">4</div>
+    <div class="cp-step-label">Review &amp; Submit</div>
+  </div>
+</div>
+
+<form id="applyToJobForm" name="applyToJobForm" enctype="multipart/form-data" method="post"
+  action="{$indexUrl}?m=careers&amp;p=onApplyToJobOrder" onsubmit="return cpValidateForm();">
+  <input type="hidden" name="ID" value="{$jobID}">
+  <input type="hidden" name="candidateID" value="-1">
+  <input type="hidden" name="applied_via_career_portal" value="1">
+
+  <div class="cp-layout">
+    <div class="cp-main">
+
+      <!-- Personal Information -->
+      <div class="cp-card" id="personalInfo">
+        <div class="cp-card-header">
+          <div class="cp-card-icon">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          </div>
+          <div>
+            <div class="cp-card-title">Personal Information</div>
+            <div class="cp-card-sub">Tell us who you are.</div>
+          </div>
+        </div>
+        <div class="cp-card-body">
+          <div class="cp-form-grid">
+            <div class="cp-form-group">
+              <label class="cp-label">First Name <span class="req">*</span></label>
+              <input class="cp-input" name="firstName" id="firstName" type="text" placeholder="Enter your first name" value="HTML_FIRSTNAME" required>
+            </div>
+            <div class="cp-form-group">
+              <label class="cp-label">Last Name <span class="req">*</span></label>
+              <input class="cp-input" name="lastName" id="lastName" type="text" placeholder="Enter your last name" value="HTML_LASTNAME" required>
+            </div>
+            <div class="cp-form-group">
+              <label class="cp-label">Email <span class="req">*</span></label>
+              <input class="cp-input" name="email" id="email" type="email" placeholder="Enter your email address" value="HTML_EMAIL" required>
+            </div>
+            <div class="cp-form-group">
+              <label class="cp-label">Confirm Email <span class="req">*</span></label>
+              <input class="cp-input" name="emailconfirm" id="emailconfirm" type="email" placeholder="Re-enter your email address" value="HTML_EMAIL" required>
+            </div>
+            <div class="cp-form-group">
+              <label class="cp-label">Phone <span class="req">*</span></label>
+              <input class="cp-input" name="phone" id="phone" type="tel" placeholder="Enter your phone number" value="HTML_PHONE" required>
+            </div>
+            <div class="cp-form-group">
+              <label class="cp-label">City <span class="req">*</span></label>
+              <input class="cp-input" name="city" id="city" type="text" placeholder="Enter your city" value="HTML_CITY" required>
+            </div>
+            <div class="cp-form-group">
+              <label class="cp-label">State <span class="req">*</span></label>
+              <select class="cp-select" name="state" id="state" required>HTML_STATES</select>
+            </div>
+            <div class="cp-form-group">
+              <label class="cp-label">Zip Code <span class="req">*</span></label>
+              <input class="cp-input" name="zip" id="zip" type="text" placeholder="Enter zip code" value="HTML_ZIP" required>
+            </div>
+            <div class="cp-form-group span2">
+              <label class="cp-label">Address <span class="req">*</span></label>
+              <textarea class="cp-textarea" name="address" id="address" placeholder="Enter your full address" required>HTML_ADDRESS</textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Professional Background -->
+      <div class="cp-card" id="professionalBg">
+        <div class="cp-card-header">
+          <div class="cp-card-icon">
+            <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+          </div>
+          <div>
+            <div class="cp-card-title">Professional Background</div>
+            <div class="cp-card-sub">Help us understand your professional experience.</div>
+          </div>
+        </div>
+        <div class="cp-card-body">
+          <div class="cp-form-grid">
+            <div class="cp-form-group">
+              <label class="cp-label">Key Skills <span class="req">*</span></label>
+              <input class="cp-input" name="keySkills" id="keySkills" type="text" placeholder="Enter your key skills (comma separated)" value="HTML_KEYSKILLS" required>
+            </div>
+            <div class="cp-form-group">
+              <label class="cp-label">Current Employer</label>
+              <input class="cp-input" name="employer" id="employer" type="text" placeholder="Enter your current employer" value="HTML_EMPLOYER">
+            </div>
+            <div class="cp-form-group span2">
+              <label class="cp-label">How did you hear about us? <span class="req">*</span></label>
+              <select class="cp-select" name="source" id="source" required>HTML_SOURCES</select>
+            </div>
+            <div class="cp-form-group span2">
+              <label class="cp-label">Additional Information</label>
+              <textarea class="cp-textarea" name="extraNotes" id="extraNotes" placeholder="Add any other relevant information">HTML_EXTRANOTES</textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Resume & Documents -->
+      <div class="cp-card" id="resumeDocs">
+        <div class="cp-card-header">
+          <div class="cp-card-icon">
+            <svg viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </div>
+          <div>
+            <div class="cp-card-title">Resume &amp; Documents</div>
+            <div class="cp-card-sub">Upload your resume and add any additional documents.</div>
+          </div>
+        </div>
+        <div class="cp-card-body">
+          <div class="cp-form-group" style="margin-bottom:16px;">
+            <label class="cp-label">Upload Resume <span class="req">*</span></label>
+            <div class="cp-upload-zone" id="resumeDropZone">
+              <input type="file" name="file" id="resumeFile" accept=".pdf,.doc,.docx,.txt,.rtf" onchange="handleFileSelect(this,'resumeFileDisplay')">
+              <div class="cp-upload-icon">
+                <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              </div>
+              <p class="cp-upload-text"><strong>Drag and drop your file here</strong><br>or</p>
+              <span class="cp-upload-btn">Choose File</span>
+              <p class="cp-upload-hint">PDF, DOC, DOCX, TXT, RTF • Max 10MB</p>
+            </div>
+            <div class="cp-file-selected" id="resumeFileDisplay">
+              <svg viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+              <span>No file selected</span>
+            </div>
+          </div>
+          <div class="cp-form-group">
+            <label class="cp-label">Cover Letter / Notes</label>
+            <textarea class="cp-textarea" name="coverLetter" id="coverLetter" rows="4" placeholder="Add your cover letter or any additional notes"></textarea>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /cp-main -->
+
+    <!-- Sidebar -->
+    <div class="cp-sidebar">
+      <div class="cp-summary-card">
+        <div class="cp-summary-header">
+          <h3>Application Summary</h3>
+          <p>Review your progress</p>
+        </div>
+        <div class="cp-summary-list">
+          <div class="cp-summary-item" id="summaryPersonal">
+            <div class="cp-summary-dot"></div>
+            <div class="cp-summary-info">
+              <div class="cp-summary-name">Personal Information</div>
+              <div class="cp-summary-status">Not started</div>
+            </div>
+          </div>
+          <div class="cp-summary-item" id="summaryProfessional">
+            <div class="cp-summary-dot"></div>
+            <div class="cp-summary-info">
+              <div class="cp-summary-name">Professional Background</div>
+              <div class="cp-summary-status">Not started</div>
+            </div>
+          </div>
+          <div class="cp-summary-item" id="summaryResume">
+            <div class="cp-summary-dot"></div>
+            <div class="cp-summary-info">
+              <div class="cp-summary-name">Resume &amp; Documents</div>
+              <div class="cp-summary-status">Not started</div>
+            </div>
+          </div>
+          <div class="cp-summary-item" id="summaryReview">
+            <div class="cp-summary-dot"></div>
+            <div class="cp-summary-info">
+              <div class="cp-summary-name">Review &amp; Submit</div>
+              <div class="cp-summary-status">Not started</div>
+            </div>
+          </div>
+        </div>
+        <div class="cp-tip">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <p><strong>Tip</strong>Complete all sections to increase your chances of getting noticed by our team.</p>
+        </div>
+      </div>
+    </div>
+  </div><!-- /cp-layout -->
+
+  <!-- Actions -->
+  <div class="cp-actions" style="background:#fff;border:1px solid #e5e7eb;border-radius:14px;margin-top:8px;">
+    <a href="{$backUrl}" class="cp-btn cp-btn-ghost">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="16" height="12" x="4" y="6" rx="2"/><path d="M8 6V4h8v2"/></svg>
+      Save Draft
+    </a>
+    <button type="submit" class="cp-btn cp-btn-primary" id="submitBtn">
+      Save &amp; Continue
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+    </button>
+  </div>
+
+</form>
+
+<script>
+function cpValidateForm() {
+  var req = ['firstName','lastName','email','emailconfirm','phone','city','state','zip','address','keySkills','source'];
+  for (var i=0; i<req.length; i++) {
+    var el = document.getElementById(req[i]);
+    if (el && !el.value.trim()) {
+      el.focus(); el.style.borderColor='#ef4444';
+      alert('Please fill in the required field: ' + (el.previousElementSibling ? el.previousElementSibling.textContent.replace('*','').trim() : req[i]));
+      return false;
+    }
+  }
+  var em = document.getElementById('email'), ec = document.getElementById('emailconfirm');
+  if (em && ec && em.value !== ec.value) { alert('Email addresses do not match.'); ec.focus(); return false; }
+  document.getElementById('submitBtn').disabled = true;
+  document.getElementById('submitBtn').textContent = 'Submitting…';
+  return true;
+}
+document.querySelectorAll('.cp-input, .cp-select, .cp-textarea').forEach(function(el){
+  el.addEventListener('focus', function(){ el.style.borderColor=''; });
+});
+</script>
+HTML;
+
+            // Substitute pre-filled values
+            $modernApplyForm = str_replace('HTML_FIRSTNAME',  htmlspecialchars($firstName),  $modernApplyForm);
+            $modernApplyForm = str_replace('HTML_LASTNAME',   htmlspecialchars($lastName),   $modernApplyForm);
+            $modernApplyForm = str_replace('HTML_EMAIL',      htmlspecialchars($email),      $modernApplyForm);
+            $modernApplyForm = str_replace('HTML_PHONE',      htmlspecialchars($phone),      $modernApplyForm);
+            $modernApplyForm = str_replace('HTML_CITY',       htmlspecialchars($city),       $modernApplyForm);
+            $modernApplyForm = str_replace('HTML_ZIP',        htmlspecialchars($zip),        $modernApplyForm);
+            $modernApplyForm = str_replace('HTML_ADDRESS',    htmlspecialchars($address),    $modernApplyForm);
+            $modernApplyForm = str_replace('HTML_KEYSKILLS',  htmlspecialchars($keySkills),  $modernApplyForm);
+            $modernApplyForm = str_replace('HTML_EMPLOYER',   htmlspecialchars($employer),   $modernApplyForm);
+            $modernApplyForm = str_replace('HTML_EXTRANOTES', htmlspecialchars($extraNotes), $modernApplyForm);
+            $modernApplyForm = str_replace('HTML_STATES',     $stateOptions,                $modernApplyForm);
+            $modernApplyForm = str_replace('HTML_SOURCES',    $sourceOptions,               $modernApplyForm);
+
+            $template['Content'] = $modernApplyForm;
+            $template['_useModern'] = true;
 
             /* Make JavaScript validation rules. */
             $validator = $this->_makeApplyValidator($template);
@@ -598,7 +873,59 @@ class CareersUI extends UserInterface
             $template['Content'] = str_replace('<input-lastName>', '<input name="lastName" id="lastName" class="inputBoxName" value="' . $lastName . '" />', $template['Content']);
             $template['Content'] = str_replace('<input-address>', '<textarea name="address" class="inputBoxArea">'. $address .'</textarea>', $template['Content']);
             $template['Content'] = str_replace('<input-city>', '<input name="city" id="city" class="inputBoxNormal" value="' . $city . '" />', $template['Content']);
-            $template['Content'] = str_replace('<input-state>', '<input name="state" id="state" class="inputBoxNormal" value="' . $state . '" />', $template['Content']);
+            $template['Content'] = str_replace('<input-state>', '<select name="state" id="state" class="inputBoxNormal">'
+                . '<option value=""' . ($state == '' ? ' selected' : '') . '>Select your state</option>'
+                . '<option value="AL"' . ($state == 'AL' ? ' selected' : '') . '>Alabama</option>'
+                . '<option value="AK"' . ($state == 'AK' ? ' selected' : '') . '>Alaska</option>'
+                . '<option value="AZ"' . ($state == 'AZ' ? ' selected' : '') . '>Arizona</option>'
+                . '<option value="AR"' . ($state == 'AR' ? ' selected' : '') . '>Arkansas</option>'
+                . '<option value="CA"' . ($state == 'CA' ? ' selected' : '') . '>California</option>'
+                . '<option value="CO"' . ($state == 'CO' ? ' selected' : '') . '>Colorado</option>'
+                . '<option value="CT"' . ($state == 'CT' ? ' selected' : '') . '>Connecticut</option>'
+                . '<option value="DE"' . ($state == 'DE' ? ' selected' : '') . '>Delaware</option>'
+                . '<option value="FL"' . ($state == 'FL' ? ' selected' : '') . '>Florida</option>'
+                . '<option value="GA"' . ($state == 'GA' ? ' selected' : '') . '>Georgia</option>'
+                . '<option value="HI"' . ($state == 'HI' ? ' selected' : '') . '>Hawaii</option>'
+                . '<option value="ID"' . ($state == 'ID' ? ' selected' : '') . '>Idaho</option>'
+                . '<option value="IL"' . ($state == 'IL' ? ' selected' : '') . '>Illinois</option>'
+                . '<option value="IN"' . ($state == 'IN' ? ' selected' : '') . '>Indiana</option>'
+                . '<option value="IA"' . ($state == 'IA' ? ' selected' : '') . '>Iowa</option>'
+                . '<option value="KS"' . ($state == 'KS' ? ' selected' : '') . '>Kansas</option>'
+                . '<option value="KY"' . ($state == 'KY' ? ' selected' : '') . '>Kentucky</option>'
+                . '<option value="LA"' . ($state == 'LA' ? ' selected' : '') . '>Louisiana</option>'
+                . '<option value="ME"' . ($state == 'ME' ? ' selected' : '') . '>Maine</option>'
+                . '<option value="MD"' . ($state == 'MD' ? ' selected' : '') . '>Maryland</option>'
+                . '<option value="MA"' . ($state == 'MA' ? ' selected' : '') . '>Massachusetts</option>'
+                . '<option value="MI"' . ($state == 'MI' ? ' selected' : '') . '>Michigan</option>'
+                . '<option value="MN"' . ($state == 'MN' ? ' selected' : '') . '>Minnesota</option>'
+                . '<option value="MS"' . ($state == 'MS' ? ' selected' : '') . '>Mississippi</option>'
+                . '<option value="MO"' . ($state == 'MO' ? ' selected' : '') . '>Missouri</option>'
+                . '<option value="MT"' . ($state == 'MT' ? ' selected' : '') . '>Montana</option>'
+                . '<option value="NE"' . ($state == 'NE' ? ' selected' : '') . '>Nebraska</option>'
+                . '<option value="NV"' . ($state == 'NV' ? ' selected' : '') . '>Nevada</option>'
+                . '<option value="NH"' . ($state == 'NH' ? ' selected' : '') . '>New Hampshire</option>'
+                . '<option value="NJ"' . ($state == 'NJ' ? ' selected' : '') . '>New Jersey</option>'
+                . '<option value="NM"' . ($state == 'NM' ? ' selected' : '') . '>New Mexico</option>'
+                . '<option value="NY"' . ($state == 'NY' ? ' selected' : '') . '>New York</option>'
+                . '<option value="NC"' . ($state == 'NC' ? ' selected' : '') . '>North Carolina</option>'
+                . '<option value="ND"' . ($state == 'ND' ? ' selected' : '') . '>North Dakota</option>'
+                . '<option value="OH"' . ($state == 'OH' ? ' selected' : '') . '>Ohio</option>'
+                . '<option value="OK"' . ($state == 'OK' ? ' selected' : '') . '>Oklahoma</option>'
+                . '<option value="OR"' . ($state == 'OR' ? ' selected' : '') . '>Oregon</option>'
+                . '<option value="PA"' . ($state == 'PA' ? ' selected' : '') . '>Pennsylvania</option>'
+                . '<option value="RI"' . ($state == 'RI' ? ' selected' : '') . '>Rhode Island</option>'
+                . '<option value="SC"' . ($state == 'SC' ? ' selected' : '') . '>South Carolina</option>'
+                . '<option value="SD"' . ($state == 'SD' ? ' selected' : '') . '>South Dakota</option>'
+                . '<option value="TN"' . ($state == 'TN' ? ' selected' : '') . '>Tennessee</option>'
+                . '<option value="TX"' . ($state == 'TX' ? ' selected' : '') . '>Texas</option>'
+                . '<option value="UT"' . ($state == 'UT' ? ' selected' : '') . '>Utah</option>'
+                . '<option value="VT"' . ($state == 'VT' ? ' selected' : '') . '>Vermont</option>'
+                . '<option value="VA"' . ($state == 'VA' ? ' selected' : '') . '>Virginia</option>'
+                . '<option value="WA"' . ($state == 'WA' ? ' selected' : '') . '>Washington</option>'
+                . '<option value="WV"' . ($state == 'WV' ? ' selected' : '') . '>West Virginia</option>'
+                . '<option value="WI"' . ($state == 'WI' ? ' selected' : '') . '>Wisconsin</option>'
+                . '<option value="WY"' . ($state == 'WY' ? ' selected' : '') . '>Wyoming</option>'
+                . '</select>', $template['Content']);
             $template['Content'] = str_replace('<input-zip>', '<input name="zip" id="zip" class="inputBoxNormal" value="' . $zip . '" />', $template['Content']);
             $template['Content'] = str_replace('<input-phone>', '<input name="phone" id="phone" class="inputBoxNormal" value="' . $phone . '" />', $template['Content']);
             $template['Content'] = str_replace('<input-email>', '<input name="email" id="email" class="inputBoxNormal" value="' . $email . '" />', $template['Content']);
@@ -608,7 +935,17 @@ class CareersUI extends UserInterface
             $template['Content'] = str_replace('<input-email2>', '<input name="email2" id="email2" class="inputBoxNormal" value="' . $email2 . '" />', $template['Content']);
             $template['Content'] = str_replace('<input-emailconfirm>', '<input name="emailconfirm" id="emailconfirm" class="inputBoxNormal" value="' . $emailconfirm . '" />', $template['Content']);
             $template['Content'] = str_replace('<input-keySkills>', '<input name="keySkills" id="keySkills" class="inputBoxNormal" value="' . $keySkills . '" />', $template['Content']);
-            $template['Content'] = str_replace('<input-source>', '<input name="source" id="source" class="inputBoxNormal" value="' . $source . '" />', $template['Content']);
+            $template['Content'] = str_replace('<input-source>', '<select name="source" id="source" class="inputBoxNormal">'
+                . '<option value=""' . ($source == '' ? ' selected' : '') . '>Select an option</option>'
+                . '<option value="LinkedIn"' . ($source == 'LinkedIn' ? ' selected' : '') . '>LinkedIn</option>'
+                . '<option value="Indeed"' . ($source == 'Indeed' ? ' selected' : '') . '>Indeed</option>'
+                . '<option value="Glassdoor"' . ($source == 'Glassdoor' ? ' selected' : '') . '>Glassdoor</option>'
+                . '<option value="Company Website"' . ($source == 'Company Website' ? ' selected' : '') . '>Company Website</option>'
+                . '<option value="Referral"' . ($source == 'Referral' ? ' selected' : '') . '>Employee Referral</option>'
+                . '<option value="Job Fair"' . ($source == 'Job Fair' ? ' selected' : '') . '>Job Fair</option>'
+                . '<option value="Social Media"' . ($source == 'Social Media' ? ' selected' : '') . '>Social Media</option>'
+                . '<option value="Other"' . ($source == 'Other' ? ' selected' : '') . '>Other</option>'
+                . '</select>', $template['Content']);
             $template['Content'] = str_replace('<input-employer>', '<input name="employer" id="employer" class="inputBoxNormal" value="' . $employer . '" />', $template['Content']);
             $template['Content'] = str_replace('<input-resumeUpload>', '<input type="file" id="resume" name="file" class="inputBoxFile" />', $template['Content']);
             $template['Content'] = str_replace('<input-resumeUploadPreview>',
@@ -678,53 +1015,57 @@ class CareersUI extends UserInterface
                 }
             }
 
-            /* This is kindof a hack, but basically, we have to put the
-             * validation code / form below inside the <td>, which is contained
-             * in the template, as they aren't allowed in <tr>s.
-             * NOTE: Continue to use ungreedy matching or this will break!
-             */
-            if (preg_match('/^.*?(<td.*?>)/i', $template['Content'], $matches))
+            /* Modern apply form already contains its own <form> tag and hidden inputs — skip legacy wrapping. */
+            if (empty($template['_useModern']))
             {
-                $startTD = $matches[1];
-                $template['Content'] = preg_replace('/^.*?(?:<td.*?>)/i', '', $template['Content']);
-            }
-            else
-            {
-                $startTD = '';
-            }
+                /* This is kindof a hack, but basically, we have to put the
+                 * validation code / form below inside the <td>, which is contained
+                 * in the template, as they aren't allowed in <tr>s.
+                 * NOTE: Continue to use ungreedy matching or this will break!
+                 */
+                if (preg_match('/^.*?(<td.*?>)/i', $template['Content'], $matches))
+                {
+                    $startTD = $matches[1];
+                    $template['Content'] = preg_replace('/^.*?(?:<td.*?>)/i', '', $template['Content']);
+                }
+                else
+                {
+                    $startTD = '';
+                }
 
-            if (preg_match('/(<\/td>).*?$/i', $template['Content'], $matches))
-            {
-                $endTD = $matches[1];
-                $template['Content'] = preg_replace('/(?:<\/td>).*?$/i', '', $template['Content']);
-            }
-            else
-            {
-                $endTD = '';
-            }
+                if (preg_match('/(<\/td>).*?$/i', $template['Content'], $matches))
+                {
+                    $endTD = $matches[1];
+                    $template['Content'] = preg_replace('/(?:<\/td>).*?$/i', '', $template['Content']);
+                }
+                else
+                {
+                    $endTD = '';
+                }
 
-            if (strpos($template['Content'], '<catsform>') === false)
-            {
-                $template['Content'] = $startTD . "\n" . $validator . "\n"
-                    . '<form name="applyToJobForm" id="applyToJobForm" action="'
-                    . CATSUtility::getIndexName()
-                    . '?m=careers&amp;p=onApplyToJobOrder" '
-                    . 'enctype="multipart/form-data" method="post" onsubmit="return applyValidate();">'
-                    . '<input type="hidden" name="ID" value="' . $jobID . '">'
-                    . '<input type="hidden" name="candidateID" value="' . $candidateID . '">'
-                    . $template['Content'] . '</form>' . "\n" . $endTD;
-            }
-            else
-            {
-                $template['Content'] = $startTD . "\n" . $validator . "\n" .
-                    str_replace('<catsform>', '<form name="applyToJobForm" id="applyToJobForm" action="'
+                if (strpos($template['Content'], '<catsform>') === false)
+                {
+                    $template['Content'] = $startTD . "\n" . $validator . "\n"
+                        . '<form name="applyToJobForm" id="applyToJobForm" action="'
                         . CATSUtility::getIndexName()
                         . '?m=careers&amp;p=onApplyToJobOrder" '
                         . 'enctype="multipart/form-data" method="post" onsubmit="return applyValidate();">'
                         . '<input type="hidden" name="ID" value="' . $jobID . '">'
-                        . '<input type="hidden" name="candidateID" value="' . $candidateID . '">',
-                        $template['Content'])
-                    . "\n" . $endTD;
+                        . '<input type="hidden" name="candidateID" value="' . $candidateID . '">'
+                        . $template['Content'] . '</form>' . "\n" . $endTD;
+                }
+                else
+                {
+                    $template['Content'] = $startTD . "\n" . $validator . "\n" .
+                        str_replace('<catsform>', '<form name="applyToJobForm" id="applyToJobForm" action="'
+                            . CATSUtility::getIndexName()
+                            . '?m=careers&amp;p=onApplyToJobOrder" '
+                            . 'enctype="multipart/form-data" method="post" onsubmit="return applyValidate();">'
+                            . '<input type="hidden" name="ID" value="' . $jobID . '">'
+                            . '<input type="hidden" name="candidateID" value="' . $candidateID . '">',
+                            $template['Content'])
+                        . "\n" . $endTD;
+                }
             }
         }
         else if ($p == 'onApplyToJobOrder')
@@ -772,9 +1113,47 @@ class CareersUI extends UserInterface
                     die();
                 }
 
-                $template['Content'] = $template['Content - Thanks for your Submission'];
-                $template['Content'] = str_replace('<title>', $jobOrderData['title'], $template['Content']);
-                $template['Content'] = str_replace('<a-jobDetails>', '<a href="' . CATSUtility::getIndexName() . '?m=careers'.(isset($_GET['templateName']) ? '&templateName='.urlencode($_GET['templateName']) : '').'&p=showJob&ID='.$_POST['ID'].'">', $template['Content']);
+                /* Generate reference ID */
+                $refID = 'NTA-' . strtoupper(substr(md5(uniqid()), 0, 6));
+
+                /* Show a clean success page with popup */
+                $jobTitle = htmlspecialchars($jobOrderData['title'] ?? 'Position');
+                $backUrl  = CATSUtility::getIndexName() . '?m=careers' . (isset($_GET['templateName']) ? '&templateName='.urlencode($_GET['templateName']) : '') . '&p=showAll';
+                echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Inter,sans-serif;background:#f1f5f9;display:flex;align-items:center;justify-content:center;min-height:100vh;}
+.card{background:#fff;border-radius:20px;padding:52px 44px;text-align:center;max-width:480px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,.10);}
+.check-circle{width:80px;height:80px;background:linear-gradient(135deg,#d1fae5,#a7f3d0);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 24px;animation:popIn .5s ease;}
+@keyframes popIn{0%{transform:scale(0);opacity:0;}70%{transform:scale(1.1);}100%{transform:scale(1);opacity:1;}}
+h1{font-size:24px;font-weight:800;color:#064e3b;margin-bottom:8px;}
+.subtitle{font-size:15px;color:#6b7280;line-height:1.6;margin-bottom:20px;}
+.ref-box{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 20px;margin-bottom:28px;}
+.ref-label{font-size:11px;font-weight:600;color:#16a34a;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;}
+.ref-id{font-size:22px;font-weight:800;color:#166534;font-family:monospace;letter-spacing:.08em;}
+.email-notice{font-size:13px;color:#6b7280;margin-bottom:32px;line-height:1.5;}
+.email-notice strong{color:#374151;}
+.btn-home{display:inline-block;padding:12px 32px;background:#2563eb;color:#fff;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px;transition:background .15s;}
+.btn-home:hover{background:#1d4ed8;}
+.job-title{font-size:13px;color:#9ca3af;margin-top:20px;}
+</style></head><body>
+<div class="card">
+  <div class="check-circle">
+    <svg width="36" height="36" fill="none" stroke="#059669" stroke-width="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+  </div>
+  <h1>Application Submitted!</h1>
+  <p class="subtitle">Thank you for applying for <strong>' . $jobTitle . '</strong>.<br>We\'ve received your application and will review it shortly.</p>
+  <div class="ref-box">
+    <div class="ref-label">Your Reference ID</div>
+    <div class="ref-id">' . $refID . '</div>
+  </div>
+  <p class="email-notice">A confirmation email has been sent to your registered email address. Please save your reference ID for future correspondence.</p>
+  <a href="' . htmlspecialchars($backUrl) . '" class="btn-home">View More Jobs</a>
+  <p class="job-title">Applied for: ' . $jobTitle . '</p>
+</div>
+</body></html>';
+                die();
             }
             else
             {
@@ -969,12 +1348,18 @@ class CareersUI extends UserInterface
             }
         }
 
+        $template['_page'] = $p;
+        $template['_jobCount'] = count($rs);
         $this->_template->assign('template', $template);
         $this->_template->assign('siteName', $siteName);
 
         if (!eval(Hooks::get('CAREERS_PAGE_BOTTOM'))) return;
 
-        if ($careerPortalSettingsRS['useCATSTemplate'] != '')
+        if (!empty($template['_useModern']))
+        {
+            $this->_template->display('./modules/careers/ApplyModern.tpl');
+        }
+        elseif ($careerPortalSettingsRS['useCATSTemplate'] != '')
         {
             $this->_template->display($careerPortalSettingsRS['useCATSTemplate']);
         }
@@ -1261,7 +1646,11 @@ class CareersUI extends UserInterface
             CommonErrors::fatal(COMMONERROR_MISSINGFIELDS, $this, 'E-Mail address is a required field - please have your administrator edit your templates to include the email field.');
         }
 
-        if (empty($source))
+        if (!empty($_POST['applied_via_career_portal']))
+        {
+            $source = 'Career Portal';
+        }
+        elseif (empty($source))
         {
             $source = 'Online Careers Website';
         }
@@ -1421,12 +1810,37 @@ class CareersUI extends UserInterface
         $pipelines = new Pipelines($siteID);
         $activityEntries = new ActivityEntries($siteID);
 
+        /* Check 3-month cooling period before allowing reapplication */
+        if ($pipelines->isInCoolingPeriod($candidateID, $jobOrderID))
+        {
+            /* Show a friendly "already applied" page instead of generic error */
+            $jobOrderData2 = $jobOrders->get($jobOrderID);
+            $jobTitle2 = htmlspecialchars($jobOrderData2['title'] ?? 'this position');
+            echo '<!DOCTYPE html><html><head><meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>body{font-family:Inter,sans-serif;background:#f8fafc;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}
+.box{background:#fff;border-radius:16px;padding:48px 40px;text-align:center;max-width:440px;box-shadow:0 4px 24px rgba(0,0,0,.08);}
+.icon{width:64px;height:64px;background:#fef3c7;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;}
+h2{font-size:20px;font-weight:700;color:#111827;margin:0 0 10px;}
+p{font-size:14px;color:#6b7280;margin:0 0 28px;line-height:1.6;}
+a{display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;}
+a:hover{background:#1d4ed8;}</style></head><body>
+<div class="box">
+  <div class="icon"><svg width="28" height="28" fill="none" stroke="#d97706" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+  <h2>Already Applied</h2>
+  <p>You have already applied for <strong>' . $jobTitle2 . '</strong>.<br>Please wait 3 months before reapplying for this position.</p>
+  <a href="' . CATSUtility::getIndexName() . '?m=careers&amp;p=showAll">View Other Jobs</a>
+</div></body></html>';
+            die();
+        }
+
         /* Is the candidate already in the pipeline for this job order? */
         $rs = $pipelines->get($candidateID, $jobOrderID);
         if (count($rs) == 0)
         {
             /* Attempt to add the candidate to the pipeline. */
-            if (!$pipelines->add($candidateID, $jobOrderID))
+            $pipelineAddResult = $pipelines->add($candidateID, $jobOrderID);
+            if (!$pipelineAddResult)
             {
                 CommonErrors::fatal(COMMONERROR_RECORDERROR, $this, 'Failed to add candidate to job order.');
             }
@@ -1528,12 +1942,40 @@ class CareersUI extends UserInterface
 
         $emailContents = $candidatesEmailTemplate;
 
+        /* Fallback: always send HTML confirmation email to candidate */
+        if (empty($emailContents))
+        {
+            $siteName = defined('SITE_NAME') ? htmlspecialchars(SITE_NAME) : 'Neutara ATS';
+            $jobTitleHtml = htmlspecialchars($jobOrderData['title'] ?? 'the position');
+            $companyHtml  = htmlspecialchars($jobOrderData['companyName'] ?? '');
+            $emailContents = '<html><body style="font-family:Arial,sans-serif;background:#f8fafc;padding:0;margin:0;">'
+                . '<div style="max-width:520px;margin:40px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.07);">'
+                . '<div style="background:#0d2488;padding:28px 32px;">'
+                . '<span style="font-size:22px;font-weight:800;color:#fff;">N</span>'
+                . '<span style="font-size:16px;font-weight:700;color:#fff;margin-left:8px;">' . $siteName . '</span>'
+                . '</div>'
+                . '<div style="padding:32px;">'
+                . '<h2 style="font-size:20px;color:#064e3b;margin:0 0 12px;">Application Received ✓</h2>'
+                . '<p style="color:#374151;font-size:14px;line-height:1.7;margin:0 0 16px;">Dear <strong>' . htmlspecialchars($firstName) . '</strong>,</p>'
+                . '<p style="color:#374151;font-size:14px;line-height:1.7;margin:0 0 16px;">Thank you for applying for the position of <strong>' . $jobTitleHtml . '</strong>'
+                . ($companyHtml ? ' at <strong>' . $companyHtml . '</strong>' : '') . '.</p>'
+                . '<p style="color:#374151;font-size:14px;line-height:1.7;margin:0 0 24px;">We have received your application and our team will review it shortly. We will be in touch if your profile matches our requirements.</p>'
+                . '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px 20px;margin-bottom:24px;">'
+                . '<div style="font-size:11px;font-weight:600;color:#16a34a;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Application Details</div>'
+                . '<div style="font-size:14px;color:#166534;"><strong>Position:</strong> ' . $jobTitleHtml . '</div>'
+                . '</div>'
+                . '<p style="color:#6b7280;font-size:13px;line-height:1.6;margin:0;">Best regards,<br><strong>The ' . $siteName . ' Team</strong></p>'
+                . '</div>'
+                . '<div style="background:#f9fafb;padding:16px 32px;border-top:1px solid #e5e7eb;font-size:11px;color:#9ca3af;">This is an automated message. Please do not reply to this email.</div>'
+                . '</div></body></html>';
+        }
+
         if (!empty($emailContents))
         {
             $careerPortalSettings->sendEmail(
                 $automatedUser['userID'],
                 $email,
-                CAREERS_CANDIDATEAPPLY_SUBJECT,
+                'Application Received: ' . ($jobOrderData['title'] ?? 'Position'),
                 $emailContents
             );
         }

@@ -70,6 +70,22 @@ if (!in_array($ext, $allowedExtensions))
 
 $candidateID = intval($tokenData['candidate_id']);
 $tokenID = intval($tokenData['token_id']);
+
+// Check for duplicate file before saving
+$fileHash = @md5_file($file['tmp_name']);
+if ($fileHash)
+{
+    $duplicate = $docs->isDuplicateFile($candidateID, $fileHash);
+    if ($duplicate)
+    {
+        echo json_encode(array(
+            'success' => false,
+            'error' => 'This file has already been uploaded as "' . $duplicate['original_filename'] . '". Duplicate files are not allowed.'
+        ));
+        exit;
+    }
+}
+
 $uploadDir = CandidateDocuments::getUploadDirectory($candidateID);
 
 $storedFilename = time() . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
@@ -87,7 +103,7 @@ $contentType = $file['type'] ?: 'application/octet-stream';
 $documentID = $docs->saveDocument(
     $candidateID, $tokenID, $docType,
     $file['name'], $storedFilename, (string)$candidateID,
-    $fileSizeKB, $contentType
+    $fileSizeKB, $contentType, $fileHash
 );
 
 $docs->incrementUploadCount($tokenID);

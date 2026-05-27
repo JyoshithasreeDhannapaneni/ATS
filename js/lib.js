@@ -72,7 +72,7 @@ function stringIsNumeric(string)
  */
 function hideParentBlock(elementID)
 {
-    element = parent.document.getElementById(elementID);
+    var element = parent.document.getElementById(elementID);
     element.parentNode.removeChild(element);
 }
 
@@ -83,8 +83,8 @@ function hideParentBlock(elementID)
  */
 function showParentBlock(elementID)
 {
-    element = parent.document.getElementById(elementID);
-    element.parentNode.removeChild(element);
+    var element = parent.document.getElementById(elementID);
+    element.style.display = 'block';
 }
 
 /**
@@ -154,11 +154,11 @@ function parentSetPopTitle(title)
  */
 function escapeHTML(text)
 {
-    text = text.replace('&', '&amp;');
-    text = text.replace('<', '&lt;');
-    text = text.replace('>', '&gt;');
-    text = text.replace('"', '&quot;');
-    text = text.replace("'", '&apos;');
+    text = text.replace(/&/g, '&amp;');
+    text = text.replace(/</g, '&lt;');
+    text = text.replace(/>/g, '&gt;');
+    text = text.replace(/"/g, '&quot;');
+    text = text.replace(/'/g, '&apos;');
 
     return text;
 }
@@ -171,11 +171,11 @@ function escapeHTML(text)
  */
 function unEscapeHTML(text)
 {
-    text = text.replace('&amp;', '&');
-    text = text.replace('&lt;', '<');
-    text = text.replace('&gt;', '>');
-    text = text.replace('&quot;', '"');
-    text = text.replace('&apos;', "'");
+    text = text.replace(/&amp;/g, '&');
+    text = text.replace(/&lt;/g, '<');
+    text = text.replace(/&gt;/g, '>');
+    text = text.replace(/&quot;/g, '"');
+    text = text.replace(/&apos;/g, "'");
 
     return text;
 }

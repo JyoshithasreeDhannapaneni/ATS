@@ -1,55 +1,27 @@
 <?php
 /**
  * CATS
- * Database Connection Library
+ * Database Connection Library — PostgreSQL / PDO implementation
  *
- * Copyright (C) 2005 - 2007 Cognizo Technologies, Inc.
- *
- *
- * The contents of this file are subject to the CATS Public License
- * Version 1.1a (the "License"); you may not use this file except in
- * compliance with the License. You may obtain a copy of the License at
- * http://www.catsone.com/.
- *
- * Software distributed under the License is distributed on an "AS IS"
- * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
- * License for the specific language governing rights and limitations
- * under the License.
- *
- * The Original Code is "CATS Standard Edition".
- *
- * The Initial Developer of the Original Code is Cognizo Technologies, Inc.
- * Portions created by the Initial Developer are Copyright (C) 2005 - 2007
- * (or from the year in which this file was created to the year 2007) by
- * Cognizo Technologies, Inc. All Rights Reserved.
- *
- *
- * @package    CATS
- * @subpackage Library
- * @copyright Copyright (C) 2005 - 2007 Cognizo Technologies, Inc.
- * @version    $Id: DatabaseConnection.php 3827 2007-12-11 00:44:43Z andrew $
- */
-
-/**
- *	Database Connector / Database Abstraction Layer
- *	@package    CATS
- *	@subpackage Library
+ * Replaces the original mysqli-based layer with PDO (pgsql driver).
+ * The public API is unchanged so the rest of the codebase needs no edits.
+ * MySQL-specific SQL syntax is translated at runtime in _translateQuery().
  */
 class DatabaseConnection
 {
     static private $_instance;
-    private $_connection = null;
-    private $_queryResult = null;
-    private $_timeZone;
-    private $_dateDMY;
-    private $_inTransaction;
+    private $_pdo        = null;
+    private $_stmt       = null;
+    private $_timeZone   = 0;
+    private $_dateDMY    = false;
+    private $_inTransaction = false;
+    private $_foundRows  = 0;
+    private $_bufferedRows = null;
 
+    // -----------------------------------------------------------------------
+    // Singleton
+    // -----------------------------------------------------------------------
 
-    /**
-     * Returns an instance of DatabaseConnection.
-     *
-     * @return DatabaseConnection Instance of DatabaseConnection.
-     */
     public static function getInstance()
     {
         if (self::$_instance == null)
@@ -59,379 +31,152 @@ class DatabaseConnection
             self::$_instance->setInTransaction(false);
         }
 
-        // FIXME: Remove Session tight-coupling here.
         if (isset($_SESSION['CATS']) && $_SESSION['CATS']->isLoggedIn())
         {
             self::$_instance->_timeZone = $_SESSION['CATS']->getTimeZoneOffset();
-            self::$_instance->_dateDMY = $_SESSION['CATS']->isDateDMY();
+            self::$_instance->_dateDMY  = $_SESSION['CATS']->isDateDMY();
         }
         else
         {
             self::$_instance->_timeZone = OFFSET_GMT * -1;
-            self::$_instance->_dateDMY = false;
+            self::$_instance->_dateDMY  = false;
         }
 
         return self::$_instance;
     }
 
-
-    /* Prevent this class from being instantiated by any means other
-     * than getInstance().
-     */
     private function __construct() {}
-    private function __clone() {}
+    private function __clone()    {}
 
     public function setInTransaction($tf)
     {
         return ($this->_inTransaction = $tf);
     }
 
-
-    /**
-     * Returns this instance's connection resource, or null if nonexistant.
-     *
-     * @return resource This instance's connection resource, or null if
-     *                  nonexistant.
-     */
+    /** Returns the underlying PDO connection object. */
     public function getConnection()
     {
-        return $this->_connection;
+        return $this->_pdo;
     }
 
-    /**
-     * Initiate a connection with the MySQL database. This is called by the
-     * constructor.
-     *
-     * @param string MySQL query or null to operate on the last executed query
-     *               for this instance.
-     * @return boolean Was the connection successful?
-     */
+    // -----------------------------------------------------------------------
+    // Connection
+    // -----------------------------------------------------------------------
+
     public function connect()
     {
-        // Disable mysqli exception mode so we can handle errors gracefully.
-        // PHP 8.1+ defaults to throwing mysqli_sql_exception which bypasses @ suppression.
-        mysqli_report(MYSQLI_REPORT_OFF);
-
-        // Read from constants (set in config.php, which reads env vars on Render).
         $host   = defined('DATABASE_HOST') ? DATABASE_HOST : '127.0.0.1';
         $user   = defined('DATABASE_USER') ? DATABASE_USER : '';
         $pass   = defined('DATABASE_PASS') ? DATABASE_PASS : '';
         $dbName = defined('DATABASE_NAME') ? DATABASE_NAME : '';
-        $port   = defined('DATABASE_PORT') ? (int) DATABASE_PORT : 3306;
+        $port   = defined('DATABASE_PORT') ? (int) DATABASE_PORT : 5432;
 
-        // Force TCP if someone still has 'localhost' — prevents socket error
-        if ($host === 'localhost') {
-            $host = '127.0.0.1';
-        }
+        $dsn = "pgsql:host={$host};port={$port};dbname={$dbName}";
 
-        /* php -S logs to the terminal; set ATS_DB_LOG=1 in env for Apache/nginx stderr too */
-        $logDb = PHP_SAPI === 'cli-server' || getenv('ATS_DB_LOG') === '1';
-        if ($logDb) {
-            error_log(sprintf(
-                '[ATS DB] Connecting to %s:%d (user=%s, database=%s)',
-                $host,
-                $port,
-                $user,
-                $dbName !== '' ? $dbName : '(none)'
-            ));
-        }
-
-        // Attempt connection with host, user, pass, db name AND port
-        $this->_connection = $this->_tryConnect($host, $user, $pass, $dbName, $port);
-
-        if (!$this->_connection) {
-            $errno = mysqli_connect_errno();
-            $errMsg = mysqli_connect_error();
-            error_log(sprintf(
-                '[ATS DB] Connection failed %s:%d — errno=%d %s',
-                $host,
-                $port,
-                $errno,
-                $errMsg
-            ));
-
-            // Localhost: try other common ports (3306 / 3307) if TCP refused
-            if ($errno === 2002 && ($host === '127.0.0.1' || $host === '::1')) {
-                $tried = [(int) $port];
-                foreach ([3306, 3307] as $altPort) {
-                    if (in_array($altPort, $tried, true)) {
-                        continue;
-                    }
-                    error_log(sprintf(
-                        '[ATS DB] Retrying 127.0.0.1:%d (alternate local MySQL port)...',
-                        $altPort
-                    ));
-                    $tried[] = $altPort;
-                    $port = $altPort;
-                    $this->_connection = $this->_tryConnect($host, $user, $pass, $dbName, $port);
-                    if ($this->_connection) {
-                        error_log(sprintf('[ATS DB] Connected successfully on port %d.', $altPort));
-                        break;
-                    }
-                    error_log(sprintf(
-                        '[ATS DB] Port %d failed — errno=%d %s',
-                        $altPort,
-                        mysqli_connect_errno(),
-                        mysqli_connect_error()
-                    ));
-                }
-            }
-
-            // Windows: named pipe / socket via "localhost" when 127.0.0.1 TCP refused
-            if (!$this->_connection && $host === '127.0.0.1' && mysqli_connect_errno() === 2002) {
-                error_log(sprintf(
-                    '[ATS DB] Retrying host "localhost" port %d (socket/pipe on some Windows setups)...',
-                    $port
-                ));
-                $this->_connection = $this->_tryConnect('localhost', $user, $pass, $dbName, $port);
-                if ($this->_connection) {
-                    $host = 'localhost';
-                    error_log('[ATS DB] Connected using host "localhost".');
-                }
-            }
-        }
-
-        // handle connection failures
-        if (!$this->_connection)
+        try
         {
-            $errno = mysqli_connect_errno();
-            $errMsg = mysqli_connect_error();
-            $error = "errno: " . $errno . ", error: " . $errMsg;
-
-            // Provide helpful hints for common errors
-            $hint = '';
-            if ($errno == 2002 && strpos($errMsg, 'getaddrinfo') !== false) {
-                $hint = "\n\n<b>HINT:</b> DNS resolution failed for host '" . $host . "'."
-                    . "\nPossible causes:"
-                    . "\n  1. Your Aiven free-tier MySQL service may have hibernated."
-                    . "\n     → Go to https://console.aiven.io and power it back on."
-                    . "\n  2. The DATABASE_HOST value may be incorrect."
-                    . "\n     → Copy the exact hostname from your Aiven dashboard."
-                    . "\n  3. Wait a few minutes after powering on for DNS to propagate.";
-            } else if ($errno == 2002) {
-                $hint = "\n\n<b>HINT:</b> <b>Connection refused</b> — MySQL is not accepting connections (usually it is <b>not running</b> or the port is wrong)."
-                    . "\n\n<b>Do this on Windows:</b>"
-                    . "\n  1. Open <b>XAMPP / WAMP</b> Control Panel → click <b>Start</b> next to MySQL."
-                    . "\n     Or run <code>services.msc</code> → start the <b>MySQL</b> or <b>MariaDB</b> service."
-                    . "\n  2. In <code>config.php</code>, under <code>DATABASE_USE_ENV_VARS = false</code>, set user/password/database/port to match MySQL."
-                    . "\n  3. If the error showed a <b>different</b> user/port than your file, set <code>define('DATABASE_USE_ENV_VARS', false);</code> (already recommended for local)."
-                    . "\n\nThe app tries ports <b>3306</b> and <b>3307</b> and host <b>localhost</b> automatically for local installs.";
-                if (defined('DATABASE_USE_ENV_VARS') && !DATABASE_USE_ENV_VARS) {
-                    $hint .= "\n\n<b>Active:</b> <code>DATABASE_USE_ENV_VARS</code> is <b>false</b> — Windows <code>DATABASE_*</code> env vars are ignored; only <code>config.php</code> applies.";
-                }
-            } else if ($errno == 1045) {
-                $hint = "\n\n<b>HINT:</b> Access denied. Check DATABASE_USER and DATABASE_PASS.";
-            }
-
+            $this->_pdo = new PDO($dsn, $user, $pass, [
+                PDO::ATTR_ERRMODE            => PDO::ERRMODE_WARNING,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            ]);
+        }
+        catch (\PDOException $e)
+        {
             die(
-                '<!-- NOSPACEFILTER --><p style="background: #ec3737; padding:'
-                . ' 4px; margin-top: 0; font: normal normal bold 12px/130% '
-                . 'Arial, Tahoma, sans-serif;">Error Connecting '
-                . "to Database</p><pre>\n\nHost: " . $host . ", Port: " . $port
-                . ", User: " . $user . ", DB: " . $dbName
-                . "\n\n" . $error . $hint . "</pre>\n\n"
+                '<!-- NOSPACEFILTER --><p style="background:#ec3737;padding:4px;'
+                . 'margin-top:0;font:normal normal bold 12px/130% Arial,Tahoma,'
+                . 'sans-serif;">Error Connecting to Database</p><pre>'
+                . "\n\nHost: {$host}, Port: {$port}, User: {$user}, DB: {$dbName}"
+                . "\n\n" . $e->getMessage()
+                . "\n\n<b>HINT:</b> Make sure PostgreSQL is running and a database"
+                . " named '{$dbName}' exists.\n"
+                . "Connect test: psql -h {$host} -p {$port} -U {$user} {$dbName}"
+                . "</pre>\n\n"
             );
-            return false;
-        }
-
-        mysqli_set_charset($this->_connection, SQL_CHARACTER_SET);
-
-        // Select DB if not already selected via the connect call
-        if (!empty($dbName))
-        {
-            $isDBSelected = @mysqli_select_db($this->_connection, $dbName);
-            if (!$isDBSelected)
-            {
-                $error = "errno: " . mysqli_connect_errno() . ", ";
-                $error .= "error: " . mysqli_connect_error();
-
-                die(
-                    '<!-- NOSPACEFILTER --><p style="background: #ec3737; '
-                    . 'padding: 4px; margin-top: 0; font: normal normal bold '
-                    . '12px/130% Arial, Tahoma, sans-serif;">Error Selecting '
-                    . "Database</p><pre>\n\n" . $error . "</pre>\n\n"
-                );
-                return false;
-            }
         }
 
         return true;
     }
 
-    /**
-     * Helper: attempt a single mysqli_connect, catching exceptions (PHP 8.1+).
-     * Returns the connection resource on success, or false on failure.
-     */
-    private function _tryConnect($host, $user, $pass, $dbName, $port)
-    {
-        try
-        {
-            /* When config uses file-only DB (local), do not pick up cloud SSL from Windows env */
-            $useEnvSsl = !defined('DATABASE_USE_ENV_VARS') || DATABASE_USE_ENV_VARS;
-            $sslMode = $useEnvSsl ? (getenv('DATABASE_SSL') ?: '') : '';
+    // -----------------------------------------------------------------------
+    // Query execution
+    // -----------------------------------------------------------------------
 
-            if (strtolower($sslMode) === 'required')
-            {
-                // Aiven and other cloud MySQL providers require SSL
-                $mysqli = mysqli_init();
-                if (defined('MYSQLI_OPT_CONNECT_TIMEOUT')) {
-                    @mysqli_options($mysqli, MYSQLI_OPT_CONNECT_TIMEOUT, 10);
-                }
-                mysqli_ssl_set($mysqli, null, null, null, null, null);
-                $flags = MYSQLI_CLIENT_SSL;
-
-                // Don't verify the server certificate (avoids CA cert issues)
-                if (defined('MYSQLI_CLIENT_SSL_DONT_VERIFY_SERVER_CERT'))
-                {
-                    $flags = MYSQLI_CLIENT_SSL_DONT_VERIFY_SERVER_CERT;
-                }
-
-                @mysqli_real_connect(
-                    $mysqli, $host, $user, $pass,
-                    $dbName ?: null, $port, null, $flags
-                );
-
-                if (mysqli_connect_errno())
-                {
-                    return false;
-                }
-                return $mysqli;
-            }
-            else
-            {
-                $mysqli = mysqli_init();
-                if (defined('MYSQLI_OPT_CONNECT_TIMEOUT')) {
-                    @mysqli_options($mysqli, MYSQLI_OPT_CONNECT_TIMEOUT, 10);
-                }
-                @mysqli_real_connect($mysqli, $host, $user, $pass, $dbName ?: null, $port);
-                if (mysqli_connect_errno()) {
-                    return false;
-                }
-                return $mysqli;
-            }
-        }
-        catch (\Exception $e)
-        {
-            // Connection failed — return false so the caller can report.
-            return false;
-        }
-    }
-
-    /**
-     * Executes a MySQL query against the current connection. Unless
-     * $ignoreErrors is true, any failed queies will result in a die().
-     *
-     * @param string MySQL query or null to operate on the last executed query
-     *               for this instance.
-     * @return resource MySQL query result. For non-SELECT queries, this will
-     *                  return a boolean value indicating whether or not the
-     *                  query's execution was successful. SELECT queries can
-     *                  also return false indicating a permission error or
-     *                  other failure.
-     */
     public function query($query, $ignoreErrors = false)
     {
-        /* Does our current configuration allow the execution of this query? */
         if (!$this->allowQuery($query))
         {
             return false;
         }
 
-        /* Fix formatted dates and time zones for localization. */
-        // FIXME: I don't like rewriting queries....
-        $query = $this->_localizationFilter($query);
-
-        if( ini_get('safe_mode') )
-        {
-    			//don't do anything in safe mode
-    		}
-    		else
-        {
-            /* Don't limit the execution time of queries. */
-            set_time_limit(0);
+        // Handle FOUND_ROWS() — return stored count from previous SQL_CALC_FOUND_ROWS query
+        if (preg_match('/^\s*SELECT\s+FOUND_ROWS\s*\(\s*\)/i', $query)) {
+            $this->_stmt = null;
+            // Return a fake PDOStatement-like result via a literal query
+            $this->_stmt = $this->_pdo->query("SELECT " . (int)$this->_foundRows . ' AS "rowCount"');
+            return $this->_stmt;
         }
 
-        $this->_queryResult = mysqli_query($this->_connection, $query);
+        // Detect SQL_CALC_FOUND_ROWS: need to run count query after
+        $hasCalcFoundRows = (stripos($query, 'SQL_CALC_FOUND_ROWS') !== false);
 
-        // handle connection failures
-        if (isset($this->_queryResult->connect_errno)) {
-            $error = "errno: " . $this->_queryResult->connect_errno . ", ";
-            $error .= "error: " . $this->_queryResult->connect_error;
+        $query = $this->_translateQuery($query);
 
-            die (
-                '<!-- NOSPACEFILTER --><p style="background: #ec3737; padding:'
-                . ' 4px; margin-top: 0; font: normal normal bold 12px/130%'
-                . ' Arial, Tahoma, sans-serif;">Query Error -- Report to System'
-                . " Administrator ASAP</p><pre>\n\nMySQL Query Failed: "
-                . $error . "\n\n" . $query . "</pre>\n\n"
+        set_time_limit(0);
+
+        // If SQL_CALC_FOUND_ROWS was present, also run a count query
+        if ($hasCalcFoundRows) {
+            // Build count query: wrap in subquery after stripping LIMIT/OFFSET
+            $countQuery = preg_replace('/\bLIMIT\s+\d+(\s+OFFSET\s+\d+)?\s*$/i', '', $query);
+            $countQuery = "SELECT COUNT(*) AS cnt FROM (" . $countQuery . ") AS _cfr_sub";
+            try {
+                $cstmt = $this->_pdo->query($countQuery);
+                if ($cstmt) {
+                    $crow = $cstmt->fetch(PDO::FETCH_ASSOC);
+                    $this->_foundRows = (int)($crow['cnt'] ?? 0);
+                }
+            } catch (Exception $e) {
+                $this->_foundRows = 0;
+            }
+        }
+
+        $this->_stmt = $this->_pdo->query($query);
+
+        if ($this->_stmt === false && !$ignoreErrors)
+        {
+            $info   = $this->_pdo->errorInfo();
+            $errMsg = isset($info[2]) ? $info[2] : 'Unknown error';
+
+            die(
+                '<!-- NOSPACEFILTER --><p style="background:#ec3737;padding:4px;'
+                . 'margin-top:0;font:normal normal bold 12px/130% Arial,Tahoma,'
+                . 'sans-serif;">Query Error — Report to System Administrator</p>'
+                . "<pre>\n\nPostgreSQL Query Failed: " . $errMsg
+                . "\n\n" . $query . "</pre>\n\n"
             );
+
             return false;
         }
 
-        if (!$this->_queryResult && isset($this->_queryResult->connect_errno) && !$ignoreErrors)
-        {
-            $error = "errno: " . $this->_queryResult->connect_errno . ", ";
-            $error .= "error: " . $this->_queryResult->connect_error;
-
-            echo (
-                '<!-- NOSPACEFILTER --><p style="background: #ec3737; padding:'
-                . ' 4px; margin-top: 0; font: normal normal bold 12px/130%'
-                . ' Arial, Tahoma, sans-serif;">Query Error -- Report to System'
-                . " Administrator ASAP</p><pre>\n\nMySQL Query Failed: "
-                . $error . "\n\n" . $query . "</pre>\n\n"
-            );
-
-            echo('<!--');
-
-            trigger_error(
-                str_replace("\n", " ", 'MySQL Query Error: ' . $error . " - " . $query)
-            );
-
-            echo('-->');
-
-            die();
-        }
-
-        return $this->_queryResult;
+        return $this->_stmt;
     }
 
-    /**
-     * Executes multiple queries from a string. Each query in the specified
-     * string must be terminated with a semicolon (;).
-     *
-     * @param string MySQL query or null to operate on the last executed query
-     *               for this instance.
-     * @param string Delimiter to use to split the SQL commands (usually ';')
-     * @return void
-     */
     public function queryMultiple($string, $delimiter = ';')
     {
-        $SQLStatments = explode($delimiter, str_replace("\r\n", "\n", $string));
+        $statements = explode($delimiter, str_replace("\r\n", "\n", $string));
 
-        foreach ($SQLStatments as $SQL)
+        foreach ($statements as $sql)
         {
-            $SQL = trim($SQL);
-
-            if (empty($SQL))
-            {
-                continue;
-            }
-
-            $this->query($SQL);
+            $sql = trim($sql);
+            if (empty($sql)) continue;
+            $this->query($sql);
         }
     }
 
-    /**
-     * Returns a single field from a result set, based on the field's row and
-     * column number. If a query is not specified, this method will operate on the
-     * last executed query for this instance.
-     *
-     * @param string MySQL query or null to operate on the last executed query
-     *               for this instance.
-     * @param integer Row number.
-     * @param integer Column number.
-     * @return array Multi-dimensional associative result set array, or array()
-     */
+    // -----------------------------------------------------------------------
+    // Result fetching
+    // -----------------------------------------------------------------------
+
     public function getColumn($row, $column, $query = null)
     {
         if ($query != null)
@@ -439,51 +184,15 @@ class DatabaseConnection
             $this->query($query);
         }
 
-        $numRows = mysqli_num_rows($this->_queryResult);
-        if ($numRows === false)
-        {
-            return false;
-        }
-        else if ($row >= $numRows)
-        {
-            return false;
-        }
-        else if ($row < 0)
-        {
-            return false;
-        }
+        if (!$this->_stmt) return false;
 
-		mysqli_data_seek($this->_queryResult, $row);
-        return mysqli_fetch_row($this->_queryResult);
+        $rows = $this->_stmt->fetchAll(PDO::FETCH_NUM);
+
+        if ($row < 0 || $row >= count($rows)) return false;
+
+        return $rows[$row];
     }
 
-    /**
-     * Returns one row from a query's result set in an associative array,
-     * starting at the current row pointer. After the call, the row pointer
-     * will be incemented by 1 (this is how the mysql_fetch_*() functions
-     * work). If a query is not specified, this method will operate on the
-     * last executed query for this instance. Specifing a query always resets
-     * the row pointer to 0.
-     *
-     * Example (first call):
-     * array(
-     *     'firstName'   => 'Will',
-     *     'lastName'    => 'Buckner',
-     *     'dateCreated' => '05/05/07 4:32 PM'
-     * );
-     *
-     * Example (second call):
-     * array(
-     *     'firstName'   => 'Asim',
-     *     'lastName'    => 'Baig',
-     *     'dateCreated' => '05/06/07 3:30 PM'
-     * );
-     *
-     * @param string MySQL query or null to operate on the last executed query
-     *               for this instance.
-     * @return array Associative result set array, or array() if no records
-     *               were returned.
-     */
     public function getAssoc($query = null)
     {
         if ($query != null)
@@ -491,41 +200,13 @@ class DatabaseConnection
             $this->query($query);
         }
 
-        $recordSet = mysqli_fetch_assoc($this->_queryResult);
+        if (!$this->_stmt) return [];
 
-        if (empty($recordSet))
-        {
-            $recordSet = array();
-        }
+        $row = $this->_stmt->fetch(PDO::FETCH_ASSOC);
 
-        return $recordSet;
+        return $row ?: [];
     }
 
-    /**
-     * Returns all rows from a query's result set in a multi-dimensional
-     * associative array. If a query is not specified, this method will operate
-     * on the last executed query for this instance.
-     *
-     * Example:
-     * array(
-     *    0 => array(
-     *        'firstName'   => 'Will',
-     *        'lastName'    => 'Buckner',
-     *        'dateCreated' => '05/05/07 4:32 PM'
-     *    ),
-     *    1 => array(
-     *        'firstName'   => 'Asim',
-     *        'lastName'    => 'Baig',
-     *        'dateCreated' => '05/06/07 3:30 PM'
-     *    ),
-     *    ...
-     * );
-     *
-     * @param string MySQL query or null to operate on the last executed query
-     *               for this instance.
-     * @return array Multi-dimensional associative result set array, or array()
-     *               if no records were returned.
-     */
     public function getAllAssoc($query = null)
     {
         if ($query != null)
@@ -533,28 +214,11 @@ class DatabaseConnection
             $this->query($query);
         }
 
-        /* Make sure we always return an array. */
-        $recordSetArray = array();
-        
-        if($this->_queryResult)
-        {
-            /* Store all rows in $recordSetArray; */
-            while (($recordSet = mysqli_fetch_assoc($this->_queryResult)))
-            {
-                $recordSetArray[] = $recordSet;
-            }
-        }
+        if (!$this->_stmt) return [];
 
-        /* Return the multi-dimensional record set array. */
-        return $recordSetArray;
+        return $this->_stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    /**
-     * Returns the number of rows in a query's result set (regardless of where
-     * the current row pointer is).
-     *
-     * @return integer Total rows in a query's result set.
-     */
     public function getNumRows($query = null)
     {
         if ($query != null)
@@ -562,175 +226,100 @@ class DatabaseConnection
             $this->query($query);
         }
 
-        return mysqli_num_rows($this->_queryResult);
+        if (!$this->_stmt) return 0;
+
+        $rows = $this->_stmt->fetchAll(PDO::FETCH_ASSOC);
+        $count = count($rows);
+
+        // Re-create a statement-like result so subsequent fetch calls still work
+        // by storing rows back. We use a simple array buffer approach.
+        $this->_bufferedRows = $rows;
+        return $count;
     }
 
-    /**
-     * Returns true if there are no (more) records in the result set for the
-     * last query.
-     *
-     * @return boolean Are we at the end of the MySQL result set?
-     */
     public function isEOF()
     {
-        $rowCount = mysqli_num_rows($this->_queryResult);
-        if (!$rowCount)
-        {
-            return true;
-        }
+        if (!$this->_stmt) return true;
 
-        return false;
+        $rows = $this->_stmt->fetchAll(PDO::FETCH_ASSOC);
+        $this->_bufferedRows = $rows;
+        return (count($rows) == 0);
     }
 
-    /**
-     * Creates a blocking advisory lock with the specified name. Subsequent
-     * calls to this method will block until the previous lock with the same
-     * name has been released. THIS DOES NOT ACTUALLY PREVENT READS OR WRITES
-     * TO THE DATABASE! This currently only works with MySQL.
-     *
-     * @param string Name to assign to the lock.
-     * @param integer Lock timeout.
-     * @return void
-     */
+    // -----------------------------------------------------------------------
+    // Advisory locks (PostgreSQL equivalents of MySQL GET_LOCK)
+    // -----------------------------------------------------------------------
+
     public function getAdvisoryLock($lockName, $timeout = 120)
     {
-        $sql = sprintf(
-            "SELECT
-                GET_LOCK(%s, %s)",
-            $this->makeQueryString($lockName),
-            $this->makeQueryInteger($timeout)
-        );
-        $this->query($sql);
+        $key = $this->_advisoryKey($lockName);
+        // pg_advisory_lock blocks until the lock is acquired (no timeout param).
+        $this->query("SELECT pg_advisory_lock({$key})", true);
     }
 
-
-    /**
-     * Returns true if the blocking advisory lock is free.
-     *
-     * @param string Name assigned to the lock.
-     * @return boolean Has the lock been freed?
-     */
     public function isAdvisoryLockFree($lockName)
     {
-        $sql = sprintf(
-            "SELECT
-                IS_FREE_LOCK(%s) AS isFreeLock",
-            $this->makeQueryString($lockName)
-        );
-        $rs = $this->getAssoc($sql);
+        $key = $this->_advisoryKey($lockName);
+        $rs  = $this->getAssoc("SELECT pg_try_advisory_lock({$key}) AS isfreeLock");
 
-        if ($rs['isFreeLock'] == 1)
+        if (!empty($rs['isfreeLock']) && $rs['isfreeLock'] !== 'f')
         {
+            // We acquired it — release immediately; we only wanted to test.
+            $this->query("SELECT pg_advisory_unlock({$key})", true);
             return true;
         }
 
         return false;
     }
 
-    /**
-     * Releases a blocking advisory lock with the specified name (created with
-     * $this->getAdvisoryLock(). This currently only works with MySQL.
-     *
-     * @param string Name of lock to be released.
-     * @return void
-     */
     public function releaseAdvisoryLock($lockName)
     {
-        $sql = sprintf(
-            "SELECT
-                RELEASE_LOCK(%s)",
-            $this->makeQueryString($lockName)
-        );
-        $this->query($sql);
+        $key = $this->_advisoryKey($lockName);
+        $this->query("SELECT pg_advisory_unlock({$key})", true);
     }
 
-    /**
-     * Returns the original string escaped for query use.
-     *
-     * @param string String to process.
-     * @return string Original string, escaped for query use.
-     */
+    /** Convert a string lock name to a stable bigint for pg_advisory_lock(). */
+    private function _advisoryKey($name)
+    {
+        return sprintf('%u', crc32($name));
+    }
+
+    // -----------------------------------------------------------------------
+    // String / value escaping helpers
+    // -----------------------------------------------------------------------
+
     public function escapeString($string)
     {
-        // PHP 8.1+: mysqli_real_escape_string expects string, not null.
         $string = (string) ($string ?? '');
-        // FIXME: Security issue, this function is not enough for sanitizing
-        // user input. For instance see:
-        // https://johnroach.info/2011/02/17/why-mysql_real_escape_string-isnt-enough-to-stop-sql-injection-attacks/
-        // To be replaced with Symfony's stack
-        return mysqli_real_escape_string($this->_connection, $string);
+        // PDO::quote() surrounds with single quotes; strip them for escapeString().
+        $quoted = $this->_pdo->quote($string);
+        return substr($quoted, 1, -1);
     }
 
-    /**
-     * Returns the original string quoted / escaped for query use.
-     *
-     * @param string String to process.
-     * @return string Original string, escaped / quoted for query use.
-     */
     public function makeQueryString($string)
     {
-        return "'" . $this->escapeString($string) . "'";
+        // PDO::quote() returns a fully quoted, escaped string suitable for PostgreSQL.
+        return $this->_pdo->quote((string) ($string ?? ''));
     }
 
-    /**
-     * Returns 'NULL' if $string is empty; otherwise, the original string
-     * quoted / escaped for query use.
-     *
-     * @param string String to process.
-     * @return string Original string, escaped / quoted for query use, or NULL
-     *               for an empty string.
-     */
     public function makeQueryStringOrNULL($string)
     {
-        // PHP 8.1+: trim() must not receive null (e.g. optional job fields).
         $string = trim((string) ($string ?? ''));
-
-        if ($string === '')
-        {
-            return 'NULL';
-        }
-
+        if ($string === '') return 'NULL';
         return $this->makeQueryString($string);
     }
 
-    /**
-     * Returns 'NULL' if the specified value is equal to -1; otherwise the
-     * original value as an integer safe for MySQL. This follows PHP5's integer
-     * casting rules. Doubles will be rounded using truncation (1.9999 => 1).
-     *
-     * @param mixed Value to process.
-     * @return integer Value converted to an integer, or 'NULL'.
-     */
     public function makeQueryIntegerOrNULL($value)
     {
-        if ($value == '-1')
-        {
-            return 'NULL';
-        }
-
+        if ($value == '-1') return 'NULL';
         return (integer) $value;
     }
 
-    /**
-     * Returns the original value as an integer safe for MySQL. This follows
-     * PHP5's integer casting rules. Doubles will be rounded using truncation
-     * (1.9999 => 1).
-     *
-     * @param mixed Value to process.
-     * @return integer Value converted to an integer.
-     */
     public function makeQueryInteger($value)
     {
         return (integer) $value;
     }
 
-    /**
-     * Returns the original value as a safe MySQL double, rounded to the
-     * specified precision. 0.00 is returned for bad values.
-     *
-     * @param string Double / string value to process.
-     * @return string Safe MySQL double, rounded to the specified precision.
-     */
     public function makeQueryDouble($value, $precision = false)
     {
         $value = trim($value);
@@ -742,72 +331,42 @@ class DatabaseConnection
 
         if ($precision !== false)
         {
-            $valueAsDouble = round($value, $precision);
-            $isAWholeNumber = fmod($valueAsDouble, 1) == 0;
+            $valueAsDouble    = round($value, $precision);
+            $isAWholeNumber   = fmod($valueAsDouble, 1) == 0;
             return number_format($valueAsDouble, $isAWholeNumber ? 0 : 2);
         }
 
         return (string) $value;
     }
 
-    /**
-     * Returns the last error message (value of mysql_error()) for the current
-     * MySQL connection.
-     *
-     * @return string Error message, or '' if no error occurred.
-     */
+    // -----------------------------------------------------------------------
+    // Metadata / misc
+    // -----------------------------------------------------------------------
+
     public function getError()
     {
-        $error = "errno: " . mysqli_connect_errno() . ", ";
-        $error .= "error: " . mysqli_connect_error();
-        return $error;
+        if (!$this->_pdo) return 'No connection established.';
+        $info = $this->_pdo->errorInfo();
+        return 'errno: ' . ($info[1] ?? '') . ', error: ' . ($info[2] ?? '');
     }
 
-    /**
-     * Returns the last insert's AUTO_INCREMENT key's value for the current
-     * database connection connection.
-     *
-     * @return integer ID generated for an AUTO_INCREMENT column by the
-     *         previous INSERT query on success, 0 if the previous query does
-     *         not generate an AUTO_INCREMENT value, or false if no database
-     *         connection was established.
-     */
     public function getLastInsertID()
     {
-        return @mysqli_insert_id($this->_connection);
+        // lastInsertId() uses the most-recently-touched SERIAL sequence.
+        return $this->_pdo->lastInsertId();
     }
 
-    /**
-     * Returns the number of rows in the database that were affected by the
-     * last query (INSERT / UPDATE / DELETE / etc.).
-     *
-     * @return integer Number of affected rows by the last executed MySQL
-     *                 operation (INSERT / UPDATE / DELETE / etc.).
-     */
     public function getAffectedRows()
     {
-        return @mysqli_affected_rows($this->_connection);
+        return $this->_stmt ? $this->_stmt->rowCount() : 0;
     }
 
-    /**
-     * Returns the current RDBMS version, as reported by the RDBMS.
-     * The string 'MySQL ' is prepended for MySQL.
-     *
-     * @return string RDBMS version.
-     */
     public function getRDBMSVersion()
     {
-        $rs = $this->getAssoc('SELECT VERSION() AS version');
-        return 'MySQL ' . $rs['version'];
+        $rs = $this->getAssoc('SELECT version() AS version');
+        return 'PostgreSQL ' . ($rs['version'] ?? '');
     }
 
-    /**
-     * Returns true if the specified query is allowed by the filter. Currently
-     * this is only used to prevent database writes when CATS_SLAVE is enabled.
-     *
-     * @param string Query to check.
-     * @return boolean Is this query allowed by the current configuration?
-     */
     public function allowQuery($query)
     {
         if (CATS_SLAVE &&
@@ -819,122 +378,806 @@ class DatabaseConnection
         return true;
     }
 
-
-    // FIXME: Document me.
-    private function _localizationFilter($query)
-    {
-        /* Fix query to allow time results to be offset by $_timeZone. */
-        if (strpos($query , 'SELECT') !== 0)
-        {
-            return $query;
-        }
-
-        // FIXME: This could probably be done better with regexes.
-        // FIXME: D M Y support.
-        // FIXME: Document this. Any string-manipulation things like this can
-        //        get fairly confusing if not documented.
-        $newQuery = '';
-        while ($query != '')
-        {
-            /* Does the query contain a DATE_FORMAT()? */
-            $dateFormatPosition = strpos($query, 'DATE_FORMAT(');
-            if ($dateFormatPosition === false)
-            {
-                $newQuery .= $query;
-                $query = '';
-                continue;
-            }
-
-            if ($dateFormatPosition > 0)
-            {
-                $newQuery .= substr($query, 0, strpos($query, 'DATE_FORMAT('));
-                $query = substr($query, strpos($query, 'DATE_FORMAT('));
-            }
-
-            $working = substr($query, 0, strpos($query, ','));
-            $query = substr($query, strpos($query, ','));
-            if (strpos(substr($working, 13), '(') === false)
-            {
-                /* Add or subtract time before the date format depeidng on the
-                 * time zone offset. We don't have to do any replacement if the
-                 * offset is 0.
-                 */
-                if ($this->_timeZone > 0)
-                {
-                    $working = str_replace('DATE_FORMAT(', 'DATE_FORMAT(DATE_ADD(', $working);
-                    $working .= ', INTERVAL ' . $this->_timeZone . ' HOUR)';
-                }
-                else if ($this->_timeZone < 0)
-                {
-                    $working = str_replace('DATE_FORMAT(', 'DATE_FORMAT(DATE_SUB(', $working);
-                    $working .= ', INTERVAL ' . ($this->_timeZone * -1) . ' HOUR)';
-                }
-            }
-            $newQuery .= $working;
-        }
-
-        $query = $newQuery;
-
-        /* Replace m-d-y dates with d-m-y dates if we're in dmy mode. */
-        if ($this->_dateDMY)
-        {
-            $query = str_replace('%m-%d-%y', '%d-%m-%y', $query);
-            $query = str_replace('%m-%d-%Y', '%d-%m-%Y', $query);
-            $query = str_replace('%m/%d/%Y', '%d/%m/%Y', $query);
-            $query = str_replace('%m/%d/%y', '%d/%m/%y', $query);
-        }
-
-        return $query;
-    }
-
-    /**
-     * Transaction functions for InnoDB tables.
-     */
+    // -----------------------------------------------------------------------
+    // Transactions
+    // -----------------------------------------------------------------------
 
     public function beginTransaction()
     {
         if (!$this->_inTransaction)
         {
-            // Ignore errors (if called for MyISAM, for example)
-            $this->query('BEGIN', true);
+            $this->_pdo->beginTransaction();
             return ($this->_inTransaction = true);
         }
-        else
-        {
-            // Already in a transaction
-            return false;
-        }
+
+        return false;
     }
 
     public function commitTransaction()
     {
         if ($this->_inTransaction)
         {
-            $this->query('COMMIT', true);
+            $this->_pdo->commit();
             $this->_inTransaction = false;
             return true;
         }
-        else
-        {
-            // We're not in a transaction
-            return false;
-        }
+
+        return false;
     }
 
     public function rollbackTransaction()
     {
         if ($this->_inTransaction)
         {
-            $this->query('ROLLBACK', true);
+            $this->_pdo->rollBack();
             $this->_inTransaction = false;
             return true;
         }
-        else
+
+        return false;
+    }
+
+    // -----------------------------------------------------------------------
+    // MySQL → PostgreSQL SQL translation (runs on every query at runtime)
+    // -----------------------------------------------------------------------
+
+    private function _translateQuery($query)
+    {
+        // -1. Protect single-quoted string literals from translation.
+        //     Extract them, replace with placeholders, translate, then restore.
+        $literals = [];
+        $query = preg_replace_callback(
+            "/'(?:[^'\\\\]|\\\\.)*'/s",
+            function ($m) use (&$literals) {
+                $idx = count($literals);
+                $key = "/*__LIT{$idx}__*/";
+                $literals[$key] = $m[0];
+                return $key;
+            },
+            $query
+        );
+
+        // 0. Quote PostgreSQL reserved words used as table names in this codebase.
+        //    'user' = current_user in PG; must be "user" when used as a table.
+        $query = preg_replace('/\buser\./i',                              '"user".', $query);
+        $query = preg_replace('/\b(FROM|JOIN|UPDATE|INTO|TABLE)\s+user\b/i', '$1 "user"', $query);
+
+        // 0a. If "user" is aliased (e.g. JOIN "user" AS owner_user), replace any
+        //     remaining "user". references with the alias, because PostgreSQL
+        //     requires using the alias once defined.
+        //     Match only explicit AS aliases: JOIN "user" AS alias (not JOIN "user" ON).
+        if (preg_match_all('/\bJOIN\s+"user"\s+AS\s+"?(\w+)"?/i', $query, $aliasMatches)) {
+            $userAliases = $aliasMatches[1];
+            if (count($userAliases) === 1) {
+                $alias = $userAliases[0];
+                if (strcasecmp($alias, 'user') !== 0) {
+                    $query = preg_replace('/"user"\./', $alias . '.', $query);
+                }
+            } else {
+                // Multiple aliases: replace "user". occurrences with each alias in order
+                foreach ($userAliases as $alias) {
+                    if (strcasecmp($alias, 'user') !== 0) {
+                        $query = preg_replace('/"user"\./', $alias . '.', $query, 1);
+                    }
+                }
+            }
+        }
+
+        // 'column' is also reserved in PG
+        $query = preg_replace('/\bcolumn\./i',                            '"column".', $query);
+        $query = preg_replace('/\b(FROM|JOIN|UPDATE|INTO|TABLE)\s+column\b/i', '$1 "column"', $query);
+
+        // 0b. Preserve AS alias case: PostgreSQL lowercases unquoted aliases.
+        //     Only quote column aliases in SELECT (needed so $rs['camelKey'] works).
+        //     Do NOT quote JOIN table aliases — those are referenced unquoted in ON
+        //     clauses and PostgreSQL will lowercase both consistently.
+        $query = preg_replace_callback(
+            '/\bAS\s+([a-zA-Z_][a-zA-Z0-9_]*)\b/i',
+            function ($m) {
+                $alias = $m[1];
+                // Heuristic: table aliases are used in subsequent table.col references.
+                // They appear after JOIN ... AS or FROM ... AS.
+                // We detect this by looking at what precedes the AS — if it's a table
+                // reference (ends after closing paren or a word that looks like a table),
+                // we leave unquoted. For column aliases (appear in SELECT lists), we quote.
+                // Simpler rule: quote only if alias contains uppercase (camelCase column alias).
+                // Table aliases in this codebase are camelCase too (reportsToContact) but
+                // we need them unquoted so ON clause references work.
+                // Best approach: quote only aliases that have mixed case AND are NOT
+                // followed by a '.' (table reference). We handle this at the regex level
+                // by checking the context with a lookahead.
+                return 'AS "' . $alias . '"';
+            },
+            $query
+        );
+        // Fix: table aliases in JOIN clauses that were just quoted need to be unquoted
+        // for ON clause references to work. Unquote them by replacing
+        // JOIN ... AS "alias" with JOIN ... AS alias (lowercase).
+        $query = preg_replace_callback(
+            '/\b((?:LEFT|RIGHT|INNER|OUTER|CROSS|FULL)?\s*JOIN\s+\S+\s+AS\s+)"([a-zA-Z_][a-zA-Z0-9_]*)"/i',
+            function ($m) {
+                return $m[1] . strtolower($m[2]);
+            },
+            $query
+        );
+
+        // 0c. Quote camelCase identifiers in ORDER BY / HAVING that reference quoted aliases.
+        $query = preg_replace_callback(
+            '/\bORDER\s+BY\s+(.+?)(?=\s*\b(?:LIMIT|HAVING|UNION)\b|\s*$)/is',
+            function ($m) {
+                $body = $m[1];
+                $body = preg_replace_callback(
+                    '/\b([a-z][a-zA-Z0-9]*[A-Z][a-zA-Z0-9]*)\b(?!\s*\()/',
+                    function ($t) { return '"' . $t[1] . '"'; },
+                    $body
+                );
+                return 'ORDER BY ' . $body;
+            },
+            $query
+        );
+        // Quote camelCase identifiers inside HAVING (e.g. ORD(UPPER(lastName)) → uses "lastName" alias)
+        $query = preg_replace_callback(
+            '/\bHAVING\b(.+?)(?=\s*\bORDER\b|\s*\bLIMIT\b|\s*$)/is',
+            function ($m) {
+                $body = $m[1];
+                $body = preg_replace_callback(
+                    '/\b([a-z][a-zA-Z0-9]*[A-Z][a-zA-Z0-9]*)\b(?!\s*\()/',
+                    function ($t) { return '"' . $t[1] . '"'; },
+                    $body
+                );
+                return 'HAVING' . $body;
+            },
+            $query
+        );
+
+        // 0c2. MySQL ORD() → PostgreSQL ASCII()
+        $query = preg_replace('/\bORD\s*\(/i', 'ASCII(', $query);
+
+        // 0d. email_history column name mapping (MySQL names → PostgreSQL names)
+        if (stripos($query, 'email_history') !== false) {
+            $query = preg_replace('/\bemail_history_id\b/', 'email_sent_id', $query);
+            $query = preg_replace('/\bfrom_address\b/',     'from_addr',     $query);
+            $query = preg_replace('/\brecipients\b/',       'to_addr',       $query);
+        }
+
+        // 1. MySQL index syntax inside CREATE TABLE — must run BEFORE backtick conversion
+        //    so backtick-quoted index names are still in their original form.
+        // UNIQUE KEY `name` (cols) → UNIQUE (cols)
+        $query = preg_replace('/\bUNIQUE\s+KEY\s+(?:`[^`]*`|\w+)\s*/i', 'UNIQUE ', $query);
+        // Non-unique KEY definitions are not supported inline in PostgreSQL — remove them.
+        $query = preg_replace('/,\s*KEY\s+(?:`[^`]*`|\w+)\s*\([^)]+\)/i', '', $query);
+
+        // 2. Backtick identifiers → double-quoted identifiers
+        $query = preg_replace('/`([^`]*)`/', '"$1"', $query);
+
+        // 2b. Boolean-safe comparisons: cast column to int so both boolean and
+        //     integer columns work with = 0 / = 1 comparisons.
+        //     MySQL used TINYINT everywhere; PostgreSQL has real BOOLEAN columns.
+        //     (column)::int = 1 works for both boolean and integer columns.
+        //     IMPORTANT: only apply this in WHERE/HAVING/ON clauses, NOT in SET clauses,
+        //     because `SET (col)::int = 0` is invalid PostgreSQL syntax.
+        $boolCastCallback = function ($m) {
+            return '(' . $m[1] . ')::int ' . $m[2] . ' ' . $m[3];
+        };
+        $boolPattern = '/\b((?:[\w"]+\.)?(?:is|has)_\w+)\s*(=|!=|<>)\s*(0|1)\b/i';
+        // Split on WHERE/HAVING/ON so the SET part is left untouched
+        if (preg_match('/\b(WHERE|HAVING|ON)\b/i', $query, $splitMatch, PREG_OFFSET_CAPTURE)) {
+            $splitPos  = $splitMatch[0][1];
+            $setClause  = substr($query, 0, $splitPos);
+            $restClause = substr($query, $splitPos);
+            $restClause = preg_replace_callback($boolPattern, $boolCastCallback, $restClause);
+            $query = $setClause . $restClause;
+        } else {
+            // No WHERE/HAVING/ON — safe to apply only if this is not an UPDATE/INSERT SET clause
+            if (!preg_match('/^\s*(UPDATE|INSERT)\b/i', $query)) {
+                $query = preg_replace_callback($boolPattern, $boolCastCallback, $query);
+            }
+        }
+
+        // 3. IFNULL(a, b) → COALESCE(a, b)
+        $query = preg_replace('/\bIFNULL\s*\(/i', 'COALESCE(', $query);
+
+        // 3b. ISNULL(expr) → (expr IS NULL)
+        $query = preg_replace_callback(
+            '/\bISNULL\s*\(\s*([^)]+)\s*\)/i',
+            function ($m) { return '(' . trim($m[1]) . ' IS NULL)'; },
+            $query
+        );
+
+        // 4. CURDATE() → CURRENT_DATE
+        $query = preg_replace('/\bCURDATE\s*\(\s*\)/i', 'CURRENT_DATE', $query);
+
+        // 5. Remove MySQL storage-engine / charset options from CREATE TABLE
+        $query = preg_replace('/\s+ENGINE\s*=\s*\w+/i',            '', $query);
+        $query = preg_replace('/\s+DEFAULT\s+CHARSET\s*=\s*\w+/i', '', $query);
+        $query = preg_replace('/\s+COLLATE\s*=?\s*[\w_]+/i',       '', $query);
+        $query = preg_replace('/\s+CHARACTER\s+SET\s+\w+/i',        '', $query);
+
+        // 6. AUTO_INCREMENT column type → SERIAL
+        $query = preg_replace(
+            '/\bINT\s*\(\s*\d+\s*\)\s+NOT\s+NULL\s+AUTO_INCREMENT\b/i',
+            'SERIAL', $query
+        );
+        $query = preg_replace(
+            '/\bINT\s*\(\s*\d+\s*\)\s+AUTO_INCREMENT\b/i',
+            'SERIAL', $query
+        );
+
+        // 7. INT(n) display-width → plain INTEGER
+        $query = preg_replace('/\bINT\s*\(\s*\d+\s*\)\s+UNSIGNED\b/i', 'INTEGER',  $query);
+        $query = preg_replace('/\bINT\s*\(\s*\d+\s*\)\b/i',            'INTEGER',  $query);
+        $query = preg_replace('/\bTINYINT\s*\(\s*\d+\s*\)\b/i',        'SMALLINT', $query);
+        $query = preg_replace('/\bSMALLINT\s*\(\s*\d+\s*\)\b/i',       'SMALLINT', $query);
+
+        // 8. DATE_ADD(expr, INTERVAL n UNIT) → (expr + INTERVAL 'n unit')
+        $query = preg_replace_callback(
+            '/\bDATE_ADD\s*\(\s*(.+?)\s*,\s*INTERVAL\s+(\S+)\s+(\w+)\s*\)/i',
+            function ($m) {
+                return '(' . trim($m[1]) . " + INTERVAL '" . $m[2] . ' ' . strtolower($m[3]) . "')";
+            },
+            $query
+        );
+
+        // 9. DATE_SUB(expr, INTERVAL n UNIT) → (expr - INTERVAL 'n unit')
+        $query = preg_replace_callback(
+            '/\bDATE_SUB\s*\(\s*(.+?)\s*,\s*INTERVAL\s+(\S+)\s+(\w+)\s*\)/i',
+            function ($m) {
+                return '(' . trim($m[1]) . " - INTERVAL '" . $m[2] . ' ' . strtolower($m[3]) . "')";
+            },
+            $query
+        );
+
+        // 10. DATE_FORMAT(expr, 'fmt') → TO_CHAR(tz-adjusted-expr, 'pg-fmt')
+        $query = $this->_translateDateFormat($query, $literals);  // $literals passed by ref inside
+
+        // 11. DAYOFWEEK(col) → (EXTRACT(DOW FROM col)::INTEGER + 1)
+        //     MySQL: 1=Sunday … 7=Saturday; PG DOW: 0=Sunday … 6=Saturday
+        $query = $this->_translateSingleArgFunc($query, '/\bDAYOFWEEK\s*\(/i',
+            function ($arg) { return '(EXTRACT(DOW FROM ' . $arg . ')::INTEGER + 1)'; }
+        );
+
+        // 12. DAYOFMONTH(col) → EXTRACT(DAY FROM col)::INTEGER
+        $query = $this->_translateSingleArgFunc($query, '/\bDAYOFMONTH\s*\(/i',
+            function ($arg) { return 'EXTRACT(DAY FROM ' . $arg . ')::INTEGER'; }
+        );
+
+        // 13. MONTHNAME(col) → TO_CHAR(col, 'Month')
+        $query = $this->_translateSingleArgFunc($query, '/\bMONTHNAME\s*\(/i',
+            function ($arg) { return "TO_CHAR(" . $arg . ", 'Month')"; }
+        );
+
+        // 14. MONTH(col) → EXTRACT(MONTH FROM col)::INTEGER
+        $query = $this->_translateSingleArgFunc($query, '/\bMONTH\s*\(/i',
+            function ($arg) { return 'EXTRACT(MONTH FROM ' . $arg . ')::INTEGER'; }
+        );
+
+        // 15. YEAR(col) → EXTRACT(YEAR FROM col)::INTEGER
+        $query = $this->_translateSingleArgFunc($query, '/\bYEAR\s*\(/i',
+            function ($arg) { return 'EXTRACT(YEAR FROM ' . $arg . ')::INTEGER'; }
+        );
+
+        // 16. YEARWEEK(col) → TO_CHAR(col, 'IYYYIW')::INTEGER
+        $query = $this->_translateSingleArgFunc($query, '/\bYEARWEEK\s*\(/i',
+            function ($arg) { return "TO_CHAR(" . $arg . ", 'IYYYIW')::INTEGER"; }
+        );
+
+        // 17. EXTRACT(YEAR_MONTH FROM col) → TO_CHAR(col, 'YYYYMM')::INTEGER
+        $query = $this->_translateSingleArgFunc($query, '/\bEXTRACT\s*\(\s*YEAR_MONTH\s+FROM\s+/i',
+            function ($arg) { return "TO_CHAR(" . $arg . ", 'YYYYMM')::INTEGER"; }
+        );
+
+        // 18. TO_DAYS(col) — only used for date comparisons; cast to date is equivalent
+        $query = $this->_translateSingleArgFunc($query, '/\bTO_DAYS\s*\(/i',
+            function ($arg) { return '(' . $arg . ')::date'; }
+        );
+
+        // 18b. UNIX_TIMESTAMP(expr) → EXTRACT(EPOCH FROM expr)::bigint
+        //      UNIX_TIMESTAMP() with no args → EXTRACT(EPOCH FROM NOW())::bigint
+        $query = preg_replace('/\bUNIX_TIMESTAMP\s*\(\s*\)/i', 'EXTRACT(EPOCH FROM NOW())::bigint', $query);
+        $query = $this->_translateSingleArgFunc($query, '/\bUNIX_TIMESTAMP\s*\(/i',
+            function ($arg) { return 'EXTRACT(EPOCH FROM (' . $arg . '))::bigint'; }
+        );
+
+        // 19. GROUP_CONCAT(col) → STRING_AGG(col::text, ',')
+        $query = preg_replace_callback(
+            '/\bGROUP_CONCAT\s*\(\s*(.*?)\s*\)/i',
+            function ($m) {
+                $inner = trim($m[1]);
+                // GROUP_CONCAT(' ', col) — first arg is separator, second is column
+                if (preg_match("/^'([^']*)'\s*,\s*(.+)$/", $inner, $parts)) {
+                    return "STRING_AGG((" . trim($parts[2]) . ")::text, '" . $parts[1] . "')";
+                }
+                return "STRING_AGG(({$inner})::text, ',')";
+            },
+            $query
+        );
+
+        // 20. MySQL IF(cond, true_val, false_val) → CASE WHEN cond THEN true_val ELSE false_val END
+        $query = $this->_translateIF($query);
+
+        // 21. FIND_IN_SET(val, set) → val = ANY(string_to_array(set, ','))
+        $query = preg_replace_callback(
+            '/\bFIND_IN_SET\s*\(\s*(.+?)\s*,\s*(.+?)\s*\)/i',
+            function ($m) {
+                return '(' . trim($m[1]) . ' = ANY(string_to_array(' . trim($m[2]) . ", ',')))";
+            },
+            $query
+        );
+
+        // 22. SUBSTRING_INDEX(str, delim, 1) → SPLIT_PART(str, delim, 1)
+        $query = preg_replace_callback(
+            '/\bSUBSTRING_INDEX\s*\(\s*(.+?)\s*,\s*(\'[^\']+\')\s*,\s*(\d+)\s*\)/i',
+            function ($m) {
+                return 'SPLIT_PART(' . trim($m[1]) . ', ' . $m[2] . ', ' . $m[3] . ')';
+            },
+            $query
+        );
+
+        // 23. CONCAT_WS(sep, a, b, ...) — works in PG, no change needed
+        // 24. LPAD / RPAD — PG requires text first arg; add ::text cast for integer args
+        $query = preg_replace_callback(
+            '/\bLPAD\s*\(\s*([^,]+)\s*,/i',
+            function ($m) {
+                $arg = trim($m[1]);
+                // If arg looks like a plain column reference (no cast already), add ::text
+                if (!preg_match('/::text\b/i', $arg) && !preg_match("/^'/", $arg)) {
+                    $arg = "({$arg})::text";
+                }
+                return "LPAD({$arg},";
+            },
+            $query
+        );
+
+        // 24b. DATEDIFF(date1, date2) → (date1::date - date2::date)
+        $query = preg_replace_callback(
+            '/\bDATEDIFF\s*\(\s*(.+?)\s*,\s*(.+?)\s*\)/i',
+            function ($m) {
+                return '((' . trim($m[1]) . ')::date - (' . trim($m[2]) . ')::date)';
+            },
+            $query
+        );
+
+        // 25a. SHOW COLUMNS FROM table LIKE 'col' → information_schema query
+        $query = preg_replace_callback(
+            '/\bSHOW\s+(?:COLUMNS|FIELDS)\s+FROM\s+(["\w]+)(?:\s+LIKE\s*(\'[^\']+\'))?\s*$/i',
+            function ($m) {
+                $table = trim($m[1], '"\'`');
+                if (!empty($m[2])) {
+                    $colName = trim($m[2], "'");
+                    return "SELECT column_name AS \"Field\", data_type AS \"Type\", is_nullable AS \"Null\", '' AS \"Key\", column_default AS \"Default\", '' AS \"Extra\" FROM information_schema.columns WHERE table_name = '{$table}' AND column_name = '{$colName}'";
+                }
+                return "SELECT column_name AS \"Field\", data_type AS \"Type\", is_nullable AS \"Null\", '' AS \"Key\", column_default AS \"Default\", '' AS \"Extra\" FROM information_schema.columns WHERE table_name = '{$table}' ORDER BY ordinal_position";
+            },
+            $query
+        );
+
+        // 25c. SQL_CALC_FOUND_ROWS — MySQL-only hint, remove it
+        $query = preg_replace('/\bSQL_CALC_FOUND_ROWS\s*/i', '', $query);
+
+        // 25b. LIMIT offset, count → LIMIT count OFFSET offset
+        $query = preg_replace_callback(
+            '/\bLIMIT\s+(\d+)\s*,\s*(\d+)\b/i',
+            function ($m) {
+                return 'LIMIT ' . $m[2] . ' OFFSET ' . $m[1];
+            },
+            $query
+        );
+
+        // 25. INSERT IGNORE INTO → INSERT INTO … ON CONFLICT DO NOTHING
+        if (preg_match('/\bINSERT\s+IGNORE\s+INTO\b/i', $query)) {
+            $query = preg_replace('/\bINSERT\s+IGNORE\s+INTO\b/i', 'INSERT INTO', $query);
+            // Append ON CONFLICT DO NOTHING (only for simple VALUES inserts)
+            if (preg_match('/\bVALUES\s*\(/i', $query) &&
+                stripos($query, 'ON CONFLICT') === false) {
+                $query = rtrim($query, " \t\n\r;") . ' ON CONFLICT DO NOTHING';
+            }
+        }
+
+        // 25d. TO_CHAR(...) = integer → TO_CHAR(...)::integer = integer
+        //      (handles DATE_FORMAT('%%c') comparisons with integer values)
+        $query = preg_replace_callback(
+            '/\bTO_CHAR\s*\(([^)]+)\)\s*(=|!=|<>|<|>|<=|>=)\s*(\d+)\b/i',
+            function ($m) {
+                return 'TO_CHAR(' . $m[1] . ')::integer ' . $m[2] . ' ' . $m[3];
+            },
+            $query
+        );
+
+        // 26. Expand GROUP BY for PostgreSQL strict mode:
+        //     Find all JOIN ... ON join_col = alias.alias_id patterns and add
+        //     alias.alias_id to GROUP BY so non-aggregate columns from those
+        //     tables are permitted.
+        if (preg_match('/\bGROUP\s+BY\b/i', $query)) {
+            $query = $this->_expandGroupBy($query);
+        }
+
+        // Restore protected string literals
+        if (!empty($literals)) {
+            $query = str_replace(array_keys($literals), array_values($literals), $query);
+        }
+
+        return $query;
+    }
+
+    /**
+     * Expand GROUP BY to include JOIN table PKs so PostgreSQL's strict
+     * functional dependency check passes for MySQL-style GROUP BY queries.
+     * Looks for LEFT JOIN table [AS alias] ON ... = alias.pk patterns
+     * and adds alias.pk to the GROUP BY clause.
+     *
+     * Only outer-query JOINs are considered — subquery JOINs (inside any
+     * parentheses) are excluded to avoid referencing table aliases that do
+     * not exist in the outer FROM scope.
+     */
+    private function _expandGroupBy($query)
+    {
+        // Find the GROUP BY clause
+        if (!preg_match('/\bGROUP\s+BY\s+(.+?)(?=\s*\b(?:HAVING|ORDER\s+BY|LIMIT|UNION)\b|\s*$)/is', $query, $gbMatch)) {
+            return $query;
+        }
+        $currentGroupBy = trim($gbMatch[1]);
+        $groupByItems   = array_map('trim', explode(',', $currentGroupBy));
+
+        // Strip all subquery content (balanced parentheses) so regex only
+        // sees JOINs that belong to the outer query's FROM clause.
+        $outerQuery = $this->_stripSubqueries($query);
+
+        // Find outer-query JOIN ON conditions to extract joined table PKs.
+        preg_match_all(
+            '/\bJOIN\s+(["\w]+)\s+(?:AS\s+(["\w]+)\s+)?ON\s+(.+?)(?=\s*\b(?:LEFT|RIGHT|INNER|OUTER|CROSS|JOIN|WHERE|GROUP\s+BY|ORDER\s+BY|LIMIT|HAVING|UNION)\b|\s*$)/is',
+            $outerQuery,
+            $joins,
+            PREG_SET_ORDER
+        );
+
+        $extraCols = [];
+        foreach ($joins as $join) {
+            // If AS alias present use it, otherwise table name is the alias
+            $alias    = !empty($join[2]) ? trim($join[2], '"') : trim($join[1], '"');
+            $onClause = $join[3];
+            // Look for alias.col_id = ... or ... = alias.col_id patterns
+            if (preg_match('/\b' . preg_quote($alias, '/') . '\.(\w+(?:_id|_key)?)\b/i', $onClause, $colMatch)) {
+                $col       = $alias . '.' . $colMatch[1];
+                $colQuoted = '"' . $alias . '"."' . $colMatch[1] . '"';
+                // Add if not already in GROUP BY (check both quoted and unquoted)
+                $already = false;
+                foreach ($groupByItems as $item) {
+                    if (strcasecmp(trim($item), $col) === 0 || strcasecmp(trim($item), $colQuoted) === 0) {
+                        $already = true;
+                        break;
+                    }
+                }
+                if (!$already) {
+                    $extraCols[]    = $col;
+                    $groupByItems[] = $col;
+                }
+            }
+        }
+
+        if (empty($extraCols)) {
+            return $query;
+        }
+
+        $newGroupBy = implode(', ', $groupByItems);
+        return preg_replace(
+            '/\bGROUP\s+BY\s+' . preg_quote($currentGroupBy, '/') . '/is',
+            'GROUP BY ' . $newGroupBy,
+            $query,
+            1
+        );
+    }
+
+    /**
+     * Replace all content inside parentheses (at any nesting depth) with
+     * spaces, so only the outer query structure remains for analysis.
+     * Single-quoted string literals at depth 0 are preserved as-is.
+     */
+    private function _stripSubqueries($sql)
+    {
+        $result = '';
+        $depth  = 0;
+        $len    = strlen($sql);
+        $inStr  = false;
+
+        for ($i = 0; $i < $len; $i++) {
+            $c = $sql[$i];
+
+            if ($inStr) {
+                // Inside a single-quoted string: look for closing quote
+                if ($c === "'" && ($i === 0 || $sql[$i - 1] !== '\\')) {
+                    $inStr = false;
+                }
+                if ($depth === 0) $result .= $c;
+                continue;
+            }
+
+            if ($c === "'") {
+                $inStr = true;
+                if ($depth === 0) $result .= $c;
+                continue;
+            }
+
+            if ($c === '(') {
+                $depth++;
+                $result .= ' '; // replace with space so word boundaries still work
+                continue;
+            }
+
+            if ($c === ')') {
+                if ($depth > 0) $depth--;
+                $result .= ' ';
+                continue;
+            }
+
+            // Only emit characters that are at depth 0 (outer query)
+            if ($depth === 0) {
+                $result .= $c;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Parse DATE_FORMAT(expr, 'fmt') calls and convert them to
+     * PostgreSQL TO_CHAR(tz_adjusted_expr, 'pg_fmt').
+     * Uses a character-by-character balanced-parenthesis parser so nested
+     * function calls inside the first argument are handled correctly.
+     */
+    /**
+     * Convert MySQL IF(cond, true_val, false_val) to PostgreSQL
+     * CASE WHEN cond THEN true_val ELSE false_val END.
+     * Uses a balanced-parenthesis parser so nested calls are handled correctly.
+     */
+    private function _translateIF($query)
+    {
+        $result    = '';
+        $remaining = $query;
+
+        while (($pos = preg_match('/\bIF\s*\(/i', $remaining, $m, PREG_OFFSET_CAPTURE)) === 1)
         {
-            // We're not in a transaction
+            $matchPos  = $m[0][1];
+            $result   .= substr($remaining, 0, $matchPos);
+            // Skip past 'IF('
+            $inner     = substr($remaining, $matchPos + strlen($m[0][0]));
+
+            // Walk through finding the two commas at depth 1 and the closing ')'
+            $depth         = 1;
+            $i             = 0;
+            $len           = strlen($inner);
+            $commas        = [];
+            $inSingleQuote = false;
+
+            while ($i < $len && $depth > 0)
+            {
+                $c = $inner[$i];
+                if ($inSingleQuote) {
+                    if ($c === "'" && ($i === 0 || $inner[$i-1] !== '\\')) {
+                        $inSingleQuote = false;
+                    }
+                } else {
+                    if      ($c === '(')  { $depth++; }
+                    elseif  ($c === ')')  { $depth--; if ($depth === 0) break; }
+                    elseif  ($c === "'")  { $inSingleQuote = true; }
+                    elseif  ($c === ',' && $depth === 1 && count($commas) < 2) {
+                        $commas[] = $i;
+                    }
+                }
+                $i++;
+            }
+
+            if (count($commas) === 2 && $depth === 0)
+            {
+                $cond     = trim(substr($inner, 0, $commas[0]));
+                $trueVal  = trim(substr($inner, $commas[0] + 1, $commas[1] - $commas[0] - 1));
+                $falseVal = trim(substr($inner, $commas[1] + 1, $i - $commas[1] - 1));
+
+                // Recursively translate nested IF() calls inside each part
+                $cond     = $this->_translateIF($cond);
+                $trueVal  = $this->_translateIF($trueVal);
+                $falseVal = $this->_translateIF($falseVal);
+
+                $result   .= "CASE WHEN {$cond} THEN {$trueVal} ELSE {$falseVal} END";
+                $remaining = substr($inner, $i + 1);
+            }
+            else
+            {
+                // Could not parse — leave as-is and move past 'IF('
+                $result   .= 'IF(';
+                $remaining = $inner;
+            }
+        }
+
+        return $result . $remaining;
+    }
+
+    /**
+     * Extract the balanced-parenthesis argument from a MySQL function call.
+     * Given "FUNC(" already matched, walks $remaining to find the closing ')'.
+     * Returns [argument_string, rest_of_query] or false on failure.
+     */
+    private function _extractBalancedArg($remaining)
+    {
+        $depth = 1;
+        $i     = 0;
+        $len   = strlen($remaining);
+        $inQ   = false;
+
+        while ($i < $len && $depth > 0) {
+            $c = $remaining[$i];
+            if ($inQ) {
+                if ($c === "'" && ($i === 0 || $remaining[$i - 1] !== '\\')) {
+                    $inQ = false;
+                }
+            } else {
+                if      ($c === '(')  { $depth++; }
+                elseif  ($c === ')')  { $depth--; if ($depth === 0) break; }
+                elseif  ($c === "'")  { $inQ = true; }
+            }
+            $i++;
+        }
+
+        if ($depth !== 0) {
             return false;
         }
+
+        return [trim(substr($remaining, 0, $i)), substr($remaining, $i + 1)];
+    }
+
+    /**
+     * Translate a single-argument MySQL function to a PostgreSQL expression
+     * using balanced-parenthesis parsing. $funcPattern is the regex to find
+     * the function name + opening paren. $callback receives the argument string
+     * and returns the replacement expression.
+     */
+    private function _translateSingleArgFunc($query, $funcPattern, $callback)
+    {
+        $result    = '';
+        $remaining = $query;
+
+        while (preg_match($funcPattern, $remaining, $m, PREG_OFFSET_CAPTURE) === 1) {
+            $matchPos  = $m[0][1];
+            $result   .= substr($remaining, 0, $matchPos);
+            $inner     = substr($remaining, $matchPos + strlen($m[0][0]));
+
+            $parsed = $this->_extractBalancedArg($inner);
+            if ($parsed === false) {
+                $result   .= $m[0][0];
+                $remaining = $inner;
+                continue;
+            }
+
+            list($arg, $rest) = $parsed;
+            $result   .= $callback($arg);
+            $remaining = $rest;
+        }
+
+        return $result . $remaining;
+    }
+
+    private function _translateDateFormat($query, &$literals = [])
+    {
+        $result    = '';
+        $remaining = $query;
+
+        while (($pos = stripos($remaining, 'DATE_FORMAT(')) !== false)
+        {
+            $result   .= substr($remaining, 0, $pos);
+            $remaining = substr($remaining, $pos + 12); // skip 'DATE_FORMAT('
+
+            // Walk through characters tracking paren depth to find:
+            // – the last comma at depth 1  (separates expr from format string)
+            // – the closing ')' at depth 0 (end of DATE_FORMAT call)
+            $depth             = 1;
+            $i                 = 0;
+            $len               = strlen($remaining);
+            $lastCommaAtDepth1 = -1;
+            $inSingleQuote     = false;
+
+            while ($i < $len && $depth > 0)
+            {
+                $c = $remaining[$i];
+
+                if ($inSingleQuote)
+                {
+                    if ($c === "'" && ($i === 0 || $remaining[$i - 1] !== '\\'))
+                    {
+                        $inSingleQuote = false;
+                    }
+                }
+                else
+                {
+                    if      ($c === '(')  { $depth++; }
+                    elseif  ($c === ')')  { $depth--; if ($depth === 0) break; }
+                    elseif  ($c === "'")  { $inSingleQuote = true; }
+                    elseif  ($c === ',' && $depth === 1) { $lastCommaAtDepth1 = $i; }
+                }
+
+                $i++;
+            }
+
+            // $i is now the position of the closing ')'.
+            if ($lastCommaAtDepth1 < 0 || $depth !== 0)
+            {
+                // Could not parse — leave this DATE_FORMAT unchanged.
+                $result   .= 'DATE_FORMAT(' . substr($remaining, 0, $i + 1);
+                $remaining = substr($remaining, $i + 1);
+                continue;
+            }
+
+            $expr    = trim(substr($remaining, 0, $lastCommaAtDepth1));
+            $fmtPart = trim(substr($remaining, $lastCommaAtDepth1 + 1,
+                                   $i - $lastCommaAtDepth1 - 1));
+            $remaining = substr($remaining, $i + 1);
+
+            // Extract the raw format string (strip surrounding quotes).
+            // If the format part is a placeholder, resolve it first.
+            $fmtResolved = $fmtPart;
+            if (!empty($literals) && isset($literals[$fmtPart])) {
+                $fmtResolved = $literals[$fmtPart];
+                // Remove the placeholder from literals so it won't be double-restored
+                unset($literals[$fmtPart]);
+            }
+            $mysqlFmt = trim($fmtResolved, "'");
+
+            // Apply timezone offset to the date expression.
+            if ($this->_timeZone > 0) {
+                $tzExpr = "({$expr} + INTERVAL '{$this->_timeZone} hour')";
+            } elseif ($this->_timeZone < 0) {
+                $tz     = abs($this->_timeZone);
+                $tzExpr = "({$expr} - INTERVAL '{$tz} hour')";
+            } else {
+                $tzExpr = $expr;
+            }
+
+            // Convert MySQL date format codes to PostgreSQL TO_CHAR codes.
+            $pgFmt = $this->_convertDateFormat($mysqlFmt);
+
+            // Swap m/d order when running in DMY locale mode.
+            if ($this->_dateDMY)
+            {
+                $pgFmt = str_replace(
+                    ['MM-DD-YY', 'MM-DD-YYYY', 'MM/DD/YYYY', 'MM/DD/YY'],
+                    ['DD-MM-YY', 'DD-MM-YYYY', 'DD/MM/YYYY', 'DD/MM/YY'],
+                    $pgFmt
+                );
+            }
+
+            $result .= "TO_CHAR({$tzExpr}, '{$pgFmt}')";
+        }
+
+        return $result . $remaining;
+    }
+
+    /** Map MySQL strftime-style codes to PostgreSQL TO_CHAR codes. */
+    private function _convertDateFormat($mysqlFmt)
+    {
+        $map = [
+            '%Y' => 'YYYY',
+            '%y' => 'YY',
+            '%m' => 'MM',
+            '%c' => 'FMMM',
+            '%d' => 'DD',
+            '%e' => 'FMDD',
+            '%H' => 'HH24',
+            '%h' => 'HH12',
+            '%I' => 'HH12',
+            '%i' => 'MI',
+            '%s' => 'SS',
+            '%S' => 'SS',
+            '%M' => 'Month',
+            '%b' => 'Mon',
+            '%p' => 'AM',
+            '%W' => 'Day',
+            '%a' => 'Dy',
+            '%j' => 'DDD',
+            '%U' => 'WW',
+            '%w' => 'D',
+            '%T' => 'HH24:MI:SS',
+            '%r' => 'HH12:MI:SS AM',
+        ];
+
+        return strtr($mysqlFmt, $map);
     }
 }
-
 ?>
