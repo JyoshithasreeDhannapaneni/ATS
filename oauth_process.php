@@ -1,4 +1,5 @@
 <?php
+ob_start();
 /**
  * Process Microsoft SSO Login
  * With proper authentication validation
@@ -118,7 +119,7 @@ oauthLog('DB connection obtained');
 
 // Find existing user
 $sql = sprintf(
-    "SELECT user_id, site_id, access_level, user_name FROM \"user\" WHERE email = %s LIMIT 1",
+    "SELECT user_id, site_id, access_level, user_name FROM `user` WHERE email = %s LIMIT 1",
     $db->makeQueryString($email)
 );
 oauthLog('User lookup SQL: ' . $sql);
@@ -139,7 +140,7 @@ if (!empty($rs)) {
 
     // Update first/last name from Microsoft
     $updateSql = sprintf(
-        "UPDATE \"user\" SET first_name = %s, last_name = %s WHERE user_id = %d",
+        "UPDATE `user` SET first_name = %s, last_name = %s WHERE user_id = %d",
         $db->makeQueryString($firstName),
         $db->makeQueryString($lastName),
         $userID
@@ -154,7 +155,7 @@ if (!empty($rs)) {
 
     // Ensure unique username
     $checkSql = sprintf(
-        "SELECT user_id FROM \"user\" WHERE user_name = %s",
+        "SELECT user_id FROM `user` WHERE user_name = %s",
         $db->makeQueryString($username)
     );
     $checkRs = $db->getAllAssoc($checkSql);
@@ -163,7 +164,7 @@ if (!empty($rs)) {
     }
 
     $sql = sprintf(
-        "INSERT INTO \"user\" (site_id, user_name, email, password, first_name, last_name, access_level, can_change_password, is_test_user)
+        "INSERT INTO `user` (site_id, user_name, email, password, first_name, last_name, access_level, can_change_password, is_test_user)
          VALUES (%d, %s, %s, %s, %s, %s, 400, 1, 0)",
         $siteID,
         $db->makeQueryString($username),
