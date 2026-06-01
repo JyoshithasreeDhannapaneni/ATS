@@ -8,6 +8,5 @@ docker-compose*.yml
 *.md
 cats_dev_backup.sql
 CREDENTIALS.txt
-vendor
 node_modules
 test
