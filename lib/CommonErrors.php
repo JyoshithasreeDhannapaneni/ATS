@@ -284,7 +284,7 @@ class CommonErrors
         $db = DatabaseConnection::getInstance();
         $tables = array();
         $rs = $db->query("SELECT table_name AS tablename FROM information_schema.tables WHERE table_schema = DATABASE()");
-        while ($tbl = ($rs ? $rs->fetch(PDO::FETCH_NUM) : null)) $tables[] = $tbl[0];
+        while ($tbl = ($rs ? mysqli_fetch_row($rs) : null)) $tables[] = $tbl[0];
         if (in_array('exceptions', $tables)) return true;
         else return false;
     }
