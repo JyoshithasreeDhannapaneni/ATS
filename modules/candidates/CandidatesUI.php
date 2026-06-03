@@ -1924,20 +1924,21 @@ class CandidatesUI extends UserInterface
 
             // Parse the extracted text
             $parsedData = [
-                'firstName' => $fnFirst,
-                'lastName'  => $fnLast,
-                'email' => '',
-                'phone' => '',
-                'city' => '',
-                'state' => '',
-                'address' => '',
-                'zip' => '',
-                'skills' => '',
+                'firstName'       => $fnFirst,
+                'lastName'        => $fnLast,
+                'jobTitle'        => '',
+                'email'           => '',
+                'phone'           => '',
+                'city'            => '',
+                'state'           => '',
+                'address'         => '',
+                'zip'             => '',
+                'skills'          => '',
                 'currentEmployer' => '',
-                'linkedin' => '',
-                'github' => '',
-                'website' => '',
-                'notes' => ''
+                'linkedin'        => '',
+                'github'          => '',
+                'website'         => '',
+                'notes'           => ''
             ];
 
             if (!empty($extractedText))
@@ -1948,19 +1949,20 @@ class CandidatesUI extends UserInterface
                 
                 if ($result && is_array($result))
                 {
-                    if (!empty($result['first_name'])) $parsedData['firstName'] = trim($result['first_name']);
-                    if (!empty($result['last_name'])) $parsedData['lastName'] = trim($result['last_name']);
-                    if (!empty($result['email_address'])) $parsedData['email'] = trim($result['email_address']);
-                    if (!empty($result['phone_number'])) $parsedData['phone'] = trim($result['phone_number']);
-                    if (!empty($result['city'])) $parsedData['city'] = trim($result['city']);
-                    if (!empty($result['state'])) $parsedData['state'] = trim($result['state']);
-                    if (!empty($result['us_address'])) $parsedData['address'] = trim($result['us_address']);
-                    if (!empty($result['zip_code'])) $parsedData['zip'] = trim($result['zip_code']);
-                    if (!empty($result['skills'])) $parsedData['skills'] = trim($result['skills']);
+                    if (!empty($result['first_name']))       $parsedData['firstName']       = trim($result['first_name']);
+                    if (!empty($result['last_name']))        $parsedData['lastName']        = trim($result['last_name']);
+                    if (!empty($result['job_title']))        $parsedData['jobTitle']        = trim($result['job_title']);
+                    if (!empty($result['email_address']))    $parsedData['email']           = trim($result['email_address']);
+                    if (!empty($result['phone_number']))     $parsedData['phone']           = trim($result['phone_number']);
+                    if (!empty($result['city']))             $parsedData['city']            = trim($result['city']);
+                    if (!empty($result['state']))            $parsedData['state']           = trim($result['state']);
+                    if (!empty($result['us_address']))       $parsedData['address']         = trim($result['us_address']);
+                    if (!empty($result['zip_code']))         $parsedData['zip']             = trim($result['zip_code']);
+                    if (!empty($result['skills']))           $parsedData['skills']          = trim($result['skills']);
                     if (!empty($result['current_employer'])) $parsedData['currentEmployer'] = trim($result['current_employer']);
-                    if (!empty($result['linkedin'])) $parsedData['linkedin'] = trim($result['linkedin']);
-                    if (!empty($result['github'])) $parsedData['github'] = trim($result['github']);
-                    if (!empty($result['website'])) $parsedData['website'] = trim($result['website']);
+                    if (!empty($result['linkedin']))         $parsedData['linkedin']        = trim($result['linkedin']);
+                    if (!empty($result['github']))           $parsedData['github']          = trim($result['github']);
+                    if (!empty($result['website']))          $parsedData['website']         = trim($result['website']);
                     
                     // Build notes from education and experience
                     $notes = [];

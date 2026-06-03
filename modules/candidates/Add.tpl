@@ -376,10 +376,12 @@
                 var parsedInfo = document.getElementById('parsedInfo');
                 var fieldsFound = [];
                 if (result.data.firstName || result.data.lastName) fieldsFound.push('Name');
-                if (result.data.email) fieldsFound.push('Email');
-                if (result.data.phone) fieldsFound.push('Phone');
-                if (result.data.skills) fieldsFound.push('Skills');
+                if (result.data.jobTitle)  fieldsFound.push('Title');
+                if (result.data.email)     fieldsFound.push('Email');
+                if (result.data.phone)     fieldsFound.push('Phone');
+                if (result.data.skills)    fieldsFound.push('Skills');
                 if (result.data.city || result.data.state) fieldsFound.push('Location');
+                if (result.data.currentEmployer) fieldsFound.push('Employer');
                 
                 if (fieldsFound.length > 0) {
                     parsedInfo.textContent = 'Extracted: ' + fieldsFound.join(', ');
@@ -408,17 +410,18 @@
     
     function fillFormFields(data) {
         var fieldMappings = {
-            'firstName': 'firstName',
-            'lastName': 'lastName',
-            'email': 'email1',
-            'phone': 'phoneCell',
-            'city': 'city',
-            'state': 'state',
-            'address': 'address',
-            'zip': 'zip',
-            'skills': 'keySkills',
+            'firstName':       'firstName',
+            'lastName':        'lastName',
+            'jobTitle':        'currentTitle',
+            'email':           'email1',
+            'phone':           'phoneCell',
+            'city':            'city',
+            'state':           'state',
+            'address':         'address',
+            'zip':             'zip',
+            'skills':          'keySkills',
             'currentEmployer': 'currentEmployer',
-            'notes': 'notes'
+            'notes':           'notes'
         };
         
         var filledFields = [];
