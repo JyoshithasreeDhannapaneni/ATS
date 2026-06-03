@@ -116,11 +116,15 @@ class AttachmentsUI extends UserInterface
         $fp = @fopen($filePath, 'r');
         if ($fp === false)
         {
-            CommonErrors::fatal(
-                COMMONERROR_BADFIELDS,
-                $this,
-                'This attachment is momentarily offline, please try again later. The support staff has been notified.'
-            );
+            // File not found on disk - show clean message
+            header('Content-Type: text/html; charset=UTF-8');
+            echo '<div style="font-family:Arial,sans-serif;padding:20px;color:#c0392b;background:#fdf2f2;border:1px solid #e74c3c;border-radius:5px;margin:20px;">
+                <h3>&#9888; File Not Available</h3>
+                <p>The file <strong>' . htmlspecialchars($downloadName ?? $fileName) . '</strong> is not available on the server.</p>
+                <p>Please re-upload the file through the candidate profile.</p>
+                <a href="javascript:history.back()" style="background:#3498db;color:white;padding:8px 15px;text-decoration:none;border-radius:4px;">Go Back</a>
+            </div>';
+            exit();
         }
 
         /* Use the original uploaded filename for the download. */

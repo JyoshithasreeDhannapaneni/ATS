@@ -311,6 +311,8 @@ class LocalParseUtility
         
         // Remove repeated special characters (often from PDF extraction)
         $text = preg_replace('/([^\w\s])\1{3,}/', '$1', $text);
+        // Remove backslashes that can break regex patterns
+        $text = str_replace('\\', ' ', $text);
         
         return $text;
     }

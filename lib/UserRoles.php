@@ -34,7 +34,7 @@ class UserRoles
         // Check if role column exists
         if (!self::roleColumnExists()) {
             // Infer role from access level
-            $sql = sprintf("SELECT access_level FROM \"user\" WHERE user_id = %d LIMIT 1", $userID);
+            $sql = sprintf("SELECT access_level FROM `user` WHERE user_id = %d LIMIT 1", $userID);
             $row = $db->getAssoc($sql);
             if (!empty($row)) {
                 return ($row['access_level'] >= 400) ? self::ROLE_ADMIN : self::ROLE_RECRUITER;
@@ -43,7 +43,7 @@ class UserRoles
         }
 
         $sql = sprintf(
-            "SELECT role, access_level FROM \"user\" WHERE user_id = %d LIMIT 1",
+            "SELECT role, access_level FROM `user` WHERE user_id = %d LIMIT 1",
             $userID
         );
         $row = $db->getAssoc($sql);
@@ -63,7 +63,7 @@ class UserRoles
     {
         $db = DatabaseConnection::getInstance();
         $sql = sprintf(
-            "SELECT interviewer_type FROM \"user\" WHERE user_id = %d LIMIT 1",
+            "SELECT interviewer_type FROM `user` WHERE user_id = %d LIMIT 1",
             $userID
         );
         $row = $db->getAssoc($sql);
@@ -155,7 +155,7 @@ class UserRoles
         $db = DatabaseConnection::getInstance();
         
         // Get user's email to match with calendar events
-        $userSql = sprintf("SELECT email, first_name, last_name FROM \"user\" WHERE user_id = %d", $userID);
+        $userSql = sprintf("SELECT email, first_name, last_name FROM `user` WHERE user_id = %d", $userID);
         $userData = $db->getAssoc($userSql);
         if (empty($userData)) {
             return array();

@@ -105,15 +105,15 @@ class Pipelines
     {
         // Ensure the tracking table exists (created once, silently ignored thereafter)
         $createSQL = "CREATE TABLE IF NOT EXISTS candidate_application_log (
-            log_id       SERIAL PRIMARY KEY,
+            log_id       INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
             site_id      INTEGER NOT NULL DEFAULT 0,
             candidate_id INTEGER NOT NULL DEFAULT 0,
             joborder_id  INTEGER NOT NULL DEFAULT 0,
-            date_applied TIMESTAMP NOT NULL DEFAULT NOW()
+            date_applied DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
         )";
         @$this->_db->query($createSQL);
-        @$this->_db->query("CREATE INDEX IF NOT EXISTS idx_cal_cand_job_site ON candidate_application_log (site_id, candidate_id, joborder_id)");
-        @$this->_db->query("CREATE INDEX IF NOT EXISTS idx_cal_date_applied ON candidate_application_log (date_applied)");
+        @$this->_db->query("CREATE INDEX idx_cal_cand_job_site ON candidate_application_log (site_id, candidate_id, joborder_id)");
+        @$this->_db->query("CREATE INDEX idx_cal_date_applied ON candidate_application_log (date_applied)");
 
         $sql = sprintf(
             "SELECT COUNT(*) AS cnt
@@ -121,7 +121,7 @@ class Pipelines
              WHERE candidate_id = %s
                AND joborder_id  = %s
                AND site_id      = %s
-               AND date_applied >= (NOW() - INTERVAL '%d days')",
+               AND date_applied >= DATE_SUB(NOW(), INTERVAL %d DAY)",
             $this->_db->makeQueryInteger($candidateID),
             $this->_db->makeQueryInteger($jobOrderID),
             $this->_db->makeQueryInteger($this->_siteID),
@@ -571,11 +571,11 @@ class Pipelines
     {
         // Ensure the application log table exists (idempotent)
         @$this->_db->query("CREATE TABLE IF NOT EXISTS candidate_application_log (
-            log_id       SERIAL PRIMARY KEY,
+            log_id       INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
             site_id      INTEGER NOT NULL DEFAULT 0,
             candidate_id INTEGER NOT NULL DEFAULT 0,
             joborder_id  INTEGER NOT NULL DEFAULT 0,
-            date_applied TIMESTAMP NOT NULL DEFAULT NOW()
+            date_applied DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
         )");
 
         $siteID = (int) $this->_siteID;

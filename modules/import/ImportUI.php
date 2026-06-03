@@ -2878,7 +2878,7 @@ class ImportUI extends UserInterface
                 // Skip lines that look like section sub-headings (very short, all caps)
                 if (strlen($trimmed) < 3) continue;
                 // Strip leading bullet characters
-                $skill = preg_replace('/^[\-\*\•\◦\▪\➢\✓\✔\>\·\o]+\s*/', '', $trimmed);
+                $skill = preg_replace('/^[\-\*\•\◦\▪\➢\✓\✔\>\·o]+\s*/', '', $trimmed);
                 $skill = trim($skill);
                 if (!empty($skill) && strlen($skill) < 120) {
                     $skills[] = $skill;
