@@ -1897,13 +1897,25 @@ class CandidatesUI extends UserInterface
             {
                 $extractedText = $this->extractTextFromDocxBasic($tmpPath);
             }
-            
+
+            // Fallback: PHP-based extraction for DOC (binary Word format)
+            if (empty($extractedText) && $ext === 'doc')
+            {
+                $extractedText = $this->extractTextFromDocBasic($tmpPath);
+            }
+
             // Fallback: Read TXT files directly
             if (empty($extractedText) && $ext === 'txt')
             {
                 $extractedText = @file_get_contents($tmpPath);
             }
-            
+
+            // Fallback: PHP-based RTF extraction
+            if (empty($extractedText) && $ext === 'rtf')
+            {
+                $extractedText = $this->extractTextFromRtfBasic($tmpPath);
+            }
+
             // Fallback: PHP-based PDF extraction
             if (empty($extractedText) && $ext === 'pdf')
             {
@@ -2113,6 +2125,98 @@ class CandidatesUI extends UserInterface
             $output = substr($output, strpos($output, '{'));
         }
         echo $output;
+    }
+
+    /**
+     * Extract readable text from a binary DOC file (old Word 97-2003 format).
+     * Scans the binary for printable ASCII/UTF-8 sequences — good enough for name/email/phone.
+     */
+    private function extractTextFromDocBasic($filePath)
+    {
+        $content = @file_get_contents($filePath);
+        if (empty($content)) return '';
+
+        // DOC files store text in Unicode (UTF-16LE) blocks and ASCII blocks.
+        // 1. Try to pull readable ASCII text sequences of 5+ chars
+        $text = '';
+        preg_match_all('/[\x20-\x7E]{5,}/', $content, $matches);
+        if (!empty($matches[0])) {
+            // Filter out binary garbage: keep only lines with letters
+            foreach ($matches[0] as $chunk) {
+                if (preg_match('/[a-zA-Z]{3,}/', $chunk)) {
+                    $text .= $chunk . "\n";
+                }
+            }
+        }
+
+        // 2. Try UTF-16LE text extraction (Word stores body text as UTF-16LE)
+        if (strlen($text) < 100) {
+            $utf16 = @iconv('UTF-16LE', 'UTF-8//IGNORE', $content);
+            if ($utf16) {
+                preg_match_all('/[\x20-\x7E\xC0-\xFF]{4,}/', $utf16, $m);
+                foreach ($m[0] as $chunk) {
+                    if (preg_match('/[a-zA-Z]{3,}/', $chunk)) {
+                        $text .= $chunk . "\n";
+                    }
+                }
+            }
+        }
+
+        // Clean up
+        $text = preg_replace('/[^\x20-\x7E\n\r\t]/', ' ', $text);
+        $text = preg_replace('/[ \t]+/', ' ', $text);
+        $text = preg_replace('/\n{3,}/', "\n\n", $text);
+        return trim($text);
+    }
+
+    /**
+     * Extract plain text from an RTF file using basic PHP string processing.
+     * Handles RTF control words, groups, and Unicode escapes.
+     */
+    private function extractTextFromRtfBasic($filePath)
+    {
+        $content = @file_get_contents($filePath);
+        if (empty($content)) return '';
+
+        // Only process if it looks like RTF
+        if (strpos($content, '{\\rtf') === false && strpos($content, '{\\RTF') === false) {
+            return '';
+        }
+
+        // Remove RTF header and binary data blobs (\binN)
+        $text = preg_replace('/\\\bin\d+[^}]*/s', '', $content);
+
+        // Remove picture and object groups entirely
+        $text = preg_replace('/\{\\\\pict[^}]*\}/s', '', $text);
+        $text = preg_replace('/\{\\\\object[^}]*\}/s', '', $text);
+        $text = preg_replace('/\{\\\\fonttbl[^}]*\}/s', '', $text);
+        $text = preg_replace('/\{\\\\colortbl[^}]*\}/s', '', $text);
+        $text = preg_replace('/\{\\\\stylesheet[^}]*\}/s', '', $text);
+        $text = preg_replace('/\{\\\\info[^}]*\}/s', '', $text);
+
+        // Convert paragraph/line breaks to newlines
+        $text = preg_replace('/\\\\par\b/', "\n", $text);
+        $text = preg_replace('/\\\\line\b/', "\n", $text);
+        $text = preg_replace('/\\\\tab\b/', "\t", $text);
+
+        // Handle Unicode escapes: \uN? — N is the Unicode code point, ? is the fallback char
+        $text = preg_replace_callback('/\\\\u(-?\d+)\?/', function($m) {
+            $cp = (int)$m[1];
+            if ($cp < 0) $cp += 65536;
+            return mb_convert_encoding(pack('n', $cp), 'UTF-8', 'UTF-16BE');
+        }, $text);
+
+        // Remove all remaining RTF control words (\word or \word-N)
+        $text = preg_replace('/\\\\[a-zA-Z]+\-?\d*\s?/', '', $text);
+
+        // Remove RTF group braces
+        $text = str_replace(array('{', '}', '\\'), array('', '', ''), $text);
+
+        // Clean up whitespace
+        $text = preg_replace('/[ \t]+/', ' ', $text);
+        $text = preg_replace('/\n{3,}/', "\n\n", trim($text));
+
+        return $text;
     }
 
     /**

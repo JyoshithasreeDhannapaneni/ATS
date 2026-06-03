@@ -601,7 +601,7 @@
                             <line x1="12" y1="3" x2="12" y2="15"/>
                         </svg>
                         <span class="upload-text"><span>Click to upload</span> or drag and drop</span>
-                        <span style="font-size: 12px; color: #9ca3af;">PDF, DOC, DOCX, TXT (max 10MB)</span>
+                        <span style="font-size: 12px; color: #9ca3af;">PDF, DOC, DOCX, RTF, TXT (max 10MB)</span>
                     </label>
                     
                     <!-- Parsing indicator -->

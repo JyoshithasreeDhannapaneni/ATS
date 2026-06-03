@@ -2359,6 +2359,14 @@ class ImportUI extends UserInterface
 
             // Determine content type and document type
             $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+
+            // Server-side extension whitelist
+            $allowedExts = ['pdf', 'doc', 'docx', 'txt', 'rtf'];
+            if (!in_array($ext, $allowedExts)) {
+                echo json_encode(['success' => false, 'error' => 'File type not supported. Please upload PDF, DOC, DOCX, TXT, or RTF files only.']);
+                return;
+            }
+
             $contentTypes = [
                 'pdf' => 'application/pdf',
                 'doc' => 'application/msword',
@@ -2436,6 +2444,15 @@ class ImportUI extends UserInterface
                 $extractedText = $this->extractTextFromDoc($tmpPath);
                 if (!empty($extractedText)) {
                     $extractionMethod = 'PHP-DOC';
+                }
+            }
+
+            // Method 6: For RTF files, try PHP-based RTF parsing
+            if (empty($extractedText) && $ext === 'rtf')
+            {
+                $extractedText = $this->extractTextFromRtf($tmpPath);
+                if (!empty($extractedText)) {
+                    $extractionMethod = 'PHP-RTF';
                 }
             }
             
@@ -3322,43 +3339,91 @@ class ImportUI extends UserInterface
     }
     
     /**
-     * Extract text from DOC file (older Word format)
+     * Extract text from DOC file (older Word 97-2003 binary format).
      */
     private function extractTextFromDoc($filePath)
     {
         $content = @file_get_contents($filePath);
-        if (empty($content)) {
-            return '';
+        if (empty($content)) return '';
+
+        // If it's actually an RTF file (some .doc files are RTF)
+        if (substr($content, 0, 5) === '{\rtf' || substr($content, 0, 5) === '{\\rtf') {
+            return $this->extractTextFromRtf($filePath);
         }
-        
-        // Check if it's actually an RTF file
-        if (substr($content, 0, 5) === '{\rtf') {
-            return $this->extractTextFromRtf($content);
-        }
-        
-        // Try to extract readable ASCII text from DOC
+
+        // Pull readable ASCII text sequences (5+ chars with letters)
         $text = '';
-        
-        // DOC files have text in certain positions - try to find readable chunks
-        if (preg_match_all('/[\x20-\x7E]{20,}/', $content, $matches)) {
-            $text = implode(' ', $matches[0]);
+        preg_match_all('/[\x20-\x7E]{5,}/', $content, $m);
+        foreach ($m[0] as $chunk) {
+            if (preg_match('/[a-zA-Z]{3,}/', $chunk)) {
+                $text .= $chunk . "\n";
+            }
         }
-        
+
+        // Also try UTF-16LE (Word stores body text as UTF-16LE)
+        if (strlen($text) < 100) {
+            $utf16 = @iconv('UTF-16LE', 'UTF-8//IGNORE', $content);
+            if ($utf16) {
+                preg_match_all('/[\x20-\x7E\xC0-\xFF]{4,}/', $utf16, $m2);
+                foreach ($m2[0] as $chunk) {
+                    if (preg_match('/[a-zA-Z]{3,}/', $chunk)) {
+                        $text .= $chunk . "\n";
+                    }
+                }
+            }
+        }
+
+        $text = preg_replace('/[^\x20-\x7E\n]/', ' ', $text);
+        $text = preg_replace('/[ \t]+/', ' ', $text);
         return trim($text);
     }
-    
+
     /**
-     * Extract text from RTF content
+     * Extract plain text from an RTF file.
+     * Accepts a file path and uses proper RTF control-word parsing.
      */
-    private function extractTextFromRtf($content)
+    private function extractTextFromRtf($filePath)
     {
-        // Remove RTF control words and groups
-        $text = preg_replace('/\{[^}]*\}/', '', $content);
-        $text = preg_replace('/\\\\[a-z]+\d*\s?/i', '', $text);
-        $text = preg_replace('/[{}]/', '', $text);
-        $text = preg_replace('/\s+/', ' ', $text);
-        
-        return trim($text);
+        $content = @file_get_contents($filePath);
+        if (empty($content)) return '';
+
+        // Accept both file path and raw RTF content (legacy callers pass content)
+        if (strpos($content, '{\\rtf') === false && strpos($content, '{\\RTF') === false) {
+            // Might be a raw RTF string passed directly — check length
+            if (strlen($filePath) < 512 && file_exists($filePath)) return '';
+            // If $filePath is actually RTF content, use it directly
+            $content = $filePath;
+            if (strpos($content, '{\\rtf') === false) return '';
+        }
+
+        // Remove binary blobs, pictures, and metadata groups
+        $text = preg_replace('/\\\bin\d+[^}]*/s', '', $content);
+        $text = preg_replace('/\{\\\\pict[^}]*\}/s', '', $text);
+        $text = preg_replace('/\{\\\\fonttbl[^}]*\}/s', '', $text);
+        $text = preg_replace('/\{\\\\colortbl[^}]*\}/s', '', $text);
+        $text = preg_replace('/\{\\\\stylesheet[^}]*\}/s', '', $text);
+        $text = preg_replace('/\{\\\\info[^}]*\}/s', '', $text);
+
+        // Paragraph and line breaks → newlines
+        $text = preg_replace('/\\\\par\b/', "\n", $text);
+        $text = preg_replace('/\\\\line\b/', "\n", $text);
+        $text = preg_replace('/\\\\tab\b/', "\t", $text);
+
+        // Unicode escapes: \uN?
+        $text = preg_replace_callback('/\\\\u(-?\d+)\?/', function($m) {
+            $cp = (int)$m[1];
+            if ($cp < 0) $cp += 65536;
+            return mb_convert_encoding(pack('n', $cp), 'UTF-8', 'UTF-16BE');
+        }, $text);
+
+        // Remove all remaining control words and braces
+        $text = preg_replace('/\\\\[a-zA-Z]+\-?\d*\s?/', '', $text);
+        $text = str_replace(['{', '}', '\\'], ['', '', ''], $text);
+
+        // Clean whitespace
+        $text = preg_replace('/[ \t]+/', ' ', $text);
+        $text = preg_replace('/\n{3,}/', "\n\n", trim($text));
+        return $text;
     }
     
     /**
