@@ -61,6 +61,12 @@ class DatabaseConnection
         return $this->_pdo;
     }
 
+    /** Returns true when connected to MySQL, false for PostgreSQL. */
+    public function isMysql()
+    {
+        return $this->_isMysql;
+    }
+
     // -----------------------------------------------------------------------
     // Connection
     // -----------------------------------------------------------------------

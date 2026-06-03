@@ -104,24 +104,37 @@ class Pipelines
     public function isInCoolingPeriod($candidateID, $jobOrderID, $coolingDays = 90)
     {
         // Ensure the tracking table exists (created once, silently ignored thereafter)
-        $createSQL = "CREATE TABLE IF NOT EXISTS candidate_application_log (
-            log_id       INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-            site_id      INTEGER NOT NULL DEFAULT 0,
-            candidate_id INTEGER NOT NULL DEFAULT 0,
-            joborder_id  INTEGER NOT NULL DEFAULT 0,
-            date_applied DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-        )";
+        if ($this->_db->isMysql()) {
+            $createSQL = "CREATE TABLE IF NOT EXISTS candidate_application_log (
+                log_id       INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                site_id      INTEGER NOT NULL DEFAULT 0,
+                candidate_id INTEGER NOT NULL DEFAULT 0,
+                joborder_id  INTEGER NOT NULL DEFAULT 0,
+                date_applied DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )";
+        } else {
+            $createSQL = "CREATE TABLE IF NOT EXISTS candidate_application_log (
+                log_id       SERIAL PRIMARY KEY,
+                site_id      INTEGER NOT NULL DEFAULT 0,
+                candidate_id INTEGER NOT NULL DEFAULT 0,
+                joborder_id  INTEGER NOT NULL DEFAULT 0,
+                date_applied TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )";
+        }
         @$this->_db->query($createSQL);
         @$this->_db->query("CREATE INDEX IF NOT EXISTS idx_cal_cand_job_site ON candidate_application_log (site_id, candidate_id, joborder_id)");
         @$this->_db->query("CREATE INDEX IF NOT EXISTS idx_cal_date_applied ON candidate_application_log (date_applied)");
 
+        $intervalExpr = $this->_db->isMysql()
+            ? "DATE_SUB(NOW(), INTERVAL %d DAY)"
+            : "NOW() - INTERVAL '%d days'";
         $sql = sprintf(
             "SELECT COUNT(*) AS cnt
              FROM candidate_application_log
              WHERE candidate_id = %s
                AND joborder_id  = %s
                AND site_id      = %s
-               AND date_applied >= DATE_SUB(NOW(), INTERVAL %d DAY)",
+               AND date_applied >= " . $intervalExpr,
             $this->_db->makeQueryInteger($candidateID),
             $this->_db->makeQueryInteger($jobOrderID),
             $this->_db->makeQueryInteger($this->_siteID),
@@ -564,13 +577,23 @@ class Pipelines
     public function getCandidatePipeline($candidateID)
     {
         // Ensure the application log table exists (idempotent)
-        @$this->_db->query("CREATE TABLE IF NOT EXISTS candidate_application_log (
-            log_id       INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-            site_id      INTEGER NOT NULL DEFAULT 0,
-            candidate_id INTEGER NOT NULL DEFAULT 0,
-            joborder_id  INTEGER NOT NULL DEFAULT 0,
-            date_applied DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-        )");
+        if ($this->_db->isMysql()) {
+            @$this->_db->query("CREATE TABLE IF NOT EXISTS candidate_application_log (
+                log_id       INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                site_id      INTEGER NOT NULL DEFAULT 0,
+                candidate_id INTEGER NOT NULL DEFAULT 0,
+                joborder_id  INTEGER NOT NULL DEFAULT 0,
+                date_applied DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )");
+        } else {
+            @$this->_db->query("CREATE TABLE IF NOT EXISTS candidate_application_log (
+                log_id       SERIAL PRIMARY KEY,
+                site_id      INTEGER NOT NULL DEFAULT 0,
+                candidate_id INTEGER NOT NULL DEFAULT 0,
+                joborder_id  INTEGER NOT NULL DEFAULT 0,
+                date_applied TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )");
+        }
 
         $siteID = (int) $this->_siteID;
         $candID = (int) $candidateID;
@@ -591,12 +614,8 @@ class Pipelines
                 joborder.city AS jobCity,
                 joborder.state AS jobState,
                 COALESCE(dept.name, '') AS department,
-                DATE_FORMAT(
-                    joborder.start_date, '%%m-%%d-%%y'
-                ) AS start_date,
-                DATE_FORMAT(
-                    joborder.date_created, '%%m-%%d-%%y'
-                ) AS dateCreated,
+                joborder.start_date AS start_date,
+                joborder.date_created AS dateCreated,
                 candidate.candidate_id AS candidateID,
                 candidate.email1 AS candidateEmail,
                 candidate_joborder_status.candidate_joborder_status_id AS statusID,
@@ -607,17 +626,14 @@ class Pipelines
                 owner_user.last_name AS ownerLastName,
                 added_user.first_name AS addedByFirstName,
                 added_user.last_name AS addedByLastName,
-                IF((SELECT COUNT(*) FROM candidate_application_log
+                CASE WHEN (SELECT COUNT(*) FROM candidate_application_log
                     WHERE candidate_id = candidate.candidate_id
                       AND joborder_id  = joborder.joborder_id
-                      AND site_id      = {$this->_siteID}) > 0, 1, 0) AS isPortalApplication,
-                DATE_FORMAT(
-                    (SELECT MIN(date_applied) FROM candidate_application_log
-                     WHERE candidate_id = candidate.candidate_id
-                       AND joborder_id  = joborder.joborder_id
-                       AND site_id      = {$this->_siteID}),
-                    '%%m-%%d-%%y (%%h:%%i %%p)'
-                ) AS applicationDate
+                      AND site_id      = {$this->_siteID}) > 0 THEN 1 ELSE 0 END AS isPortalApplication,
+                (SELECT MIN(date_applied) FROM candidate_application_log
+                 WHERE candidate_id = candidate.candidate_id
+                   AND joborder_id  = joborder.joborder_id
+                   AND site_id      = {$this->_siteID}) AS applicationDate
             FROM
                 candidate_joborder
             INNER JOIN candidate
