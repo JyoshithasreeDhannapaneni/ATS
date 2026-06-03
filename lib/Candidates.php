@@ -788,7 +788,7 @@ class Candidates
         $sql = sprintf(
             "SELECT COUNT(*) AS cnt FROM candidate
              WHERE site_id = %s AND source = 'Career Portal' AND is_admin_hidden = 0",
-            $this->_siteID
+            $this->_db->makeQueryInteger($this->_siteID)
         );
         return (int)$this->_db->getColumn(0, 0, $sql);
     }
@@ -798,7 +798,7 @@ class Candidates
         $sql = sprintf(
             "SELECT COUNT(*) AS cnt FROM candidate
              WHERE site_id = %s AND (source IS NULL OR source != 'Career Portal') AND is_admin_hidden = 0",
-            $this->_siteID
+            $this->_db->makeQueryInteger($this->_siteID)
         );
         return (int)$this->_db->getColumn(0, 0, $sql);
     }

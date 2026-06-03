@@ -9,6 +9,13 @@
     <div id="main">
         <?php TemplateUtility::printQuickSearch(); ?>
 
+        <?php if (!empty($_SESSION['flashMessage'])): ?>
+        <div style="background:#d1fae5;border:1px solid #6ee7b7;color:#065f46;padding:10px 16px;margin:8px 0;border-radius:6px;font-size:13px;">
+            ✓ <?php echo htmlspecialchars($_SESSION['flashMessage']); ?>
+        </div>
+        <?php unset($_SESSION['flashMessage']); ?>
+        <?php endif; ?>
+
         <div id="contents"<?php echo !$this->totalJobOrders ? ' style="background-color: #E6EEFF; padding: 0;"' : ''; ?>>
             <?php if ($this->totalJobOrders): ?>
             <table width="100%">

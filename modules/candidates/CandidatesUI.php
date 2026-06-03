@@ -383,6 +383,10 @@ class CandidatesUI extends UserInterface
                 $this->addDuplicates();
                 break;
 
+            case 'workflow':
+                $this->showWorkflow();
+                break;
+
             /* Main candidates page. */
             case 'listByView':
             default:
@@ -4867,6 +4871,41 @@ class CandidatesUI extends UserInterface
             // Log error but don't fail the calendar event creation
             error_log("Microsoft Teams integration error: " . $e->getMessage());
         }
+    }
+
+    private function showWorkflow()
+    {
+        $db     = DatabaseConnection::getInstance();
+        $siteID = $_SESSION['CATS']->getSiteID();
+
+        // Get all pipeline statuses
+        $statuses = $db->getAllAssoc(
+            "SELECT candidate_joborder_status_id AS statusID,
+                    short_description AS statusName,
+                    can_be_scheduled  AS canSchedule,
+                    triggers_email    AS triggersEmail,
+                    is_enabled        AS isEnabled
+             FROM candidate_joborder_status
+             WHERE is_enabled = 1
+             ORDER BY candidate_joborder_status_id ASC"
+        );
+
+        // Count candidates per status
+        $countRS = $db->getAllAssoc(sprintf(
+            "SELECT cj.status AS statusID, COUNT(*) AS cnt
+             FROM candidate_joborder cj
+             JOIN joborder jo ON cj.joborder_id = jo.joborder_id
+             WHERE jo.site_id = %s
+             GROUP BY cj.status",
+            $db->makeQueryInteger($siteID)
+        ));
+        $countMap = array();
+        foreach ($countRS as $r) { $countMap[$r['statusID']] = $r['cnt']; }
+
+        $this->_template->assign('statuses',  $statuses);
+        $this->_template->assign('countMap',  $countMap);
+        $this->_template->assign('active',    $this);
+        $this->_template->display('./modules/candidates/Workflow.tpl');
     }
 }
 

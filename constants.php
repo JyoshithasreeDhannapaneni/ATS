@@ -37,7 +37,8 @@ $coreModules = array(
     'lists'      => '7',
     'calendar'   => '8',
     'reports'    => '9',
-    'settings'   => '10',
+    'orgchart'   => '10',
+    'settings'   => '11',
 );
 
 /* CATS Version */

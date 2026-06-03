@@ -118,9 +118,9 @@ if (ini_get('session.auto_start') !== '0' &&
 }
 
 /* Proper extensions loaded?! */
-if (!extension_loaded('pdo_pgsql') || !function_exists('session_start'))
+if (!extension_loaded('pdo') || !function_exists('session_start'))
 {
-    die('OpenCATS Error: Either PHP Sessions extension or PDO PostgreSQL extension (pdo_pgsql) is not loaded.');
+    die('OpenCATS Error: Either PHP Sessions extension or PDO extension is not loaded.');
 }
 
 /* Make sure we have a Session object stored in the user's session. */

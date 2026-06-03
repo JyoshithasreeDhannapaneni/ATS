@@ -844,7 +844,8 @@ class Users
         } else {
             /* Is the user's supplied password correct? Support both bcrypt and legacy md5 */
             $passwordValid = false;
-            if (password_get_info($rs['password'])['algo'] !== null && password_get_info($rs['password'])['algo'] !== 0) {
+            $algo = password_get_info($rs['password'])['algo'];
+            if ($algo !== null && $algo !== 0) {
                 $passwordValid = password_verify($password, $rs['password']);
             } else {
                 $passwordValid = ($rs['password'] === md5($password));

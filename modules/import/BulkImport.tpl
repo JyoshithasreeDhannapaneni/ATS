@@ -746,7 +746,7 @@
 
                 <!-- CSV Upload Zone -->
                 <div class="upload-zone" id="csvUploadZone" onclick="document.getElementById('csvFileInput').click()">
-                    <input type="file" id="csvFileInput" class="hidden-input" accept=".csv,.xlsx,.xls" onchange="handleCSVFiles(this.files)">
+                    <input type="file" id="csvFileInput" class="hidden-input" accept=".csv,.xlsx,.xls,.pdf,.doc,.docx" onchange="handleCSVFiles(this.files)">
                     <div class="upload-zone-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -930,10 +930,18 @@ function handleCSVFiles(files) {
         parseCSV(content);
     };
     
-    if (file.name.endsWith('.csv')) {
+    const name = file.name.toLowerCase();
+    if (name.endsWith('.csv')) {
         reader.readAsText(file);
+    } else if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
+        alert('Excel format: please export your spreadsheet as CSV (.csv) and re-upload.');
+    } else if (name.endsWith('.pdf') || name.endsWith('.doc') || name.endsWith('.docx')) {
+        // Route resume files to the resume upload tab handler
+        handleResumeFiles([file]);
+        // Switch to resume tab so the user sees the result
+        switchTab('resume');
     } else {
-        alert('Please upload a CSV file. Excel files will be supported soon.');
+        alert('Unsupported file type. Please upload a CSV, PDF, or Word document.');
     }
 }
 

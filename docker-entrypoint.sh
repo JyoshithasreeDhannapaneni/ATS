@@ -13,7 +13,7 @@ if [ -n "$PORT" ] && [ "$PORT" != "80" ]; then
     sed -i "s/<VirtualHost \*:80>/<VirtualHost *:$PORT>/" /etc/apache2/sites-available/000-default.conf
 fi
 
-# Ensure config.php exists (it is excluded from the build by .dockerignore)
+# Ensure config.php exists
 if [ ! -f /var/www/html/config.php ] && [ -f /var/www/html/config.php.example ]; then
     echo "Creating config.php from config.php.example..."
     cp /var/www/html/config.php.example /var/www/html/config.php
@@ -29,23 +29,19 @@ chmod -R 777 /var/www/html/temp /var/www/html/attachments /var/www/html/uploads
 # Log database configuration
 echo "--- Database Configuration ---"
 echo "  HOST: ${DATABASE_HOST:-NOT SET}"
-echo "  PORT: ${DATABASE_PORT:-5432}"
+echo "  PORT: ${DATABASE_PORT:-3306}"
 echo "  USER: ${DATABASE_USER:-NOT SET}"
 echo "  NAME: ${DATABASE_NAME:-NOT SET}"
 
-# Wait for PostgreSQL to be reachable (up to 60 seconds)
+# Wait for MySQL to be reachable (up to 60 seconds)
 if [ -n "$DATABASE_HOST" ]; then
-    echo "--- Waiting for PostgreSQL at $DATABASE_HOST:${DATABASE_PORT:-5432} ---"
+    echo "--- Waiting for MySQL at $DATABASE_HOST:${DATABASE_PORT:-3306} ---"
     for i in $(seq 1 30); do
         if php -r "
-            try {
-                \$dsn = 'pgsql:host=${DATABASE_HOST};port=${DATABASE_PORT:-5432};dbname=${DATABASE_NAME}';
-                \$pdo = new PDO(\$dsn, '${DATABASE_USER}', '${DATABASE_PASS}');
-                \$pdo = null;
-                exit(0);
-            } catch (Exception \$e) { exit(1); }
+            \$conn = @mysqli_connect('${DATABASE_HOST}', '${DATABASE_USER}', '${DATABASE_PASS}', '${DATABASE_NAME}', ${DATABASE_PORT:-3306});
+            if (\$conn) { mysqli_close(\$conn); exit(0); } exit(1);
         " 2>/dev/null; then
-            echo "  PostgreSQL connection OK"
+            echo "  MySQL connection OK"
             break
         fi
         echo "  Attempt $i/30 — waiting..."

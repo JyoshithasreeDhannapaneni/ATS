@@ -188,7 +188,7 @@
         }
         var jobIDField = document.getElementById('companyJobID');
         jobIDField.style.opacity = '0.5';
-        fetch('<?php echo(CATSUtility::getIndexName()); ?>?f=generateCompanyJobID', {
+        fetch('ajax/generateCompanyJobID.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: 'companyID=' + encodeURIComponent(companyID) + '&siteID=<?php echo($this->_siteID); ?>'

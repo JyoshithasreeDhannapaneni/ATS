@@ -53,9 +53,9 @@ try {
 
     // Get the highest number for this company's job orders
     $maxIDSQL = sprintf(
-        "SELECT job_order_id FROM job_order
+        "SELECT joborder_id FROM joborder
          WHERE company_id = %d AND site_id = %d
-         ORDER BY job_order_id DESC LIMIT 1",
+         ORDER BY joborder_id DESC LIMIT 1",
         $companyID,
         $siteID
     );
@@ -65,14 +65,14 @@ try {
     // Extract the number from existing company job IDs or start from 1
     $nextNumber = 1;
     if (!empty($maxIDResult)) {
-        $lastJobID = $maxIDResult[0]['job_order_id'];
+        $lastJobID = $maxIDResult[0]['joborder_id'];
         // Try to extract numeric suffix from existing company job IDs
         $jobIDSQL = sprintf(
-            "SELECT company_job_id FROM job_order
+            "SELECT client_job_id FROM joborder
              WHERE company_id = %d AND site_id = %d
-             AND company_job_id IS NOT NULL
-             AND company_job_id != ''
-             ORDER BY job_order_id DESC LIMIT 5",
+             AND client_job_id IS NOT NULL
+             AND client_job_id != ''
+             ORDER BY joborder_id DESC LIMIT 5",
             $companyID,
             $siteID
         );
@@ -81,9 +81,9 @@ try {
         $maxNum = 0;
 
         foreach ($jobIDResults as $row) {
-            if (!empty($row['company_job_id'])) {
+            if (!empty($row['client_job_id'])) {
                 // Extract number from pattern like "NT1", "NT2", etc.
-                preg_match('/(\d+)$/', $row['company_job_id'], $matches);
+                preg_match('/(\d+)$/', $row['client_job_id'], $matches);
                 if (!empty($matches[1])) {
                     $num = intval($matches[1]);
                     if ($num > $maxNum) {

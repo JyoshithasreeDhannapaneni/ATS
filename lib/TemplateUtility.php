@@ -614,7 +614,8 @@ class TemplateUtility
             'lists' => '📋',
             'calendar' => '📅',
             'reports' => '📈',
-            'settings' => '⚙️'
+            'settings' => '⚙️',
+            'orgchart' => '👤'
         );
 
         $indexName = CATSUtility::getIndexName();

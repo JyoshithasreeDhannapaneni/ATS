@@ -1,11 +1,11 @@
 <?php
 /**
  * CATS
- * Database Connection Library — PostgreSQL / PDO implementation
+ * Database Connection Library — MySQL / PostgreSQL PDO implementation
  *
- * Replaces the original mysqli-based layer with PDO (pgsql driver).
- * The public API is unchanged so the rest of the codebase needs no edits.
- * MySQL-specific SQL syntax is translated at runtime in _translateQuery().
+ * Connects using MySQL (pdo_mysql) when DATABASE_PORT=3306 (Docker/production),
+ * or PostgreSQL (pdo_pgsql) when DATABASE_PORT=5432 (local dev).
+ * MySQL-specific SQL is passed through as-is; PostgreSQL mode translates at runtime.
  */
 class DatabaseConnection
 {
@@ -17,6 +17,8 @@ class DatabaseConnection
     private $_inTransaction = false;
     private $_foundRows  = 0;
     private $_bufferedRows = null;
+    private $_isMysql    = false;
+    private $_queryHadRows = false;
 
     // -----------------------------------------------------------------------
     // Singleton
@@ -71,7 +73,16 @@ class DatabaseConnection
         $dbName = defined('DATABASE_NAME') ? DATABASE_NAME : '';
         $port   = defined('DATABASE_PORT') ? (int) DATABASE_PORT : 5432;
 
-        $dsn = "pgsql:host={$host};port={$port};dbname={$dbName}";
+        // Use MySQL driver when port is 3306 (Docker/production), PostgreSQL otherwise (local dev).
+        $this->_isMysql = ($port === 3306);
+
+        if ($this->_isMysql) {
+            $dsn  = "mysql:host={$host};port={$port};dbname={$dbName};charset=utf8mb4";
+            $hint = "Connect test: mysql -h {$host} -P {$port} -u {$user} {$dbName}";
+        } else {
+            $dsn  = "pgsql:host={$host};port={$port};dbname={$dbName}";
+            $hint = "Connect test: psql -h {$host} -p {$port} -U {$user} {$dbName}";
+        }
 
         try
         {
@@ -79,18 +90,23 @@ class DatabaseConnection
                 PDO::ATTR_ERRMODE            => PDO::ERRMODE_WARNING,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             ]);
+
+            if ($this->_isMysql) {
+                $this->_pdo->exec("SET SESSION sql_mode = ''");
+            }
         }
         catch (\PDOException $e)
         {
+            $driver = $this->_isMysql ? 'MySQL' : 'PostgreSQL';
             die(
                 '<!-- NOSPACEFILTER --><p style="background:#ec3737;padding:4px;'
                 . 'margin-top:0;font:normal normal bold 12px/130% Arial,Tahoma,'
                 . 'sans-serif;">Error Connecting to Database</p><pre>'
                 . "\n\nHost: {$host}, Port: {$port}, User: {$user}, DB: {$dbName}"
                 . "\n\n" . $e->getMessage()
-                . "\n\n<b>HINT:</b> Make sure PostgreSQL is running and a database"
+                . "\n\n<b>HINT:</b> Make sure {$driver} is running and a database"
                 . " named '{$dbName}' exists.\n"
-                . "Connect test: psql -h {$host} -p {$port} -U {$user} {$dbName}"
+                . $hint
                 . "</pre>\n\n"
             );
         }
@@ -109,25 +125,36 @@ class DatabaseConnection
             return false;
         }
 
-        // Handle FOUND_ROWS() — return stored count from previous SQL_CALC_FOUND_ROWS query
+        // Handle FOUND_ROWS() — MySQL supports it natively; PostgreSQL uses a stored count.
         if (preg_match('/^\s*SELECT\s+FOUND_ROWS\s*\(\s*\)/i', $query)) {
             $this->_stmt = null;
-            // Return a fake PDOStatement-like result via a literal query
-            $this->_stmt = $this->_pdo->query("SELECT " . (int)$this->_foundRows . ' AS "rowCount"');
+            if ($this->_isMysql) {
+                // MySQL: FOUND_ROWS() is native — pass through directly.
+                $this->_stmt = $this->_pdo->query("SELECT FOUND_ROWS() AS rowCount");
+            } else {
+                // PostgreSQL: return the count we stored from the previous count query.
+                $this->_stmt = $this->_pdo->query("SELECT " . (int)$this->_foundRows . ' AS "rowCount"');
+            }
             return $this->_stmt;
         }
 
         // Detect SQL_CALC_FOUND_ROWS: need to run count query after
         $hasCalcFoundRows = (stripos($query, 'SQL_CALC_FOUND_ROWS') !== false);
 
-        $query = $this->_translateQuery($query);
+        // Only translate MySQL→PostgreSQL syntax when running on PostgreSQL.
+        // In MySQL mode the codebase SQL is already valid MySQL — no translation needed.
+        if (!$this->_isMysql) {
+            $query = $this->_translateQuery($query);
+        }
 
         set_time_limit(0);
 
-        // If SQL_CALC_FOUND_ROWS was present, also run a count query
-        if ($hasCalcFoundRows) {
-            // Build count query: wrap in subquery after stripping LIMIT/OFFSET
-            $countQuery = preg_replace('/\bLIMIT\s+\d+(\s+OFFSET\s+\d+)?\s*$/i', '', $query);
+        // If SQL_CALC_FOUND_ROWS was present, resolve the total row count.
+        if ($hasCalcFoundRows && !$this->_isMysql) {
+            // PostgreSQL: run a separate COUNT(*) subquery (pg has no FOUND_ROWS()).
+            // Strip SQL_CALC_FOUND_ROWS from inner query — it's MySQL-only syntax.
+            $countQuery = preg_replace('/\bSQL_CALC_FOUND_ROWS\s*/i', '', $query);
+            $countQuery = preg_replace('/\bLIMIT\s+\d+(\s+OFFSET\s+\d+)?\s*$/i', '', $countQuery);
             $countQuery = "SELECT COUNT(*) AS cnt FROM (" . $countQuery . ") AS _cfr_sub";
             try {
                 $cstmt = $this->_pdo->query($countQuery);
@@ -140,18 +167,36 @@ class DatabaseConnection
             }
         }
 
+        // Reset per-query state.
+        $this->_bufferedRows = null;
+        $this->_queryHadRows = false;
+
         $this->_stmt = $this->_pdo->query($query);
+
+        // MySQL: after running the query with SQL_CALC_FOUND_ROWS, fetch FOUND_ROWS() immediately.
+        if ($hasCalcFoundRows && $this->_isMysql && $this->_stmt !== false) {
+            try {
+                $frStmt = $this->_pdo->query("SELECT FOUND_ROWS() AS cnt");
+                if ($frStmt) {
+                    $crow = $frStmt->fetch(PDO::FETCH_ASSOC);
+                    $this->_foundRows = (int)($crow['cnt'] ?? 0);
+                }
+            } catch (Exception $e) {
+                $this->_foundRows = 0;
+            }
+        }
 
         if ($this->_stmt === false && !$ignoreErrors)
         {
             $info   = $this->_pdo->errorInfo();
             $errMsg = isset($info[2]) ? $info[2] : 'Unknown error';
+            $driver = $this->_isMysql ? 'MySQL' : 'PostgreSQL';
 
             die(
                 '<!-- NOSPACEFILTER --><p style="background:#ec3737;padding:4px;'
                 . 'margin-top:0;font:normal normal bold 12px/130% Arial,Tahoma,'
                 . 'sans-serif;">Query Error — Report to System Administrator</p>'
-                . "<pre>\n\nPostgreSQL Query Failed: " . $errMsg
+                . "<pre>\n\n{$driver} Query Failed: " . $errMsg
                 . "\n\n" . $query . "</pre>\n\n"
             );
 
@@ -200,9 +245,19 @@ class DatabaseConnection
             $this->query($query);
         }
 
-        if (!$this->_stmt) return [];
+        if (!$this->_stmt) {
+            $this->_bufferedRows = [];
+            $this->_queryHadRows = false;
+            return [];
+        }
 
-        $row = $this->_stmt->fetch(PDO::FETCH_ASSOC);
+        // Buffer ALL rows on first access so isEOF() and repeated getAssoc() calls work correctly.
+        if ($this->_bufferedRows === null) {
+            $this->_bufferedRows = $this->_stmt->fetchAll(PDO::FETCH_ASSOC);
+            $this->_queryHadRows = count($this->_bufferedRows) > 0;
+        }
+
+        $row = array_shift($this->_bufferedRows);
 
         return $row ?: [];
     }
@@ -241,30 +296,47 @@ class DatabaseConnection
     {
         if (!$this->_stmt) return true;
 
-        $rows = $this->_stmt->fetchAll(PDO::FETCH_ASSOC);
-        $this->_bufferedRows = $rows;
-        return (count($rows) == 0);
+        // If the buffer was already populated by getAssoc(), use _queryHadRows to report
+        // whether the ORIGINAL query returned zero rows — not whether rows remain after reads.
+        // This matches the old mysqli behaviour: isEOF() = "query produced no rows at all".
+        if ($this->_bufferedRows !== null) {
+            return !$this->_queryHadRows;
+        }
+
+        // Buffer not yet populated — fetch now and set the flag.
+        $this->_bufferedRows = $this->_stmt->fetchAll(PDO::FETCH_ASSOC);
+        $this->_queryHadRows = count($this->_bufferedRows) > 0;
+        return !$this->_queryHadRows;
     }
 
     // -----------------------------------------------------------------------
-    // Advisory locks (PostgreSQL equivalents of MySQL GET_LOCK)
+    // Advisory locks — MySQL GET_LOCK / PostgreSQL pg_advisory_lock
     // -----------------------------------------------------------------------
 
     public function getAdvisoryLock($lockName, $timeout = 120)
     {
-        $key = $this->_advisoryKey($lockName);
-        // pg_advisory_lock blocks until the lock is acquired (no timeout param).
-        $this->query("SELECT pg_advisory_lock({$key})", true);
+        if ($this->_isMysql) {
+            $safe = $this->_pdo->quote($lockName);
+            $this->query("SELECT GET_LOCK({$safe}, {$timeout})", true);
+        } else {
+            $key = $this->_advisoryKey($lockName);
+            $this->query("SELECT pg_advisory_lock({$key})", true);
+        }
     }
 
     public function isAdvisoryLockFree($lockName)
     {
+        if ($this->_isMysql) {
+            $safe = $this->_pdo->quote($lockName);
+            $rs = $this->getAssoc("SELECT IS_FREE_LOCK({$safe}) AS isfreeLock");
+            return !empty($rs['isfreeLock']) && $rs['isfreeLock'] == 1;
+        }
+
         $key = $this->_advisoryKey($lockName);
         $rs  = $this->getAssoc("SELECT pg_try_advisory_lock({$key}) AS isfreeLock");
 
         if (!empty($rs['isfreeLock']) && $rs['isfreeLock'] !== 'f')
         {
-            // We acquired it — release immediately; we only wanted to test.
             $this->query("SELECT pg_advisory_unlock({$key})", true);
             return true;
         }
@@ -274,8 +346,13 @@ class DatabaseConnection
 
     public function releaseAdvisoryLock($lockName)
     {
-        $key = $this->_advisoryKey($lockName);
-        $this->query("SELECT pg_advisory_unlock({$key})", true);
+        if ($this->_isMysql) {
+            $safe = $this->_pdo->quote($lockName);
+            $this->query("SELECT RELEASE_LOCK({$safe})", true);
+        } else {
+            $key = $this->_advisoryKey($lockName);
+            $this->query("SELECT pg_advisory_unlock({$key})", true);
+        }
     }
 
     /** Convert a string lock name to a stable bigint for pg_advisory_lock(). */

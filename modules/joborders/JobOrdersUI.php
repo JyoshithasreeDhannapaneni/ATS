@@ -1174,11 +1174,16 @@ class JobOrdersUI extends UserInterface
             CommonErrors::fatal(COMMONERROR_BADINDEX, $this, 'Invalid job order ID.');
         }
 
-        $jobOrderID = $_GET['jobOrderID'];
+        $jobOrderID = (int) $_GET['jobOrderID'];
 
         if (!eval(Hooks::get('JO_ON_DELETE_PRE'))) return;
 
         $joborders = new JobOrders($this->_siteID);
+
+        /* Capture the title before deleting so we can confirm to the user. */
+        $joData = $joborders->get($jobOrderID);
+        $joTitle = ($joData && !empty($joData['title'])) ? $joData['title'] : 'Job Order #' . $jobOrderID;
+
         $joborders->delete($jobOrderID);
 
         /* Delete the MRU entry if present. */
@@ -1187,6 +1192,9 @@ class JobOrdersUI extends UserInterface
         );
 
         if (!eval(Hooks::get('JO_ON_DELETE_POST'))) return;
+
+        /* Pass a one-time confirmation message so the user knows exactly what was deleted. */
+        $_SESSION['flashMessage'] = 'Requisition "' . htmlspecialchars($joTitle) . '" (ID: ' . $jobOrderID . ') was deleted successfully.';
 
         CATSUtility::transferRelativeURI('m=joborders&a=listByView');
     }

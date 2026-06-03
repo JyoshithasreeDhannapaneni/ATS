@@ -24,7 +24,7 @@
             jobIDField.style.opacity = '0.5';
 
             // Call AJAX endpoint to generate Company Job ID
-            fetch('<?php echo(CATSUtility::getIndexName()); ?>?f=generateCompanyJobID', {
+            fetch('ajax/generateCompanyJobID.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded'
