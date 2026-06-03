@@ -111,7 +111,7 @@ class DocumentToText
                 }
 
                 $nativeEncoding = 'ISO-8859-1';
-                $command = '"'. ANTIWORD_PATH . '" -m ' . ANTIWORD_MAP . ' '
+                $command = '"'. ANTIWORD_PATH . '" -m ' . escapeshellarg(ANTIWORD_MAP) . ' '
                     . $escapedFilename;
                 break;
 
@@ -163,7 +163,7 @@ class DocumentToText
                 break;
 
             case DOCUMENT_TYPE_ODT:
-                $this->_rawOutput = $this->odt2text($filename);
+                $this->_rawOutput = $this->odt2text($fileName);
                 if ( $this->_rawOutput == null )
                 {
                     return false;

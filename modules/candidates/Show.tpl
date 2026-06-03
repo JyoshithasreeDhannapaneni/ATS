@@ -229,8 +229,8 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                                 if (linkResult) linkResult.style.display = 'block';
 
                                 // Switch to Documents tab to show the link
-                                var docTab = document.querySelector('[onclick*="documentsTab"]');
-                                if (docTab) docTab.click();
+                                var docTab = document.getElementById('documentsTab');
+                                if (docTab) { var anchor = docTab.querySelector('a'); if (anchor) anchor.click(); }
                             }
                         } else {
                             alert('Failed to update status. Please try again.');
@@ -2329,8 +2329,8 @@ use OpenCATS\UI\CandidateDuplicateQuickActionMenu;
                                                 );
                                                 foreach ($statusOptions as $statusVal => $statusLabel):
                                             ?>
-                                                <option value="<?php echo $statusVal; ?>" <?php echo ($this->candidateStatusID == $statusVal) ? 'selected' : ''; ?>>
-                                                    <?php echo $statusLabel; ?>
+                                                <option value="<?php echo (int)$statusVal; ?>" <?php echo ($this->candidateStatusID == $statusVal) ? 'selected' : ''; ?>>
+                                                    <?php echo htmlspecialchars($statusLabel); ?>
                                                 </option>
                                             <?php endforeach; ?>
                                         </select>

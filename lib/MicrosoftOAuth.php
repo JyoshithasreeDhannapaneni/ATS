@@ -93,7 +93,8 @@ class MicrosoftOAuth
             $state = bin2hex(random_bytes(16));
         }
         
-        // Store state in session for verification
+        // Store state in session for verification (INF-4: use canonical key checked by oauth_callback.php)
+        $_SESSION['oauth_state'] = $state;
         $_SESSION['microsoft_oauth_state'] = $state;
         
         $params = array(

@@ -69,15 +69,15 @@ else
 
         echo '<tr>';
         echo '<td style="padding-right: 6px; width: 160px;">',
-             $activity['dateModified'],
+             htmlspecialchars($activity['dateModified']),
              '</td>';
         echo '<td style="padding-right: 6px; width: 125px">(',
-             $activity['enteredByFirstName'],
+             htmlspecialchars($activity['enteredByFirstName']),
              ' ',
-             $activity['enteredByLastName'],
+             htmlspecialchars($activity['enteredByLastName']),
              ')</td>';
         echo '<td style="padding-right: 6px; width: 625px;">',
-             $activity['notes'],
+             htmlspecialchars($activity['notes']),
              '<br /></td>';
         echo '</tr>';
     }

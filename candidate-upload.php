@@ -449,14 +449,35 @@ $documentTypes = CandidateDocuments::getDocumentTypes();
             xhr.send(formData);
         });
 
+        function escapeHtml(str) {
+            var div = document.createElement('div');
+            div.appendChild(document.createTextNode(str));
+            return div.innerHTML;
+        }
         function addUploadedFile(name, type, size) {
             if (emptyState) emptyState.style.display = 'none';
             var li = document.createElement('li');
-            li.innerHTML = '<div class="file-info">' +
-                '<div class="file-icon"><svg width="16" height="16" fill="none" stroke="#2563eb" stroke-width="2" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg></div>' +
-                '<div><div class="file-name">' + name + '</div>' +
-                '<div class="file-type">' + type + ' &middot; ' + size + '</div></div></div>' +
-                '<span class="status-badge success">Uploaded</span>';
+            var fileInfo = document.createElement('div');
+            fileInfo.className = 'file-info';
+            var fileIcon = document.createElement('div');
+            fileIcon.className = 'file-icon';
+            fileIcon.innerHTML = '<svg width="16" height="16" fill="none" stroke="#2563eb" stroke-width="2" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>';
+            var fileDetails = document.createElement('div');
+            var fileName = document.createElement('div');
+            fileName.className = 'file-name';
+            fileName.textContent = name;
+            var fileType = document.createElement('div');
+            fileType.className = 'file-type';
+            fileType.textContent = type + ' · ' + size;
+            fileDetails.appendChild(fileName);
+            fileDetails.appendChild(fileType);
+            fileInfo.appendChild(fileIcon);
+            fileInfo.appendChild(fileDetails);
+            var badge = document.createElement('span');
+            badge.className = 'status-badge success';
+            badge.textContent = 'Uploaded';
+            li.appendChild(fileInfo);
+            li.appendChild(badge);
             uploadedList.prepend(li);
         }
     </script>

@@ -423,6 +423,7 @@ class Users
                 notes        = %s
                 WHERE
                 user_id = %s
+                AND site_id = %s
                 AND
                 %s",
                 $this->_db->makeQueryString($lastName),
@@ -598,7 +599,7 @@ class Users
                 user_login.date DESC
                 LIMIT
                 %s",
-                $userID,
+                $this->_db->makeQueryInteger($userID),
                 $this->_db->makeQueryInteger($limit)
                 );
 

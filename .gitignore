@@ -29,3 +29,7 @@ vendor/
 tools/
 dbcheck.php
 docs/DATABASE-LOCAL.md
+
+# Debug and log files
+oauth_debug.log
+*.log

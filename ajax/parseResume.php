@@ -7,6 +7,12 @@
  * Used by the candidate add form for auto-fill.
  */
 
+if (!defined('LEGACY_ROOT')) {
+    define('LEGACY_ROOT', realpath(dirname(__FILE__) . '/..'));
+}
+include_once(LEGACY_ROOT . '/constants.php');
+include_once(LEGACY_ROOT . '/config.php');
+
 include_once(LEGACY_ROOT . '/lib/LocalParseUtility.php');
 
 $interface = new SecureAJAXInterface();

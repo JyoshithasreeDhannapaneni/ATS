@@ -746,7 +746,7 @@
 
                 <!-- CSV Upload Zone -->
                 <div class="upload-zone" id="csvUploadZone" onclick="document.getElementById('csvFileInput').click()">
-                    <input type="file" id="csvFileInput" class="hidden-input" accept=".csv,.xlsx,.xls,.pdf,.doc,.docx" onchange="handleCSVFiles(this.files)">
+                    <input type="file" id="csvFileInput" class="hidden-input" accept=".csv,.xlsx,.xls" onchange="handleCSVFiles(this.files)">
                     <div class="upload-zone-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -1002,7 +1002,7 @@ function showCSVPreview(headers, data) {
     headerRow.innerHTML = '<th>Status</th>' + headers.map(h => `<th>${escapeHtml(h)}</th>`).join('');
     
     body.innerHTML = data.slice(0, 10).map((row, idx) => {
-        const hasName = row.first_name || row.firstname || row.name;
+        const hasName = row.first_name || row.name;
         const status = hasName ? 'valid' : 'invalid';
         const statusText = hasName ? 'Valid' : 'Missing Name';
         
@@ -1191,8 +1191,8 @@ function importCSVData() {
         // Send to server
         const formData = new FormData();
         formData.append('action', 'importCandidate');
-        formData.append('firstName', row.first_name || row.firstname || '');
-        formData.append('lastName', row.last_name || row.lastname || '');
+        formData.append('firstName', row.first_name || '');
+        formData.append('lastName', row.last_name || '');
         formData.append('email', row.email || row.email1 || '');
         formData.append('phone', row.phone || row.phone_cell || row.mobile || '');
         formData.append('city', row.city || '');
@@ -1288,8 +1288,8 @@ function importResumeFiles() {
                     }
                     const row = rows[rowIdx];
                     const fd = new FormData();
-                    fd.append('firstName', row.first_name || row.firstname || '');
-                    fd.append('lastName', row.last_name || row.lastname || '');
+                    fd.append('firstName', row.first_name || '');
+                    fd.append('lastName', row.last_name || '');
                     fd.append('email', row.email || row.email1 || '');
                     fd.append('phone', row.phone || row.phone_cell || row.mobile || '');
                     fd.append('city', row.city || '');
@@ -1374,7 +1374,7 @@ function updateFileStatus(idx, status, data) {
                 if (nameEl) {
                     nameEl.innerHTML = escapeHtml(data.name) + 
                         '<span style="color: #6b7280; font-weight: 400; font-size: 11px; margin-left: 8px;">' + 
-                        (data.email ? data.email : '') + '</span>';
+                        (data.email ? escapeHtml(data.email) : '') + '</span>';
                 }
             }
         } else {

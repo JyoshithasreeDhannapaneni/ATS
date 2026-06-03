@@ -32,6 +32,11 @@ include_once(LEGACY_ROOT . '/lib/ActivityEntries.php');
 
 $interface = new SecureAJAXInterface();
 
+if (!isset($_SESSION['CATS']) || $_SESSION['CATS']->getAccessLevel('activities') < ACCESS_LEVEL_DELETE) {
+    $interface->outputXMLErrorPage(-1, 'Insufficient permissions to delete activities.');
+    die();
+}
+
 if (!$interface->isRequiredIDValid('activityID'))
 {
     $interface->outputXMLErrorPage(-1, 'Invalid activity ID.');
@@ -44,6 +49,14 @@ $activityID = $_REQUEST['activityID'];
 
 /* Delete the activity entry. */
 $activityEntries = new ActivityEntries($siteID);
+
+$entry = $activityEntries->get($activityID);
+if (!$entry || (isset($entry['enteredBy']) && $entry['enteredBy'] != $_SESSION['CATS']->getUserID()
+    && $_SESSION['CATS']->getAccessLevel('activities') < ACCESS_LEVEL_DELETE)) {
+    $interface->outputXMLErrorPage(-1, 'Cannot delete another user activity without admin permission.');
+    die();
+}
+
 $activityEntries->delete($activityID);
 
 /* Send back the XML data. */

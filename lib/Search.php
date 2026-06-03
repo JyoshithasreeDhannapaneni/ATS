@@ -748,6 +748,10 @@ class SearchCompanies
         $wildCardString = str_replace('*', '%', $wildCardString) . '%';
         $wildCardString = $this->_db->makeQueryString($wildCardString);
 
+        $allowedSortFields = ['company.name', 'company.date_created', 'company.date_modified', 'c.name', 'name'];
+        if (!in_array($sortBy, $allowedSortFields)) { $sortBy = 'company.name'; }
+        $sortDirection = (strtoupper($sortDirection) === 'DESC') ? 'DESC' : 'ASC';
+
         $sql = sprintf(
             "SELECT
                 company.company_id AS companyID,

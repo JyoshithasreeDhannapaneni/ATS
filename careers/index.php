@@ -31,6 +31,9 @@
  * $Id: index.php 1623 2007-02-06 18:38:58Z will $
  */
 
+@ini_set('display_errors', '0');
+error_reporting(0);
+
 $careerPage = true;
 
 chdir('..');

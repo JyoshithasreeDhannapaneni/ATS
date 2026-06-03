@@ -384,6 +384,9 @@ class CandidatesUI extends UserInterface
                 break;
 
             case 'workflow':
+                if ($this->getUserAccessLevel('candidates') < ACCESS_LEVEL_READ) {
+                    CommonErrors::fatal(COMMONERROR_PERMISSION, $this, 'Invalid user level for action.');
+                }
                 $this->showWorkflow();
                 break;
 
@@ -1832,10 +1835,6 @@ class CandidatesUI extends UserInterface
      */
     private function parseResumeAjax()
     {
-        // Suppress ALL PHP warnings/notices/deprecations — they break JSON output
-        $oldErrorReporting = error_reporting(0);
-        @ini_set('display_errors', '0');
-
         // Clean any prior output
         while (ob_get_level()) { ob_end_clean(); }
         ob_start();
@@ -1857,6 +1856,12 @@ class CandidatesUI extends UserInterface
 
             // Determine extension and content type first
             $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+
+            $allowedExts = ['pdf', 'doc', 'docx', 'txt', 'rtf'];
+            if (!in_array($ext, $allowedExts)) {
+                echo json_encode(['success' => false, 'error' => 'File type not allowed']);
+                return;
+            }
 
             // Pre-populate name from filename — text parsing may override below
             list($fnFirst, $fnLast) = $this->extractNameFromFilename($fileName);
@@ -2078,7 +2083,7 @@ class CandidatesUI extends UserInterface
 
             // Store the temp file path for later use when form is submitted
             // Save to 'addcandidate' directory so _addCandidate can find it
-            $tempFileName = 'resume_' . time() . '_' . rand(1000, 9999) . '.' . $ext;
+            $tempFileName = 'resume_' . bin2hex(random_bytes(16)) . '.' . $ext;
             $tempDir = FileUtility::getUploadPath($this->_siteID, 'addcandidate');
             if ($tempDir) {
                 $newTempPath = $tempDir . '/' . $tempFileName;
@@ -2106,7 +2111,6 @@ class CandidatesUI extends UserInterface
             $output = substr($output, strpos($output, '{'));
         }
         echo $output;
-        error_reporting($oldErrorReporting);
     }
 
     /**

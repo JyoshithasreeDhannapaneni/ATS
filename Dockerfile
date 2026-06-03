@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y \
     libonig-dev \
     libxml2-dev \
     libzip-dev \
+    libpq-dev \
     zip \
     unzip \
     antiword \
@@ -16,14 +17,14 @@ RUN apt-get update && apt-get install -y \
     html2text \
     unrtf \
     default-mysql-client \
-    && docker-php-ext-install mysqli mbstring exif pcntl bcmath gd zip \
+    && docker-php-ext-install mysqli mbstring exif pcntl bcmath gd zip pdo_pgsql pgsql \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 COPY . /var/www/html/
 
-RUN composer install --no-dev --optimize-autoloader 2>/dev/null || true
+RUN composer install --no-dev --optimize-autoloader
 
 RUN if [ ! -f config.php ] && [ -f config.php.example ]; then \
         cp config.php.example config.php && \
@@ -33,12 +34,12 @@ RUN if [ ! -f config.php ] && [ -f config.php.example ]; then \
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html \
     && mkdir -p temp attachments uploads \
-    && chmod -R 777 temp attachments uploads
+    && chmod -R 755 temp attachments uploads
 
 RUN a2enmod rewrite
 
 RUN echo '<Directory /var/www/html>\n\
-    Options Indexes FollowSymLinks\n\
+    Options -Indexes FollowSymLinks\n\
     AllowOverride All\n\
     Require all granted\n\
 </Directory>' > /etc/apache2/conf-available/opencats.conf \

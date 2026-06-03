@@ -287,7 +287,7 @@ if (!eval(Hooks::get('JO_AJAX_GET_PIPELINE'))) return;
             <td valign="top" nowrap="nowrap"><?php echo(htmlspecialchars($pipelinesData['dateCreated'])); ?></td>
             <td valign="top" nowrap="nowrap"><?php echo(htmlspecialchars($pipelinesData['addedByAbbrName'])); ?></td>
             <td valign="top" nowrap="nowrap"><?php echo(htmlspecialchars($pipelinesData['status'])); ?></td>
-            <td valign="top"><?php echo($pipelinesData['lastActivity']); ?></td>
+            <td valign="top"><?php echo strip_tags($pipelinesData['lastActivity'], '<strong><br>'); ?></td>
 <?php if (!$isPopup): ?>
             <td align="center" nowrap="nowrap">
                 <?php if ($_SESSION['CATS']->getAccessLevel('pipelines.screening') >= ACCESS_LEVEL_EDIT && !$_SESSION['CATS']->hasUserCategory('sourcer')): ?>

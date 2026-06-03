@@ -87,7 +87,6 @@ define('CALENDAR_DAY_SUNDAY',   1);
 define('CALENDAR_DAY_MONDAY',   2);
 define('CALENDAR_DAY_TUESDAY',  3);
 define('CALENDAR_DAY_WEDNESDAY', 4);
-define('CALENDAR_DAY_WEDNSDAY', 4);
 define('CALENDAR_DAY_THURSDAY', 5);
 define('CALENDAR_DAY_FRIDAY',   6);
 define('CALENDAR_DAY_SATURDAY', 7);
@@ -121,8 +120,8 @@ define('TIME_PERIOD_LASTTWOWEEKS', 1000);
 /* Pipeline status flag. */
 define('PIPELINE_STATUS_NOSTATUS',           0);
 define('PIPELINE_STATUS_NOCONTACT',          100);
-define('PIPELINE_STATUS_CANDIDATE_REPLIED',  250);
 define('PIPELINE_STATUS_CONTACTED',          200);
+define('PIPELINE_STATUS_CANDIDATE_REPLIED',  250);
 define('PIPELINE_STATUS_QUALIFYING',         300);
 define('PIPELINE_STATUS_SUBMITTED',          400);
 define('PIPELINE_STATUS_INTERVIEWING',       500);
@@ -177,7 +176,7 @@ define(
 );
 
 /* Constants for the login module. */
-define('DEFAULT_ADMIN_PASSWORD', 'EnggOps2026!');
+define('DEFAULT_ADMIN_PASSWORD', getenv('DEFAULT_ADMIN_PASSWORD') ?: '');
 define('DEFAULT_MAIL_FROM_ADDRESS', 'noreply@yourdomain.com');
 
 /* Module data array offsets. */

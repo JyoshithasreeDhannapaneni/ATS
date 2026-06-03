@@ -8,6 +8,18 @@ include_once('./constants.php');
 @session_name(CATS_SESSION_NAME);
 session_start();
 
+// INF-4: Validate OAuth state parameter to prevent CSRF attacks.
+// Only validate when a response parameter is present (code, id_token, or error).
+if (isset($_GET['code']) || isset($_GET['id_token']) || isset($_GET['error'])) {
+    if (!isset($_GET['state']) || !isset($_SESSION['oauth_state']) ||
+        !hash_equals($_SESSION['oauth_state'], $_GET['state'])) {
+        error_log('OAuth: Invalid state parameter - possible CSRF');
+        header('Location: index.php?m=login&loginError=sso_failed');
+        exit;
+    }
+    unset($_SESSION['oauth_state']);
+}
+
 // Check for id_token in fragment - need JavaScript to pass it
 ?>
 <!DOCTYPE html>

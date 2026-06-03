@@ -200,7 +200,7 @@
                 document.getElementById('companyJobID').value = data.companyJobID;
             }
         })
-        .catch(error => { jobIDField.style.opacity = '1'; });
+        .catch(error => { jobIDField.style.opacity = '1'; jobIDField.placeholder = 'Auto-generate failed — enter manually'; });
     }
 
     function selectQuestionnaireByType() {

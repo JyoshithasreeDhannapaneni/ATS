@@ -9,6 +9,13 @@ include_once('../constants.php');
 include_once('../lib/DatabaseConnection.php');
 include_once('../lib/Companies.php');
 
+session_start();
+if (!isset($_SESSION['CATS']) || !$_SESSION['CATS']->isLoggedIn()) {
+    http_response_code(403);
+    echo json_encode(['error' => 'Unauthorized']);
+    exit;
+}
+
 header('Content-Type: application/json');
 
 $companyID = isset($_POST['companyID']) ? intval($_POST['companyID']) : 0;
@@ -51,50 +58,29 @@ try {
         $abbrev = strtoupper(substr($companyName, 0, 2));
     }
 
-    // Get the highest number for this company's job orders
-    $maxIDSQL = sprintf(
-        "SELECT joborder_id FROM joborder
-         WHERE company_id = %d AND site_id = %d
-         ORDER BY joborder_id DESC LIMIT 1",
-        $companyID,
-        $siteID
+    // Get the highest numbered job ID for this company+abbrev combination
+    $maxNumSQL = sprintf(
+        "SELECT client_job_id FROM joborder WHERE company_id = %d AND site_id = %d AND client_job_id REGEXP '^[A-Z]+[0-9]+$' ORDER BY CAST(SUBSTRING(client_job_id, %d) AS UNSIGNED) DESC LIMIT 10",
+        $companyID, $siteID, strlen($abbrev) + 1
     );
 
-    $maxIDResult = $db->getAllAssoc($maxIDSQL);
+    $maxNumResults = $db->getAllAssoc($maxNumSQL);
 
-    // Extract the number from existing company job IDs or start from 1
+    // Find the highest number matching the current abbrev prefix
     $nextNumber = 1;
-    if (!empty($maxIDResult)) {
-        $lastJobID = $maxIDResult[0]['joborder_id'];
-        // Try to extract numeric suffix from existing company job IDs
-        $jobIDSQL = sprintf(
-            "SELECT client_job_id FROM joborder
-             WHERE company_id = %d AND site_id = %d
-             AND client_job_id IS NOT NULL
-             AND client_job_id != ''
-             ORDER BY joborder_id DESC LIMIT 5",
-            $companyID,
-            $siteID
-        );
-
-        $jobIDResults = $db->getAllAssoc($jobIDSQL);
-        $maxNum = 0;
-
-        foreach ($jobIDResults as $row) {
-            if (!empty($row['client_job_id'])) {
-                // Extract number from pattern like "NT1", "NT2", etc.
-                preg_match('/(\d+)$/', $row['client_job_id'], $matches);
-                if (!empty($matches[1])) {
-                    $num = intval($matches[1]);
-                    if ($num > $maxNum) {
-                        $maxNum = $num;
-                    }
+    $maxNum = 0;
+    foreach ($maxNumResults as $row) {
+        if (!empty($row['client_job_id']) && strpos($row['client_job_id'], $abbrev) === 0) {
+            $suffix = substr($row['client_job_id'], strlen($abbrev));
+            if (ctype_digit($suffix)) {
+                $num = intval($suffix);
+                if ($num > $maxNum) {
+                    $maxNum = $num;
                 }
             }
         }
-
-        $nextNumber = $maxNum + 1;
     }
+    $nextNumber = $maxNum + 1;
 
     // Generate the Company Job ID
     $generatedJobID = $abbrev . $nextNumber;

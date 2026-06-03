@@ -16,10 +16,9 @@ session_start();
 $clientId = MICROSOFT_SSO_CLIENT_ID;
 $allowedDomains = ['cloudfuze.com', 'exinent.com'];
 
-$debugLog = './oauth_debug.log';
+// INF-7: Removed oauth_debug.log file writing to avoid sensitive data leakage on disk.
 function oauthLog($msg) {
-    global $debugLog;
-    file_put_contents($debugLog, date('Y-m-d H:i:s') . ' - ' . $msg . "\n", FILE_APPEND);
+    error_log('OAuth: ' . $msg);
 }
 oauthLog('=== OAuth process started ===');
 
@@ -47,6 +46,19 @@ $payload = json_decode(base64_decode(str_replace(['-', '_'], ['+', '/'], $parts[
 
 if (!$payload) {
     header('Location: index.php?m=login&message=' . urlencode('Could not decode token'));
+    exit;
+}
+
+// SECURITY WARNING: JWT cryptographic signature not yet verified (INF-3)
+// Validate issuer and audience as minimum check until firebase/php-jwt is added
+if (empty($payload['iss']) || strpos($payload['iss'], 'microsoftonline.com') === false) {
+    error_log('OAuth: Invalid JWT issuer: ' . ($payload['iss'] ?? 'none'));
+    header('Location: index.php?m=login&loginError=sso_failed');
+    exit;
+}
+if (empty($payload['aud']) || $payload['aud'] !== MICROSOFT_SSO_CLIENT_ID) {
+    error_log('OAuth: Invalid JWT audience');
+    header('Location: index.php?m=login&loginError=sso_failed');
     exit;
 }
 
@@ -165,7 +177,7 @@ if (!empty($rs)) {
 
     $sql = sprintf(
         "INSERT INTO `user` (site_id, user_name, email, password, first_name, last_name, access_level, can_change_password, is_test_user)
-         VALUES (%d, %s, %s, %s, %s, %s, 400, 1, 0)",
+         VALUES (%d, %s, %s, %s, %s, %s, 100, 1, 0)",  /* INF-12: was 400 (Site Admin), changed to 100 (Read Only) */
         $siteID,
         $db->makeQueryString($username),
         $db->makeQueryString($email),

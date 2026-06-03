@@ -373,6 +373,7 @@ foreach ($statuses as $s) { $statusMap[$s['statusID']] = $s; }
             $allStatuses = array_merge($pipelineFlow, $rejectStatuses);
             usort($allStatuses, function($a,$b){ return $a['id'] - $b['id']; });
             $stageLabel = function($id) {
+                if (in_array($id, [650, 700, 1010, 1070])) return array('Exit','#fee2e2','#dc2626');
                 if ($id <= 300) return array('Sourcing','#dbeafe','#1d4ed8');
                 if ($id <= 500) return array('Screening','#f3e8ff','#7e22ce');
                 if ($id <= 1040) return array('Interviews','#dcfce7','#15803d');

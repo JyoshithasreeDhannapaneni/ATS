@@ -810,6 +810,7 @@ class CATSSession
                 break;
                 
             case LOGIN_SUCCESS:
+                session_regenerate_id(true);
                 $this->_username               = $rs['username'];
                 $this->_password               = $rs['password'];
                 $this->_userID                 = $rs['userID'];
@@ -874,7 +875,10 @@ class CATSSession
 
                 if (!empty($rs['columnPreferences']) && $this->_isDemo == false)
                 {
-                    $this->_dataGridColumnPreferences = unserialize($rs['columnPreferences']);
+                    $this->_dataGridColumnPreferences = unserialize($rs['columnPreferences'], ['allowed_classes' => false]);
+                    if (!is_array($this->_dataGridColumnPreferences)) {
+                        $this->_dataGridColumnPreferences = [];
+                    }
                 }
                 else
                 {

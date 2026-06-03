@@ -89,7 +89,10 @@ class MicrosoftSSO
         }
         
         $nonce = bin2hex(random_bytes(16));
-        
+
+        // INF-4: Store state in session so oauth_callback.php can validate it (CSRF protection)
+        $_SESSION['oauth_state'] = $state;
+
         // Use id_token - implicit flow, no client secret needed
         $params = array(
             'client_id' => $this->_clientId,

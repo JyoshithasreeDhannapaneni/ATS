@@ -9,11 +9,11 @@
     <div id="main">
         <?php TemplateUtility::printQuickSearch(); ?>
 
-        <?php if (!empty($_SESSION['flashMessage'])): ?>
+        <?php $flashMsg = !empty($_SESSION['flashMessage']) ? $_SESSION['flashMessage'] : ''; unset($_SESSION['flashMessage']); ?>
+        <?php if ($flashMsg): ?>
         <div style="background:#d1fae5;border:1px solid #6ee7b7;color:#065f46;padding:10px 16px;margin:8px 0;border-radius:6px;font-size:13px;">
-            ✓ <?php echo htmlspecialchars($_SESSION['flashMessage']); ?>
+            ✓ <?php echo htmlspecialchars($flashMsg); ?>
         </div>
-        <?php unset($_SESSION['flashMessage']); ?>
         <?php endif; ?>
 
         <div id="contents"<?php echo !$this->totalJobOrders ? ' style="background-color: #E6EEFF; padding: 0;"' : ''; ?>>

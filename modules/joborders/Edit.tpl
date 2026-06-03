@@ -23,6 +23,9 @@
             // Show loading indicator
             jobIDField.style.opacity = '0.5';
 
+            // Capture the field value at call time to guard against race conditions
+            var valueAtCallTime = jobIDField.value.trim();
+
             // Call AJAX endpoint to generate Company Job ID
             fetch('ajax/generateCompanyJobID.php', {
                 method: 'POST',
@@ -35,7 +38,10 @@
             .then(data => {
                 jobIDField.style.opacity = '1';
                 if (data.success && data.companyJobID) {
-                    jobIDField.value = data.companyJobID;
+                    // Only update if the field has not been changed since the request was made
+                    if (jobIDField.value.trim() === valueAtCallTime) {
+                        jobIDField.value = data.companyJobID;
+                    }
                 } else if (data.error) {
                     console.error('Error generating Company Job ID:', data.error);
                 }

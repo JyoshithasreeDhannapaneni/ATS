@@ -35,6 +35,11 @@ include_once(LEGACY_ROOT . '/lib/Pipelines.php');
 
 $interface = new SecureAJAXInterface();
 
+if (!isset($_SESSION['CATS']) || $_SESSION['CATS']->getAccessLevel('activities') < ACCESS_LEVEL_EDIT) {
+    $interface->outputXMLErrorPage(-1, 'Insufficient permissions to edit activities.');
+    die();
+}
+
 if (!$interface->isRequiredIDValid('activityID'))
 {
     $interface->outputXMLErrorPage(-1, 'Invalid activity ID.');

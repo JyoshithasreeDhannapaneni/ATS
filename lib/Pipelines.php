@@ -112,8 +112,8 @@ class Pipelines
             date_applied DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
         )";
         @$this->_db->query($createSQL);
-        @$this->_db->query("CREATE INDEX idx_cal_cand_job_site ON candidate_application_log (site_id, candidate_id, joborder_id)");
-        @$this->_db->query("CREATE INDEX idx_cal_date_applied ON candidate_application_log (date_applied)");
+        @$this->_db->query("CREATE INDEX IF NOT EXISTS idx_cal_cand_job_site ON candidate_application_log (site_id, candidate_id, joborder_id)");
+        @$this->_db->query("CREATE INDEX IF NOT EXISTS idx_cal_date_applied ON candidate_application_log (date_applied)");
 
         $sql = sprintf(
             "SELECT COUNT(*) AS cnt
@@ -482,8 +482,7 @@ class Pipelines
     // FIXME: Document me.
     public function getStatuses()
     {
-        $sql = sprintf(
-            "SELECT
+        $sql = "SELECT
                 candidate_joborder_status_id AS statusID,
                 short_description AS status,
                 can_be_scheduled AS canBeScheduled,
@@ -493,9 +492,7 @@ class Pipelines
             WHERE
                 is_enabled = 1
             ORDER BY
-                candidate_joborder_status_id ASC",
-            $this->_db->makeQueryInteger($this->_siteID)
-        );
+                candidate_joborder_status_id ASC";
 
         return $this->_db->getAllAssoc($sql);
     }
@@ -504,8 +501,7 @@ class Pipelines
     // Throws out No Status.
     public function getStatusesForPicking()
     {
-        $sql = sprintf(
-            "SELECT
+        $sql = "SELECT
                 candidate_joborder_status_id AS statusID,
                 short_description AS status,
                 can_be_scheduled AS canBeScheduled,
@@ -517,9 +513,7 @@ class Pipelines
             AND
                 candidate_joborder_status_id != 0
             ORDER BY
-                candidate_joborder_status_id ASC",
-            $this->_db->makeQueryInteger($this->_siteID)
-        );
+                candidate_joborder_status_id ASC";
 
         return $this->_db->getAllAssoc($sql);
     }
@@ -616,12 +610,12 @@ class Pipelines
                 IF((SELECT COUNT(*) FROM candidate_application_log
                     WHERE candidate_id = candidate.candidate_id
                       AND joborder_id  = joborder.joborder_id
-                      AND site_id      = $siteID) > 0, 1, 0) AS isPortalApplication,
+                      AND site_id      = {$this->_siteID}) > 0, 1, 0) AS isPortalApplication,
                 DATE_FORMAT(
                     (SELECT MIN(date_applied) FROM candidate_application_log
                      WHERE candidate_id = candidate.candidate_id
                        AND joborder_id  = joborder.joborder_id
-                       AND site_id      = $siteID),
+                       AND site_id      = {$this->_siteID}),
                     '%%m-%%d-%%y (%%h:%%i %%p)'
                 ) AS applicationDate
             FROM

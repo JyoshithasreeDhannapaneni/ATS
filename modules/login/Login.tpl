@@ -43,7 +43,7 @@
                         <h1 class="brand-title">Neutara ATS</h1>
                         <p class="brand-subtitle">Sign in to your account</p>
                     </div>
-                    <form name="loginForm" id="loginForm" action="<?php echo(CATSUtility::getIndexName()); ?>?m=login&amp;a=attemptLogin<?php if ($this->reloginVars != ''): ?>&amp;reloginVars=<?php echo($this->reloginVars); ?><?php endif; ?>" method="post" onsubmit="return checkLoginForm(document.loginForm);" autocomplete="off">
+                    <form name="loginForm" id="loginForm" action="<?php echo(CATSUtility::getIndexName()); ?>?m=login&amp;a=attemptLogin<?php if ($this->reloginVars != ''): ?>&amp;reloginVars=<?php echo htmlspecialchars($this->reloginVars, ENT_QUOTES); ?><?php endif; ?>" method="post" onsubmit="return checkLoginForm(document.loginForm);" autocomplete="off">
                         <div id="subFormBlock">
                             <?php if ($this->siteName != '' && $this->siteName != 'choose'): ?>
                                 <?php if ($this->siteNameFull == 'error'): ?>

@@ -2345,6 +2345,7 @@ class ImportUI extends UserInterface
 
             $file = $_FILES['resumeFile'];
             $fileName = $file['name'];
+            $fileName = basename($fileName);
             $tmpPath = $file['tmp_name'];
             
             $jobOrderID = isset($_POST['jobOrderID']) ? (int)$_POST['jobOrderID'] : 0;

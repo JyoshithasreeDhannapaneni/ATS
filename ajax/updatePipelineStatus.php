@@ -69,6 +69,17 @@ $candidateID         = $_REQUEST['candidateID'];
 $jobOrderID          = $_REQUEST['jobOrderID'];
 $statusID             = $_REQUEST['statusID'];
 
+$db = DatabaseConnection::getInstance();
+$ownerCheck = $db->getAllAssoc(sprintf(
+    "SELECT candidate_joborder_id FROM candidate_joborder WHERE candidate_joborder_id = %d AND candidate_id = %d AND joborder_id = %d AND site_id = %d LIMIT 1",
+    intval($candidateJobOrderID), intval($candidateID), intval($jobOrderID), $siteID
+));
+if (empty($ownerCheck)) {
+    $template->assign('errorMessage', 'Invalid pipeline record.');
+    $template->display('Error.tpl');
+    exit;
+}
+
 $pipelines = new Pipelines($siteID);
 
 // Get old status before update
@@ -100,34 +111,6 @@ foreach ($statuses as $status)
 // Update the status (this already handles history logging)
 $pipelines->setStatus($candidateID, $jobOrderID, $statusID, '', '');
 
-// Add activity entry for status change (only if status actually changed)
-if ($oldStatusID != $statusID && $oldStatusID != 0)
-{
-    $activityEntries = new ActivityEntries($siteID);
-    $activityTypes = $activityEntries->getTypes();
-    
-    // Find "Other" activity type (usually type ID 400 or similar)
-    $activityTypeID = 400; // Default to "Other" type
-    foreach ($activityTypes as $type)
-    {
-        if (strtolower($type['type']) == 'other' || strtolower($type['type']) == 'status change')
-        {
-            $activityTypeID = $type['typeID'];
-            break;
-        }
-    }
-    
-    $activityNote = 'Status change: ' . $oldStatus . ' → ' . $statusDescription;
-    $activityEntries->add(
-        $candidateID,
-        DATA_ITEM_CANDIDATE,
-        $activityTypeID,
-        $activityNote,
-        $_SESSION['CATS']->getUserID(),
-        $jobOrderID
-    );
-}
-
 // Trigger email automation for status change
 if ($oldStatusID != $statusID)
 {
@@ -150,7 +133,8 @@ if ($statusID == 1060 && $oldStatusID != 1060)
     }
 
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $baseURL = $protocol . '://' . $_SERVER['HTTP_HOST'] . dirname(dirname($_SERVER['SCRIPT_NAME']));
+    $host = preg_replace('/[^a-zA-Z0-9.\-:_]/', '', $_SERVER['HTTP_HOST'] ?? 'localhost');
+    $baseURL = $protocol . '://' . $host . dirname(dirname($_SERVER['SCRIPT_NAME']));
     $uploadLinkURL = rtrim($baseURL, '/') . '/candidate-upload.php?token=' . $existingToken;
 }
 

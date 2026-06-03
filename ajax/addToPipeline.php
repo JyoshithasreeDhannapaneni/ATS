@@ -33,7 +33,7 @@ $siteID = $interface->getSiteID();
 
 $candidateID = $_REQUEST['candidateID'];
 $jobOrderID  = $_REQUEST['jobOrderID'];
-$statusID    = isset($_REQUEST['statusID']) ? intval($_REQUEST['statusID']) : 100; // Default to "No Contact"
+$statusID    = isset($_REQUEST['statusID']) ? intval($_REQUEST['statusID']) : PIPELINE_STATUS_NOCONTACT; // Default to "No Contact"
 
 $pipelines = new Pipelines($siteID);
 
@@ -64,8 +64,8 @@ if (!$result)
     die();
 }
 
-// If a custom status was provided (not the default 100), update it
-if ($statusID != 100)
+// If a custom status was provided (not the default), update it
+if ($statusID != PIPELINE_STATUS_NOCONTACT)
 {
     $pipelines->setStatus($candidateID, $jobOrderID, $statusID, '', '');
 }

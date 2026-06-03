@@ -1182,6 +1182,9 @@ class JobOrdersUI extends UserInterface
 
         /* Capture the title before deleting so we can confirm to the user. */
         $joData = $joborders->get($jobOrderID);
+        if (!$joData || (isset($joData['siteID']) && $joData['siteID'] != $this->_siteID)) {
+            CommonErrors::fatal(COMMONERROR_BADINDEX, $this, 'Invalid job order ID.');
+        }
         $joTitle = ($joData && !empty($joData['title'])) ? $joData['title'] : 'Job Order #' . $jobOrderID;
 
         $joborders->delete($jobOrderID);

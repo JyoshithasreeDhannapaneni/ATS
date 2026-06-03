@@ -60,7 +60,7 @@ else
     $output .=
         "    <candidate>\n" .
         "        <id>"         . $candidateID . "</id>\n" .
-        "        <name>"         . $candidateRS['candidateFullName'] . "</name>\n" .
+        "        <name>"         . htmlspecialchars($candidateRS['candidateFullName'], ENT_XML1) . "</name>\n" .
         "    </candidate>\n";
 }
 

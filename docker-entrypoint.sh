@@ -36,17 +36,23 @@ echo "  NAME: ${DATABASE_NAME:-NOT SET}"
 # Wait for MySQL to be reachable (up to 60 seconds)
 if [ -n "$DATABASE_HOST" ]; then
     echo "--- Waiting for MySQL at $DATABASE_HOST:${DATABASE_PORT:-3306} ---"
+    connected=0
     for i in $(seq 1 30); do
         if php -r "
             \$conn = @mysqli_connect('${DATABASE_HOST}', '${DATABASE_USER}', '${DATABASE_PASS}', '${DATABASE_NAME}', ${DATABASE_PORT:-3306});
             if (\$conn) { mysqli_close(\$conn); exit(0); } exit(1);
         " 2>/dev/null; then
             echo "  MySQL connection OK"
+            connected=1
             break
         fi
         echo "  Attempt $i/30 — waiting..."
         sleep 2
     done
+    if [ $connected -eq 0 ]; then
+      echo "ERROR: Could not connect to MySQL after 30 attempts. Aborting."
+      exit 1
+    fi
 fi
 
 echo "========================================="

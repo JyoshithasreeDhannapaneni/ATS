@@ -300,7 +300,7 @@ class DatabaseConnection
         // whether the ORIGINAL query returned zero rows — not whether rows remain after reads.
         // This matches the old mysqli behaviour: isEOF() = "query produced no rows at all".
         if ($this->_bufferedRows !== null) {
-            return !$this->_queryHadRows;
+            return empty($this->_bufferedRows);  // CORRECT - true when all rows consumed
         }
 
         // Buffer not yet populated — fetch now and set the flag.
