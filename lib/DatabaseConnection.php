@@ -302,16 +302,14 @@ class DatabaseConnection
     {
         if (!$this->_stmt) return true;
 
-        // If the buffer was already populated by getAssoc(), use _queryHadRows to report
-        // whether the ORIGINAL query returned zero rows — not whether rows remain after reads.
-        // This matches the old mysqli behaviour: isEOF() = "query produced no rows at all".
-        if ($this->_bufferedRows !== null) {
-            return empty($this->_bufferedRows);  // CORRECT - true when all rows consumed
+        // Buffer not yet populated - fetch now and set the flag.
+        if ($this->_bufferedRows === null) {
+            $this->_bufferedRows = $this->_stmt->fetchAll(PDO::FETCH_ASSOC);
+            $this->_queryHadRows = count($this->_bufferedRows) > 0;
         }
 
-        // Buffer not yet populated — fetch now and set the flag.
-        $this->_bufferedRows = $this->_stmt->fetchAll(PDO::FETCH_ASSOC);
-        $this->_queryHadRows = count($this->_bufferedRows) > 0;
+        // isEOF() = "query produced no rows at all" (original mysqli behaviour).
+        // Use _queryHadRows so getAssoc() consuming rows does not affect this.
         return !$this->_queryHadRows;
     }
 
@@ -846,15 +844,8 @@ class DatabaseConnection
             $query
         );
 
-        // 25. INSERT IGNORE INTO → INSERT INTO … ON CONFLICT DO NOTHING
-        if (preg_match('/\bINSERT\s+IGNORE\s+INTO\b/i', $query)) {
-            $query = preg_replace('/\bINSERT\s+IGNORE\s+INTO\b/i', 'INSERT INTO', $query);
-            // Append ON CONFLICT DO NOTHING (only for simple VALUES inserts)
-            if (preg_match('/\bVALUES\s*\(/i', $query) &&
-                stripos($query, 'ON CONFLICT') === false) {
-                $query = rtrim($query, " \t\n\r;") . ' ON CONFLICT DO NOTHING';
-            }
-        }
+        // 25. INSERT IGNORE INTO — keep as-is for MySQL/MariaDB
+        // (ON CONFLICT DO NOTHING is PostgreSQL only)
 
         // 25d. TO_CHAR(...) = integer → TO_CHAR(...)::integer = integer
         //      (handles DATE_FORMAT('%%c') comparisons with integer values)

@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y \
     html2text \
     unrtf \
     default-mysql-client \
-    && docker-php-ext-install mysqli mbstring exif pcntl bcmath gd zip pdo_pgsql pgsql \
+    && docker-php-ext-install mysqli pdo_mysql mbstring exif pcntl bcmath gd zip pdo_pgsql pgsql \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -39,7 +39,7 @@ RUN chown -R www-data:www-data /var/www/html \
 RUN a2enmod rewrite
 
 RUN echo '<Directory /var/www/html>\n\
-    Options -Indexes FollowSymLinks\n\
+    Options -Indexes +FollowSymLinks\n\
     AllowOverride All\n\
     Require all granted\n\
 </Directory>' > /etc/apache2/conf-available/opencats.conf \
