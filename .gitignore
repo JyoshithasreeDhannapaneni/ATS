@@ -33,3 +33,55 @@ docs/DATABASE-LOCAL.md
 # Debug and log files
 oauth_debug.log
 *.log
+
+# Runtime state files
+INSTALL_BLOCK
+
+# Backup, temp, and OS artifacts
+*.bak
+*.tmp
+*.orig
+Thumbs.db
+
+# One-time migration and install scripts (do not re-add)
+update_apply_v4.php
+update_career_v6.php
+update_career_v7.php
+update_merged_v5.php
+update_premium_portal.php
+update_premium_v2.php
+update_premium_v3.php
+update_templates.php
+fix_job_details_mysql.php
+fix_sequences.php
+fix_pg_password.ps1
+dump_career_template.php
+deploy_neutara_career.php
+setup_career_portal.php
+install_builtin_templates.php
+install_neutara_template.php
+install_neutara_template_mysql.php
+generate_resume_pdf.php
+rebuild_old_docs.php
+installtest.php
+
+# AI-generated artifact files (do not re-add)
+CAREER_PORTAL_COLOR_PALETTE.txt
+CAREER_PORTAL_THEME_APPLIED.txt
+COMPLETE_QUESTIONNAIRE_SYSTEM.txt
+QUESTIONNAIRE_BY_JOB_TYPE_REFERENCE.txt
+QUESTIONNAIRE_JOB_ORDER_VIEW.txt
+QUESTIONNAIRE_SETUP_QUICKSTART.txt
+QUICK_REFERENCE_CARD.txt
+QUICK_VISUAL_GUIDE.txt
+SETUP_COMPLETE.txt
+SYSTEM_ARCHITECTURE.txt
+SYSTEM_READY.txt
+THEME_UPDATE_COMPLETE.txt
+VERIFICATION_REPORT.txt
+WHATS_NEW_TODAY.txt
+MICROSOFT_TEAMS_SETUP.md
+PHP8_FIXES.md
+QUESTIONNAIRE_BY_JOBTYPE_GUIDE.md
+issue_template.md
+README-testing.md
