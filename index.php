@@ -72,6 +72,10 @@ include_once(LEGACY_ROOT . '/lib/TemplateUtility.php'); /* Depends: ModuleUtilit
 
 /* Give the session a unique name to avoid conflicts and start the session. */
 @session_name(CATS_SESSION_NAME);
+if (!empty($_SERVER["HTTP_X_FORWARDED_PROTO"]) && $_SERVER["HTTP_X_FORWARDED_PROTO"] === "https") {
+    $_SERVER["HTTPS"] = "on";
+    ini_set("session.cookie_secure", 1);
+}
 session_start();
 
 /* Try to prevent caching. */

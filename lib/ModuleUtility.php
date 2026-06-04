@@ -482,7 +482,7 @@ class ModuleUtility
                     %s,
                     0
                 )
-                ON CONFLICT DO NOTHING",
+                ON DUPLICATE KEY UPDATE version=version",
                 $db->makeQueryString($moduleName)
             );
             $db->query($sql);
