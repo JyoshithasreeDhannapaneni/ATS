@@ -195,7 +195,7 @@ class PipelineEmailAutomation
             $fromAddress = $settings['fromAddress'] ?? 'noreply@neutara.com';
             $fromName = 'Neutara ATS';
 
-            $recipients = array($candidate['firstName'] . ' ' . $candidate['lastName'], $candidate['email1']);
+            $recipients = array(array($candidate['email1'], $candidate['firstName'] . ' ' . $candidate['lastName']));
 
             return $mailer->send(
                 array($fromAddress, $fromName),

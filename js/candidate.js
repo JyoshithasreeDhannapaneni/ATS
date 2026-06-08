@@ -26,7 +26,8 @@
  * $Id: candidate.js 3078 2007-09-21 20:25:28Z will $
  */
 
-var candidateIsAlreadyInSystem = false;
+var candidateEmailIsAlreadyInSystem = false;
+var candidatePhoneIsAlreadyInSystem = false;
 var candidateIsAlreadyInSystemID = -1;
 var candidateIsAlreadyInSystemName = '';
 
@@ -62,16 +63,16 @@ function checkEmailAlreadyInSystem(email, sessionCookie)
 
         if (idNode.firstChild.nodeValue != -1)
         {
-            candidateIsAlreadyInSystem = true;
+            candidateEmailIsAlreadyInSystem = true;
             candidateIsAlreadyInSystemID = idNode.firstChild.nodeValue;
             candidateIsAlreadyInSystemName = http.responseXML.getElementsByTagName('name').item(0).firstChild.nodeValue;
-            
+
             document.getElementById('candidateAlreadyInSystemName').innerHTML = candidateIsAlreadyInSystemName;
             document.getElementById('candidateAlreadyInSystemTable').style.display = '';
         }
         else
         {
-            candidateIsAlreadyInSystem = false;
+            candidateEmailIsAlreadyInSystem = false;
             document.getElementById('candidateAlreadyInSystemTable').style.display = 'none';
         }
     }
@@ -90,7 +91,7 @@ function checkEmailAlreadyInSystem(email, sessionCookie)
 
 function onSubmitEmailInSystem()
 {
-    if (candidateIsAlreadyInSystem)
+    if (candidateEmailIsAlreadyInSystem)
     {
         var agree=confirm("Warning:  The candidate may already be in the system.\n\nAre you sure you want to add the candidate?");
         if (agree)
@@ -98,6 +99,7 @@ function onSubmitEmailInSystem()
         else
         	return false ;
     }
+    return true;
 }
 
 function checkPhoneAlreadyInSystem(phone, sessionCookie)
@@ -132,16 +134,16 @@ function checkPhoneAlreadyInSystem(phone, sessionCookie)
 
         if (idNode.firstChild.nodeValue != -1)
         {
-            candidateIsAlreadyInSystem = true;
+            candidatePhoneIsAlreadyInSystem = true;
             candidateIsAlreadyInSystemID = idNode.firstChild.nodeValue;
             candidateIsAlreadyInSystemName = http.responseXML.getElementsByTagName('name').item(0).firstChild.nodeValue;
-            
+
             document.getElementById('candidateAlreadyInSystemName').innerHTML = candidateIsAlreadyInSystemName;
             document.getElementById('candidateAlreadyInSystemTable').style.display = '';
         }
         else
         {
-            candidateIsAlreadyInSystem = false;
+            candidatePhoneIsAlreadyInSystem = false;
             document.getElementById('candidateAlreadyInSystemTable').style.display = 'none';
         }
     }
@@ -160,7 +162,7 @@ function checkPhoneAlreadyInSystem(phone, sessionCookie)
 
 function onSubmitPhoneInSystem()
 {
-    if (candidateIsAlreadyInSystem)
+    if (candidatePhoneIsAlreadyInSystem)
     {
         var agree=confirm("Warning:  The candidate may already be in the system.\n\nAre you sure you want to add the candidate?");
         if (agree)
@@ -168,6 +170,7 @@ function onSubmitPhoneInSystem()
         else
         	return false ;
     }
+    return true;
 }
 
 

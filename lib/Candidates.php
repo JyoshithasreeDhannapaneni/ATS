@@ -98,6 +98,9 @@ class Candidates
         $gender = '', $race = '', $veteran = '', $disability = '',
         $skipHistory = false)
     {
+        if (!empty($email1)) { $existingByEmail = $this->getIDByEmail($email1); if ($existingByEmail > 0) return -2; }
+        if (!empty($phoneCell)) { $existingByPhone = $this->getIDByPhone($phoneCell); if ($existingByPhone > 0) return -2; }
+
         $sql = sprintf(
             "INSERT INTO candidate (
                 first_name,

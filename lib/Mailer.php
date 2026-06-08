@@ -195,6 +195,13 @@ class Mailer
         $signature = false)
     {
 
+        if (MAIL_MAILER == MAILER_MODE_SMTP && empty(MAIL_SMTP_PASS))
+        {
+            error_log("MAILER: SMTP password not set. Configure MAIL_SMTP_PASS env var.");
+            $this->_errorMessage = "SMTP password not configured.";
+            return false;
+        }
+
         $this->_mailer->From     = $from[0];
         $this->_mailer->FromName = $from[1];
 

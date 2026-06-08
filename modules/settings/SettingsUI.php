@@ -913,6 +913,10 @@ class SettingsUI extends UserInterface
                 $this->deleteEmailTemplate();
                 break;
 
+            case 'emailLog':
+                $this->emailLogAction();
+                break;
+
             /* Main settings page. */
             case 'myProfile':
             default:
@@ -925,7 +929,23 @@ class SettingsUI extends UserInterface
         }
     }
 
-    private function deleteEmailTemplate() 
+    private function emailLogAction() {
+        $page = isset($_GET["page"]) ? max(1, (int)$_GET["page"]) : 1;
+        $limit = 50;
+        $offset = ($page - 1) * $limit;
+        $db = DatabaseConnection::getInstance();
+        $countRS = $db->getAssoc(sprintf("SELECT COUNT(*) AS cnt FROM email_history WHERE site_id = %d", $this->_siteID));
+        $total = isset($countRS["cnt"]) ? (int)$countRS["cnt"] : 0;
+        $sql = sprintf("SELECT eh.email_history_id, eh.date, eh.from_address, eh.recipients, eh.subject, eh.user_id, eh.candidate_id, COALESCE(CONCAT(u.first_name, ' ', u.last_name), 'System') AS sent_by FROM email_history eh LEFT JOIN user u ON u.user_id = eh.user_id AND u.site_id = eh.site_id WHERE eh.site_id = %d ORDER BY eh.date DESC LIMIT %d OFFSET %d", $this->_siteID, $limit, $offset);
+        $rs = $db->getAllAssoc($sql);
+        $this->_template->assign("emailLogRS", $rs);
+        $this->_template->assign("totalEmails", $total);
+        $this->_template->assign("currentPage", $page);
+        $this->_template->assign("totalPages", (int)ceil(max(1,$total) / $limit));
+        $this->_template->display("./modules/settings/EmailLog.tpl");
+    }
+
+    private function deleteEmailTemplate()
     {
         if ($this->_realAccessLevel < ACCESS_LEVEL_SA)
         {

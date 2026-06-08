@@ -101,6 +101,15 @@
                             <tr>
                                 <td>
                                     <img src="images/bullet_black.gif" alt="" />
+                                    <a href="<?php echo CATSUtility::getIndexName(); ?>?m=settings&amp;a=emailLog">Email History</a>
+                                </td>
+                                <td>
+                                    View a log of all emails sent from this site.
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <img src="images/bullet_black.gif" alt="" />
                                     <a href="<?php echo(CATSUtility::getIndexName()); ?>?m=settings&amp;a=administration&amp;s=localization">
                                         Localization
                                     </a>

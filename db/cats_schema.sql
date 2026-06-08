@@ -604,10 +604,13 @@ CREATE TABLE `email_history` (
   `user_id` int(11) DEFAULT NULL,
   `site_id` int(11) NOT NULL DEFAULT '0',
   `date` datetime DEFAULT NULL,
+  `candidate_id` int(11) DEFAULT NULL,
+  `subject` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`email_history_id`),
   KEY `IDX_site_id` (`site_id`),
   KEY `IDX_date` (`date`),
-  KEY `IDX_user_id` (`user_id`)
+  KEY `IDX_user_id` (`user_id`),
+  KEY `IDX_eh_candidate` (`candidate_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 /*Data for the table `email_history` */

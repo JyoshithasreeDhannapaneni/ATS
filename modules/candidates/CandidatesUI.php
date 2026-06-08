@@ -3718,7 +3718,9 @@ class CandidatesUI extends UserInterface
             $disability
         );
 
-        
+        if ($candidateID === -2) { $this->fatalModal("A candidate with this email or phone already exists. Search for the existing record."); return; }
+        if ($candidateID <= 0) { $this->fatalModal("Failed to add candidate."); return; }
+
         if ($candidateID <= 0)
         {
             return $candidateID;

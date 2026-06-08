@@ -408,6 +408,22 @@
         });
     }
     
+    (function() {
+        var dropZone = document.getElementById("uploadContent");
+        if (!dropZone) return;
+        dropZone.addEventListener("dragover", function(e) { e.preventDefault(); dropZone.style.borderColor="#0078d4"; dropZone.style.background="#f0f8ff"; });
+        dropZone.addEventListener("dragleave", function(e) { dropZone.style.borderColor=""; dropZone.style.background=""; });
+        dropZone.addEventListener("drop", function(e) {
+            e.preventDefault();
+            dropZone.style.borderColor=""; dropZone.style.background="";
+            var files = e.dataTransfer.files;
+            if (files && files.length > 0) {
+                var fi = document.getElementById("file");
+                if (fi && window.DataTransfer) { var dt = new DataTransfer(); dt.items.add(files[0]); fi.files = dt.files; handleResumeUpload(); }
+            }
+        });
+    })();
+
     function fillFormFields(data) {
         var fieldMappings = {
             'firstName':       'firstName',
@@ -449,6 +465,12 @@
             }
         }
         
+        var wsField = document.getElementById("webSite");
+        if (wsField && !wsField.value) {
+            if (data.website && data.website.trim()) { wsField.value = data.website.trim(); }
+            else if (data.linkedin && data.linkedin.trim()) { wsField.value = data.linkedin.trim(); }
+        }
+
         // If we filled location fields, show the additional fields section
         if (data.city || data.state || data.address || data.zip || data.currentEmployer) {
             var additionalFields = document.getElementById('additionalFields');
@@ -521,8 +543,8 @@
         <?php if ($this->isParsingEnabled): ?>
             <input type="hidden" name="loadDocument" id="loadDocument" value="" />
             <input type="hidden" name="parseDocument" id="parseDocument" value="" />
-            <input type="hidden" name="documentTempFile" id="documentTempFile" value="<?php echo (isset($this->preassignedFields['documentTempFile']) ? $this->preassignedFields['documentTempFile'] : ''); ?>" />
         <?php endif; ?>
+        <input type="hidden" name="documentTempFile" id="documentTempFile" value="<?php echo (isset($this->preassignedFields['documentTempFile']) ? $this->preassignedFields['documentTempFile'] : ''); ?>" />
 
         <div class="add-candidate-form">
             <!-- Basic Information -->
@@ -709,6 +731,10 @@
                         Employment
                     </h3>
                     <div class="form-group">
+                        <label for="currentTitle">Current Title</label>
+                        <input type="text" name="currentTitle" id="currentTitle" tabindex="26" maxlength="100" size="30" class="inputBoxes" />
+                    </div>
+                    <div class="form-group">
                         <label for="currentEmployer">Current Employer</label>
                         <input type="text" name="currentEmployer" id="currentEmployer" value="<?php if (isset($this->preassignedFields['currentEmployer'])) $this->_($this->preassignedFields['currentEmployer']); ?>" />
                     </div>
@@ -744,11 +770,11 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label for="phoneHome">Home Phone</label>
-                            <input type="tel" name="phoneHome" id="phoneHome" value="<?php if (isset($this->preassignedFields['phoneHome'])) $this->_($this->preassignedFields['phoneHome']); ?>" />
+                            <input type="tel" name="phoneHome" id="phoneHome" value="<?php if (isset($this->preassignedFields['phoneHome'])) $this->_($this->preassignedFields['phoneHome']); ?>" onchange="checkPhoneAlreadyInSystem(this.value);" />
                         </div>
                         <div class="form-group">
                             <label for="phoneWork">Work Phone</label>
-                            <input type="tel" name="phoneWork" id="phoneWork" value="<?php if (isset($this->preassignedFields['phoneWork'])) $this->_($this->preassignedFields['phoneWork']); ?>" />
+                            <input type="tel" name="phoneWork" id="phoneWork" value="<?php if (isset($this->preassignedFields['phoneWork'])) $this->_($this->preassignedFields['phoneWork']); ?>" onchange="checkPhoneAlreadyInSystem(this.value);" />
                         </div>
                     </div>
                     <div class="form-group">

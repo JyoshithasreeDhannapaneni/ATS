@@ -41,6 +41,7 @@ class Pipelines
 {
     private $_db;
     private $_siteID;
+    private $_applicationLogInitialized = false;
 
 
     public function __construct($siteID)
@@ -48,6 +49,18 @@ class Pipelines
         $this->_siteID = $siteID;
         $this->_db = DatabaseConnection::getInstance();
         $this->_ensureCustomStatusesExist();
+    }
+
+    private function _initApplicationLog() {
+        if ($this->_applicationLogInitialized) return;
+        if ($this->_db->isMysql()) {
+            @$this->_db->query("CREATE TABLE IF NOT EXISTS candidate_application_log (log_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, site_id INTEGER NOT NULL DEFAULT 0, candidate_id INTEGER NOT NULL DEFAULT 0, joborder_id INTEGER NOT NULL DEFAULT 0, date_applied DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)");
+        } else {
+            @$this->_db->query("CREATE TABLE IF NOT EXISTS candidate_application_log (log_id SERIAL PRIMARY KEY, site_id INTEGER NOT NULL DEFAULT 0, candidate_id INTEGER NOT NULL DEFAULT 0, joborder_id INTEGER NOT NULL DEFAULT 0, date_applied TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)");
+        }
+        @$this->_db->query("CREATE INDEX IF NOT EXISTS idx_cal_cand_job_site ON candidate_application_log (site_id, candidate_id, joborder_id)");
+        @$this->_db->query("CREATE INDEX IF NOT EXISTS idx_cal_date_applied ON candidate_application_log (date_applied)");
+        $this->_applicationLogInitialized = true;
     }
 
     /**
@@ -103,27 +116,7 @@ class Pipelines
      */
     public function isInCoolingPeriod($candidateID, $jobOrderID, $coolingDays = 90)
     {
-        // Ensure the tracking table exists (created once, silently ignored thereafter)
-        if ($this->_db->isMysql()) {
-            $createSQL = "CREATE TABLE IF NOT EXISTS candidate_application_log (
-                log_id       INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-                site_id      INTEGER NOT NULL DEFAULT 0,
-                candidate_id INTEGER NOT NULL DEFAULT 0,
-                joborder_id  INTEGER NOT NULL DEFAULT 0,
-                date_applied DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-            )";
-        } else {
-            $createSQL = "CREATE TABLE IF NOT EXISTS candidate_application_log (
-                log_id       SERIAL PRIMARY KEY,
-                site_id      INTEGER NOT NULL DEFAULT 0,
-                candidate_id INTEGER NOT NULL DEFAULT 0,
-                joborder_id  INTEGER NOT NULL DEFAULT 0,
-                date_applied TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-            )";
-        }
-        @$this->_db->query($createSQL);
-        @$this->_db->query("CREATE INDEX IF NOT EXISTS idx_cal_cand_job_site ON candidate_application_log (site_id, candidate_id, joborder_id)");
-        @$this->_db->query("CREATE INDEX IF NOT EXISTS idx_cal_date_applied ON candidate_application_log (date_applied)");
+        $this->_initApplicationLog();
 
         $intervalExpr = $this->_db->isMysql()
             ? "DATE_SUB(NOW(), INTERVAL %d DAY)"
@@ -576,24 +569,7 @@ class Pipelines
      */
     public function getCandidatePipeline($candidateID)
     {
-        // Ensure the application log table exists (idempotent)
-        if ($this->_db->isMysql()) {
-            @$this->_db->query("CREATE TABLE IF NOT EXISTS candidate_application_log (
-                log_id       INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-                site_id      INTEGER NOT NULL DEFAULT 0,
-                candidate_id INTEGER NOT NULL DEFAULT 0,
-                joborder_id  INTEGER NOT NULL DEFAULT 0,
-                date_applied DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-            )");
-        } else {
-            @$this->_db->query("CREATE TABLE IF NOT EXISTS candidate_application_log (
-                log_id       SERIAL PRIMARY KEY,
-                site_id      INTEGER NOT NULL DEFAULT 0,
-                candidate_id INTEGER NOT NULL DEFAULT 0,
-                joborder_id  INTEGER NOT NULL DEFAULT 0,
-                date_applied TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-            )");
-        }
+        $this->_initApplicationLog();
 
         $siteID = (int) $this->_siteID;
         $candID = (int) $candidateID;
