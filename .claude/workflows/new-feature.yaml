@@ -1,0 +1,79 @@
+# GStack workflow: new-feature
+# Use for anything adding new behavior: new module/action, new schema, new API-like
+# endpoint (index.php?m=...&a=...), new candidate/job-order data field, new UI page.
+name: new-feature
+description: >
+  Full design-through-review pipeline for new functionality in the ATS
+  (OpenCATS-derived PHP app). Each phase's output is the input to the next.
+
+phases:
+  - phase: design
+    agent: architect
+    description: >
+      Produce a design doc: schema changes (MySQL + Postgres), module/action map,
+      request flow, ACL impact, template/JS plan. Stop here for user review before
+      implementation begins on anything non-trivial.
+    gate: user reviews and approves the design doc before continuing
+
+  - phase: backend-implementation
+    agent: backend-engineer
+    depends_on: design
+    description: >
+      Implement PHP module controllers, entity/repository code, DB access, and
+      schema/upgrade SQL per the approved design. Add PHPUnit tests for new logic.
+
+  - phase: frontend-implementation
+    agent: frontend-engineer
+    depends_on: design
+    can_run_parallel_with: backend-implementation
+    description: >
+      Implement .tpl templates, JS, and CSS per the design's template/JS plan.
+      Coordinates with backend-engineer on the exact data shape needed from new
+      endpoints (skip this phase entirely if the feature has no UI surface).
+
+  - phase: qa
+    agent: qa-engineer
+    depends_on: [backend-implementation, frontend-implementation]
+    description: >
+      Run/extend PHPUnit and Behat coverage for the new feature; verify MySQL and
+      Postgres paths if SQL was touched; write a manual test plan for anything
+      automation doesn't reach.
+
+  - phase: security-review
+    agent: security-reviewer
+    depends_on: qa
+    description: >
+      Review for SQLi, XSS, ACL/auth gaps, unsafe upload handling, secret leakage.
+      Mandatory whenever the feature touches auth, candidate/job-order data, file
+      uploads, or the public career portal (careers/).
+
+  - phase: code-review
+    agent: code-reviewer
+    depends_on: qa
+    can_run_parallel_with: security-review
+    description: >
+      General correctness/consistency/scope review of the diff.
+
+  - phase: documentation
+    agent: documentation-engineer
+    depends_on: [security-review, code-review]
+    description: >
+      Add a CHANGELOG.MD entry; update config.php.example/.env.example if new
+      config/env vars were introduced.
+
+  - phase: commit-gate
+    depends_on: documentation
+    description: >
+      STOP. Ask the user (1) whether to commit, and if yes (2) which branch.
+      Never commit without both answers. See CLAUDE.md "Workflow Selection" for
+      the exact gate wording.
+
+  - phase: deploy-gate
+    agent: devops-engineer
+    depends_on: commit-gate
+    optional: true
+    description: >
+      Only if the user separately asks to deploy. STOP and ask (1) whether to
+      deploy, (2) which branch, (3) target environment. This project has no
+      staging environment and no deploy automation — devops-engineer prepares a
+      manual build/deploy checklist; it does not execute a deploy itself.

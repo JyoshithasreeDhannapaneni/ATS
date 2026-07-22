@@ -1,5 +1,6 @@
 # Ignore sensitive and environment-specific files
 config.php
+.env
 CREDENTIALS.txt
 composer.phar
 
@@ -18,14 +19,12 @@ uploads/
 vendor/
 
 # CI and metadata
-.github/
 .travis.yml
 
 # OS files
 .DS_Store
 
 # Development artifacts
-.claude/
 tools/
 dbcheck.php
 docs/DATABASE-LOCAL.md

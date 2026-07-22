@@ -1,0 +1,82 @@
+# GStack workflow: deployment
+# Reflects THIS project's actual deploy process: .github/workflows/deploy.yml
+# is manual-trigger only (workflow_dispatch) — pushing to main never deploys
+# by itself; someone with write access must click "Run workflow" in the
+# Actions tab (or Claude runs `gh workflow run deploy.yml` when explicitly
+# told to). main is the only branch/environment — there is no staging.
+# Do not add further pipeline automation (auto-triggering on push, auto-
+# running DB migrations) without the user explicitly asking for it.
+name: deployment
+description: >
+  Deployment pipeline for the ATS. Code deploy itself is a manually-triggered
+  GitHub Actions workflow (.github/workflows/deploy.yml); DB migrations stay
+  a fully manual step a human runs separately.
+
+phases:
+  - phase: pre-deploy-review
+    agent: code-reviewer
+    description: >
+      Confirm everything intended for this deploy is committed to the branch
+      being deployed and has already passed code-review/security-review as
+      part of whatever new-feature/bug-fix workflow produced it. Do not
+      re-review from scratch if it was already reviewed on this branch.
+
+  - phase: security-check
+    agent: security-reviewer
+    description: >
+      Final check for anything deploy-sensitive: no secrets in tracked files,
+      config.php/.env changes documented (not committed), no unreviewed
+      auth/ACL changes going out.
+
+  - phase: deploy-gate
+    description: >
+      STOP. This is the three-step deploy gate from CLAUDE.md "Workflow
+      Selection" — do not skip any step:
+        1. Ask whether to deploy at all.
+        2. Ask which branch to deploy (this project has only `main` -> production;
+           there is no staging branch/environment).
+        3. Ask which target environment (currently: production is the only
+           real environment this project deploys to — confirm explicitly
+           rather than assuming).
+      Only proceed past this phase once the user has explicitly answered all
+      three. Because deploy.yml is manual-trigger only, this gate is the ONLY
+      thing standing between "code is on main" and "production got the new
+      code" — there is no GitHub-side approval pause backing it up.
+
+  - phase: build-and-deploy-prep
+    agent: devops-engineer
+    depends_on: deploy-gate
+    description: >
+      Confirm the approved branch is pushed to `main`. List any manual
+      prerequisite the pipeline does NOT cover: new config.php/.env values
+      that must be set on the server by hand, and any new db/upgrade-*.sql
+      that must be applied to the production database manually (migrations
+      are intentionally excluded from the pipeline). Once confirmed, trigger
+      the deploy via `gh workflow run deploy.yml` (only after the deploy gate
+      above was explicitly answered) or tell the user to click "Run workflow"
+      on the Actions tab themselves.
+
+  - phase: post-deploy-verification
+    agent: qa-engineer
+    depends_on: build-and-deploy-prep
+    description: >
+      Once the GitHub Actions run shows success, provide a short smoke-test
+      plan (login, core candidate/job-order flows, career portal submission)
+      for the operator to run against production. qa-engineer does not have
+      access to the production server and cannot run this itself — it
+      produces the checklist.
+
+notes: >
+  Code deploy is a manually-triggered GitHub Actions workflow
+  (.github/workflows/deploy.yml, workflow_dispatch only — no push trigger).
+  This is a deliberate substitute for a GitHub Environment with
+  required-reviewer approval, which was the original design but needs repo
+  admin access not currently available on this repo. If admin access is
+  granted later, switch deploy.yml back to triggering on push to main gated
+  by a "production" Environment (Settings -> Environments) — see
+  CLAUDE.md's "Production deploys" section. There is still no staging
+  environment. DB migrations remain a fully manual, unautomated step. If the
+  user asks to change the pipeline itself, treat that as a separate,
+  explicit request (new-feature.yaml with architect + devops-engineer
+  design) rather than silently modifying deploy.yml as a side effect of a
+  routine deployment.

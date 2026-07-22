@@ -1,0 +1,77 @@
+# GStack workflow: bug-fix
+# Use for fixing broken/incorrect existing behavior. Lighter-weight than
+# new-feature.yaml — skips a formal design doc unless the fix is non-trivial
+# (touches schema, ACL, or spans multiple modules).
+name: bug-fix
+description: >
+  Diagnose-fix-verify pipeline for bug fixes in the ATS. Architect phase is
+  optional and only engaged for non-trivial fixes.
+
+phases:
+  - phase: design
+    agent: architect
+    optional: true
+    description: >
+      Only engage if the fix touches schema, ACL, or spans multiple modules
+      (e.g. the MySQL/Postgres compatibility fixes this project has needed
+      repeatedly). Produces a short design note: root cause, affected
+      module/action map, and MySQL/Postgres parity notes. Skip for a
+      single-file, single-cause fix — go straight to implementation.
+
+  - phase: backend-fix
+    agent: backend-engineer
+    description: >
+      Root-cause the bug in PHP/SQL code, implement the fix, add/update a
+      PHPUnit regression test that would have caught it.
+
+  - phase: frontend-fix
+    agent: frontend-engineer
+    can_run_parallel_with: backend-fix
+    description: >
+      Fix the .tpl/JS/CSS side of the bug if applicable. Skip if the bug is
+      backend/SQL-only.
+
+  - phase: qa
+    agent: qa-engineer
+    depends_on: [backend-fix, frontend-fix]
+    description: >
+      Run the regression test plus the existing suite for the affected module;
+      verify MySQL and Postgres if the fix touched SQL (this fork has hit this
+      exact class of regression multiple times — don't skip this check).
+
+  - phase: security-review
+    agent: security-reviewer
+    depends_on: qa
+    optional: true
+    description: >
+      Engage only if the bug is or could be security-relevant (injection, XSS,
+      ACL bypass, upload handling, secret exposure). Skip for purely cosmetic
+      or logic-only fixes with no security surface.
+
+  - phase: code-review
+    agent: code-reviewer
+    depends_on: qa
+    description: >
+      Confirm the fix is scoped to the actual bug, doesn't bundle unrelated
+      changes, and matches surrounding code style.
+
+  - phase: documentation
+    agent: documentation-engineer
+    depends_on: [code-review]
+    description: >
+      Add a CHANGELOG.MD entry describing the fix.
+
+  - phase: commit-gate
+    depends_on: documentation
+    description: >
+      STOP. Ask the user (1) whether to commit, and if yes (2) which branch.
+
+  - phase: deploy-gate
+    agent: devops-engineer
+    depends_on: commit-gate
+    optional: true
+    description: >
+      Only if the user separately asks to deploy. STOP and ask (1) whether to
+      deploy, (2) which branch, (3) target environment. No staging environment
+      or deploy automation exists — devops-engineer prepares a manual
+      build/deploy checklist for the human operator.
