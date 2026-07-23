@@ -1,9 +1,9 @@
 services:
   ats-mysql:
-    image: mysql:8.0
+    image: mariadb:10.7
     container_name: ats-mysql
     ports:
-      - "3307:3306"
+      - "127.0.0.1:3307:3306"
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-Root@12345}
       MYSQL_DATABASE: opencats
@@ -26,7 +26,7 @@ services:
       dockerfile: Dockerfile
     container_name: ats-app
     ports:
-      - "8080:80"
+      - "127.0.0.1:8080:80"
     environment:
       PORT: "80"
       DATABASE_HOST: ats-mysql
