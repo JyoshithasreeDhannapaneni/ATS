@@ -25,6 +25,10 @@ jobs:
           script: |
             cd /opt/ATS
             git fetch origin
+            echo "=== DIAGNOSTIC: local uncommitted changes before checkout ==="
+            git status --short
+            git diff
+            echo "=== END DIAGNOSTIC ==="
             git checkout -B "${{ github.ref_name }}" "origin/${{ github.ref_name }}"
             docker compose -f docker-compose.local.yml up -d --build
             # config.php and INSTALL_BLOCK have no volume mount, so a fresh
