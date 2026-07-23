@@ -43,5 +43,5 @@ jobs:
             # ONE-OFF: apply pending migrations never run against production
             # (db/upgrade-*.sql is a manual step, not part of this pipeline -
             # this block will be removed after this run).
-            docker exec ats-app bash -c 'mysql -h "$DATABASE_HOST" -P "$DATABASE_PORT" -u "$DATABASE_USER" -p"$DATABASE_PASS" "$DATABASE_NAME" < /var/www/html/db/upgrade-pipeline-templates.sql'
-            docker exec ats-app bash -c 'mysql -h "$DATABASE_HOST" -P "$DATABASE_PORT" -u "$DATABASE_USER" -p"$DATABASE_PASS" "$DATABASE_NAME" < /var/www/html/db/upgrade-add-contact-phone.sql'
+            docker exec ats-app bash -c 'mysql --ssl-mode=DISABLED -h "$DATABASE_HOST" -P "$DATABASE_PORT" -u "$DATABASE_USER" -p"$DATABASE_PASS" "$DATABASE_NAME" < /var/www/html/db/upgrade-pipeline-templates.sql'
+            docker exec ats-app bash -c 'mysql --ssl-mode=DISABLED -h "$DATABASE_HOST" -P "$DATABASE_PORT" -u "$DATABASE_USER" -p"$DATABASE_PASS" "$DATABASE_NAME" < /var/www/html/db/upgrade-add-contact-phone.sql'
