@@ -25,7 +25,13 @@ jobs:
           script: |
             cd /opt/ATS
             git fetch origin
-            git checkout -B "${{ github.ref_name }}" "origin/${{ github.ref_name }}"
+            # checkout refuses whenever the working tree has local edits to a
+            # file that also changed upstream, even if the two now agree - so
+            # switch branch (best-effort) then force the tree to match the
+            # target ref exactly, rather than relying on checkout's conflict
+            # detection. Untracked files (deploy_key, data/, etc.) are left alone.
+            git checkout -B "${{ github.ref_name }}" "origin/${{ github.ref_name }}" || true
+            git reset --hard "origin/${{ github.ref_name }}"
             docker compose -f docker-compose.local.yml up -d --build
             # config.php and INSTALL_BLOCK have no volume mount, so a fresh
             # --build loses them unless they already exist on the host. Copy
