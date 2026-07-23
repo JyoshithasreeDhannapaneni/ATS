@@ -1287,7 +1287,19 @@ document.addEventListener("DOMContentLoaded", function() {
         {
             $extension = substr($filename, strrpos($filename, '.') + 1);
 
-            $filename .= $javascriptAntiCache;
+            /* main.css changes far more often than the version string does
+             * (which is what $javascriptAntiCache is normally keyed on), so
+             * a stale browser cache can silently keep serving an old
+             * stylesheet indefinitely. Key it on the file's own mtime instead
+             * so every edit busts the cache automatically. */
+            if ($filename === 'main.css' && file_exists($filename))
+            {
+                $filename .= '?m=' . filemtime($filename);
+            }
+            else
+            {
+                $filename .= $javascriptAntiCache;
+            }
 
             if ($extension == 'js')
             {
