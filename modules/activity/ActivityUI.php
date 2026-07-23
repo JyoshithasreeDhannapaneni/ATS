@@ -131,6 +131,7 @@ class ActivityUI extends UserInterface
         $this->_template->assign('isResultsMode', false);
         $this->_template->assign('wildCardString', '');
         $this->_template->assign('active', $this);
+        $this->_template->assign('quickLinks', $this->getQuickLinks());
         $this->_template->display('./modules/activity/Search.tpl');
     }
 
