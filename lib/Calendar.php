@@ -139,9 +139,9 @@ class Calendar
             LEFT JOIN user AS entered_by_user
                 ON calendar_event.entered_by = entered_by_user.user_id
             WHERE
-                EXTRACT(MONTH FROM calendar_event.date)::INTEGER = %s
+                MONTH(calendar_event.date) = %s
             AND
-                EXTRACT(YEAR FROM calendar_event.date)::INTEGER = %s
+                YEAR(calendar_event.date) = %s
             AND
                 calendar_event.site_id = %s
             ORDER BY
