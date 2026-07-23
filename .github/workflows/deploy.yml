@@ -27,3 +27,10 @@ jobs:
             git fetch origin
             git checkout -B "${{ github.ref_name }}" "origin/${{ github.ref_name }}"
             docker compose -f docker-compose.local.yml up -d --build
+            # config.php and INSTALL_BLOCK have no volume mount, so a fresh
+            # --build loses them unless they already exist on the host. Copy
+            # whatever the container has out to the host once so the bind
+            # mounts added in docker-compose.local.yml pick them up from now on.
+            docker exec ats-app test -f /var/www/html/INSTALL_BLOCK || docker exec ats-app touch /var/www/html/INSTALL_BLOCK
+            test -f ./config.php || docker cp ats-app:/var/www/html/config.php ./config.php
+            test -f ./INSTALL_BLOCK || docker cp ats-app:/var/www/html/INSTALL_BLOCK ./INSTALL_BLOCK
