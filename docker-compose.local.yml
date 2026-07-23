@@ -38,6 +38,8 @@ services:
       ats-mysql:
         condition: service_healthy
     volumes:
+      - ./config.php:/var/www/html/config.php
+      - ./INSTALL_BLOCK:/var/www/html/INSTALL_BLOCK
       - ats_attachments:/var/www/html/attachments
       - ats_uploads:/var/www/html/uploads
       - ats_temp:/var/www/html/temp
