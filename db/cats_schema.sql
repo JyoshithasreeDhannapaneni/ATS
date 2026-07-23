@@ -626,6 +626,7 @@ CREATE TABLE `email_template` (
   `title` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
   `possible_variables` text COLLATE utf8_unicode_ci,
   `disabled` int(1) DEFAULT '0',
+  `subject` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`email_template_id`)
 ) ENGINE=MyISAM AUTO_INCREMENT=32 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
@@ -796,6 +797,7 @@ CREATE TABLE `joborder` (
   `joborder_id` int(11) NOT NULL AUTO_INCREMENT,
   `recruiter` int(11) DEFAULT NULL,
   `contact_id` int(11) DEFAULT NULL,
+  `contact_phone` varchar(40) DEFAULT NULL,
   `company_id` int(11) DEFAULT NULL,
   `entered_by` int(11) NOT NULL DEFAULT '0',
   `owner` int(11) DEFAULT NULL,
@@ -818,6 +820,7 @@ CREATE TABLE `joborder` (
   `date_modified` datetime NOT NULL DEFAULT '1000-01-01 00:00:00',
   `public` int(1) NOT NULL DEFAULT '0',
   `company_department_id` int(11) DEFAULT NULL,
+  `pipeline_template_id` int(11) DEFAULT NULL,
   `is_admin_hidden` int(1) DEFAULT '0',
   `openings_available` int(11) DEFAULT '0',
   `questionnaire_id` int(11) DEFAULT NULL,
@@ -1188,5 +1191,33 @@ CREATE TABLE `zipcodes` (
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 /*Data for the table `zipcodes` */
+
+/*Table structure for table `pipeline_template` */
+/* Configurable interview/pipeline round templates, assignable per job order
+   (optionally defaulted per department). A joborder with no template keeps
+   using the fixed global candidate_joborder_status list — purely additive. */
+
+CREATE TABLE `pipeline_template` (
+  `template_id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(128) COLLATE utf8_unicode_ci NOT NULL,
+  `company_department_id` int(11) DEFAULT NULL,
+  `site_id` int(11) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`template_id`),
+  KEY `IDX_pt_department` (`company_department_id`),
+  KEY `IDX_pt_site` (`site_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+/*Table structure for table `pipeline_template_stage` */
+
+CREATE TABLE `pipeline_template_stage` (
+  `stage_id` int(11) NOT NULL AUTO_INCREMENT,
+  `template_id` int(11) NOT NULL,
+  `candidate_joborder_status_id` int(11) NOT NULL,
+  `stage_order` int(11) NOT NULL DEFAULT '0',
+  `stage_name` varchar(64) COLLATE utf8_unicode_ci NOT NULL,
+  `is_enabled` int(11) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`stage_id`),
+  KEY `IDX_pts_template` (`template_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;

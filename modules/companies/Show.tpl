@@ -9,14 +9,12 @@ use OpenCATS\UI\QuickActionMenu;
         <?php TemplateUtility::printQuickSearch(); ?>
 
         <div id="contents">
-            <table>
-                <tr>
-                    <td width="3%">
-                        <img src="images/companies.gif" width="24" height="24" border="0" alt="Companies" style="margin-top: 3px;" />&nbsp;
-                    </td>
-                    <td><h2>Companies: Company Details</h2></td>
-               </tr>
-            </table>
+            <?php TemplateUtility::printBreadcrumb(
+                CATSUtility::getIndexName().'?m=companies&amp;a=show',
+                'Companies',
+                $this->data['name'],
+                'images/companies.gif'
+            ); ?>
 
             <p class="note">Company Details</p>
 
@@ -217,26 +215,23 @@ use OpenCATS\UI\QuickActionMenu;
             </table>
             <!-- /CONTACT INFO -->
 
-            <?php if ($this->getUserAccessLevel('companies.edit') >= ACCESS_LEVEL_EDIT): ?>
-                <a id="edit_link" href="<?php echo(CATSUtility::getIndexName()); ?>?m=companies&amp;a=edit&amp;companyID=<?php echo($this->companyID); ?>">
-                    <img src="images/actions/edit.gif" width="16" height="16" class="absmiddle" alt="edit" border="0" />&nbsp;Edit
-                </a>
-                &nbsp;&nbsp;&nbsp;&nbsp;
-            <?php endif; ?>
-            <?php if ($this->getUserAccessLevel('companies.delete') >= ACCESS_LEVEL_DELETE): ?>
-                <a id="delete_link" href="<?php echo(CATSUtility::getIndexName()); ?>?m=companies&amp;a=delete&amp;companyID=<?php echo($this->companyID); ?>" onclick="javascript:return confirm('Delete this company?');">
-                    <img src="images/actions/delete.gif" width="16" height="16" class="absmiddle" alt="delete" border="0" />&nbsp;Delete
-                </a>
-                &nbsp;&nbsp;&nbsp;&nbsp;
-            <?php endif; ?>
-            <?php if ($this->privledgedUser): ?>
-                <a id="history_link" href="<?php echo(CATSUtility::getIndexName()); ?>?m=settings&amp;a=viewItemHistory&amp;dataItemType=200&amp;dataItemID=<?php echo($this->companyID); ?>">
-                    <img src="images/icon_clock.gif" width="16" height="16" class="absmiddle"  border="0" />&nbsp;View History
-                </a>
-                &nbsp;&nbsp;&nbsp;&nbsp;
-            <?php endif; ?>
-            <br clear="all" />
-            <br />
+            <div class="detail-actions">
+                <?php if ($this->getUserAccessLevel('companies.edit') >= ACCESS_LEVEL_EDIT): ?>
+                    <a id="edit_link" class="detail-action-link" href="<?php echo(CATSUtility::getIndexName()); ?>?m=companies&amp;a=edit&amp;companyID=<?php echo($this->companyID); ?>">
+                        <img src="images/actions/edit.gif" width="16" height="16" class="absmiddle" alt="" border="0" />Edit
+                    </a>
+                <?php endif; ?>
+                <?php if ($this->getUserAccessLevel('companies.delete') >= ACCESS_LEVEL_DELETE): ?>
+                    <a id="delete_link" class="detail-action-link danger" href="<?php echo(CATSUtility::getIndexName()); ?>?m=companies&amp;a=delete&amp;companyID=<?php echo($this->companyID); ?>" onclick="javascript:return confirm('Delete this company?');">
+                        <img src="images/actions/delete.gif" width="16" height="16" class="absmiddle" alt="" border="0" />Delete
+                    </a>
+                <?php endif; ?>
+                <?php if ($this->privledgedUser): ?>
+                    <a id="history_link" class="detail-action-link" href="<?php echo(CATSUtility::getIndexName()); ?>?m=settings&amp;a=viewItemHistory&amp;dataItemType=200&amp;dataItemID=<?php echo($this->companyID); ?>">
+                        <img src="images/icon_clock.gif" width="16" height="16" class="absmiddle" border="0" alt="" />View History
+                    </a>
+                <?php endif; ?>
+            </div>
 
             <p class="note">Job Orders</p>
             <table class="sortable">
@@ -286,12 +281,12 @@ use OpenCATS\UI\QuickActionMenu;
             </table>
 
             <?php if ($this->getUserAccessLevel('joborders.add') >= ACCESS_LEVEL_EDIT): ?>
-                <a href="<?php echo(CATSUtility::getIndexName()); ?>?m=joborders&amp;a=add&amp;selected_company_id=<?php echo($this->companyID); ?>" title="Add Job Order">
-                    <img src="images/actions/job_order.gif" width="16" height="16" class="absmiddle" alt="New Job Order" border="0" />&nbsp;Add Job Order
-                </a>
+                <div class="detail-actions">
+                    <a class="detail-action-link" href="<?php echo(CATSUtility::getIndexName()); ?>?m=joborders&amp;a=add&amp;selected_company_id=<?php echo($this->companyID); ?>" title="Add Job Order">
+                        <img src="images/actions/job_order.gif" width="16" height="16" class="absmiddle" alt="" border="0" />Add Job Order
+                    </a>
+                </div>
             <?php endif; ?>
-            <br clear="all" />
-            <br />
 
             <!-- CONTACT INFO -->
             <p class="note">Contacts</p>
@@ -385,22 +380,21 @@ use OpenCATS\UI\QuickActionMenu;
 
             </table>
 
-            <?php if ($this->getUserAccessLevel('contacts.add') >= ACCESS_LEVEL_EDIT): ?>
-                <a href="<?php echo(CATSUtility::getIndexName()); ?>?m=contacts&amp;a=add&amp;selected_company_id=<?php echo($this->companyID); ?>" title="Add Contact">
-                    <img src="images/actions/add_contact.gif" width="16" height="16" class="absmiddle" alt="add contact" border="0" title="Add Contact"/>&nbsp;Add Contact
-                </a>
-            <?php endif; ?>
-            <?php if (is_array($this->contactsRSWC) && is_array($this->contactsRS) && count($this->contactsRSWC) != count($this->contactsRS)) : ?>
-                &nbsp;
-                <a href="javascript:void(0)" id="linkShowAll" onclick="javascript:for (i = 0; i< <?php echo(is_array($this->contactsRSWC) ? count($this->contactsRSWC) : 0); ?>; i++) document.getElementById('ContactsDefault'+i).style.display='none'; for (i = 0; i< <?php echo(is_array($this->contactsRS) ? count($this->contactsRS) : 0); ?>; i++) document.getElementById('ContactsFull'+i).style.display=''; document.getElementById('linkShowAll').style.display='none'; document.getElementById('linkHideSome').style.display='';">
-                    <img src="images/actions/add_contact.gif" width="16" height="16" class="absmiddle" alt="add contact" border="0" title="Show All"/>
-                    &nbsp;Show contacts who have left (<?php echo((is_array($this->contactsRS) ? count($this->contactsRS) : 0) - (is_array($this->contactsRSWC) ? count($this->contactsRSWC) : 0)); ?>)
-                </a>
-                <a href="javascript:void(0)" id="linkHideSome" style="display:none;" onclick="javascript:for (i = 0; i< <?php echo(is_array($this->contactsRSWC) ? count($this->contactsRSWC) : 0); ?>; i++) document.getElementById('ContactsDefault'+i).style.display=''; for (i = 0; i< <?php echo(is_array($this->contactsRS) ? count($this->contactsRS) : 0); ?>; i++) document.getElementById('ContactsFull'+i).style.display='none'; document.getElementById('linkShowAll').style.display=''; document.getElementById('linkHideSome').style.display='none';">
-                    <img src="images/actions/add_contact.gif" width="16" height="16" class="absmiddle" alt="add contact" border="0" title="Hide Some"/>
-                    &nbsp;Hide contacts who have left (<?php echo((is_array($this->contactsRS) ? count($this->contactsRS) : 0) - (is_array($this->contactsRSWC) ? count($this->contactsRSWC) : 0)); ?>)
-                </a>
-            <?php endif; ?>
+            <div class="detail-actions">
+                <?php if ($this->getUserAccessLevel('contacts.add') >= ACCESS_LEVEL_EDIT): ?>
+                    <a class="detail-action-link" href="<?php echo(CATSUtility::getIndexName()); ?>?m=contacts&amp;a=add&amp;selected_company_id=<?php echo($this->companyID); ?>" title="Add Contact">
+                        <img src="images/actions/add_contact.gif" width="16" height="16" class="absmiddle" alt="" border="0" />Add Contact
+                    </a>
+                <?php endif; ?>
+                <?php if (is_array($this->contactsRSWC) && is_array($this->contactsRS) && count($this->contactsRSWC) != count($this->contactsRS)) : ?>
+                    <a class="detail-action-link" href="javascript:void(0)" id="linkShowAll" onclick="javascript:for (i = 0; i< <?php echo(is_array($this->contactsRSWC) ? count($this->contactsRSWC) : 0); ?>; i++) document.getElementById('ContactsDefault'+i).style.display='none'; for (i = 0; i< <?php echo(is_array($this->contactsRS) ? count($this->contactsRS) : 0); ?>; i++) document.getElementById('ContactsFull'+i).style.display=''; document.getElementById('linkShowAll').style.display='none'; document.getElementById('linkHideSome').style.display='';">
+                        Show contacts who have left (<?php echo((is_array($this->contactsRS) ? count($this->contactsRS) : 0) - (is_array($this->contactsRSWC) ? count($this->contactsRSWC) : 0)); ?>)
+                    </a>
+                    <a class="detail-action-link" href="javascript:void(0)" id="linkHideSome" style="display:none;" onclick="javascript:for (i = 0; i< <?php echo(is_array($this->contactsRSWC) ? count($this->contactsRSWC) : 0); ?>; i++) document.getElementById('ContactsDefault'+i).style.display=''; for (i = 0; i< <?php echo(is_array($this->contactsRS) ? count($this->contactsRS) : 0); ?>; i++) document.getElementById('ContactsFull'+i).style.display='none'; document.getElementById('linkShowAll').style.display=''; document.getElementById('linkHideSome').style.display='none';">
+                        Hide contacts who have left (<?php echo((is_array($this->contactsRS) ? count($this->contactsRS) : 0) - (is_array($this->contactsRSWC) ? count($this->contactsRSWC) : 0)); ?>)
+                    </a>
+                <?php endif; ?>
+            </div>
             <!-- /CONTACT INFO -->
         </div>
     </div>

@@ -2571,6 +2571,22 @@ class SettingsUI extends UserInterface
                     $templateFile = './modules/settings/SiteName.tpl';
                     break;
 
+                case 'pipelineTemplates':
+                    $this->_template->assign('pipelineTemplates', $this->getPipelineTemplatesForDisplay());
+                    $this->_template->assign('departmentOptions', $this->getDepartmentOptionsForTemplates());
+                    $templateFile = './modules/settings/PipelineTemplates.tpl';
+                    break;
+
+                case 'aiSettings':
+                    $existingKey = $this->getAnthropicApiKeySetting();
+                    $this->_template->assign('anthropicApiKeyConfigured', $existingKey !== '');
+                    /* Never echo the real key back into the page; leaving the field
+                     * blank on load means "keep existing" unless the admin types a
+                     * new one. */
+                    $this->_template->assign('anthropicApiKeyMasked', '');
+                    $templateFile = './modules/settings/AISettings.tpl';
+                    break;
+
                 case 'newVersionCheck':
                     if (!$systemAdministration)
                     {
@@ -2686,6 +2702,9 @@ class SettingsUI extends UserInterface
             // Highlight certain rows of importance based on criteria
             $candidates = new Candidates($this->_siteID);
             $this->_template->assign('totalCandidates', $candidates->getCount());
+
+            $companies = new Companies($this->_siteID);
+            $this->_template->assign('defaultCompanyID', $companies->getDefaultCompany());
         }
 
         if (!eval(Hooks::get('SETTINGS_DISPLAY_ADMINISTRATION'))) return;
@@ -2736,6 +2755,59 @@ class SettingsUI extends UserInterface
 
                 $this->changeSiteName($siteName);
                 CATSUtility::transferRelativeURI('m=settings&a=administration');
+                break;
+
+            case 'createPipelineTemplate':
+                if ($this->getUserAccessLevel('settings.administration') < ACCESS_LEVEL_SA)
+                {
+                    CommonErrors::fatal(COMMONERROR_PERMISSION, $this, 'Invalid user level for administration.');
+                }
+
+                $templateName = $this->getTrimmedInput('templateName', $_POST);
+                $departmentID = $this->getTrimmedInput('departmentID', $_POST);
+                $stagesText   = isset($_POST['stagesText']) ? $_POST['stagesText'] : '';
+
+                if (empty($templateName) || trim($stagesText) === '')
+                {
+                    CommonErrors::fatal(COMMONERROR_MISSINGFIELDS, $this, 'A template name and at least one stage are required.');
+                }
+
+                $this->createPipelineTemplate($templateName, $departmentID !== '' ? intval($departmentID) : null, $stagesText);
+
+                CATSUtility::transferRelativeURI('m=settings&a=administration&s=pipelineTemplates');
+                break;
+
+            case 'deletePipelineTemplate':
+                if ($this->getUserAccessLevel('settings.administration') < ACCESS_LEVEL_SA)
+                {
+                    CommonErrors::fatal(COMMONERROR_PERMISSION, $this, 'Invalid user level for administration.');
+                }
+
+                $templateID = $this->getTrimmedInput('templateID', $_POST);
+                if (!empty($templateID))
+                {
+                    $this->deletePipelineTemplate(intval($templateID));
+                }
+
+                CATSUtility::transferRelativeURI('m=settings&a=administration&s=pipelineTemplates');
+                break;
+
+            case 'saveAiSettings':
+                if ($this->getUserAccessLevel('settings.administration') < ACCESS_LEVEL_SA)
+                {
+                    CommonErrors::fatal(COMMONERROR_PERMISSION, $this, 'Invalid user level for administration.');
+                }
+
+                $anthropicApiKey = $this->getTrimmedInput('anthropicApiKey', $_POST);
+
+                /* Blank submission means "keep the existing key unchanged" —
+                 * the field is never pre-filled with the real value. */
+                if ($anthropicApiKey !== '')
+                {
+                    $this->saveAnthropicApiKeySetting($anthropicApiKey);
+                }
+
+                CATSUtility::transferRelativeURI('m=settings&a=administration&s=aiSettings');
                 break;
 
             case 'changeVersionCheck':
@@ -2803,6 +2875,211 @@ class SettingsUI extends UserInterface
                 CATSUtility::transferRelativeURI('m=settings&a=administration');
                 break;
         }
+    }
+
+    /*
+     * Reads the site's configured Anthropic API key from the generic
+     * key-value `settings` table, falling back to the ANTHROPIC_API_KEY
+     * environment variable if nothing has been saved through the UI yet.
+     */
+    private function getAnthropicApiKeySetting()
+    {
+        $db = DatabaseConnection::getInstance();
+        $rs = $db->getAllAssoc(sprintf(
+            "SELECT value FROM settings
+             WHERE setting = %s AND site_id = %s
+             LIMIT 1",
+            $db->makeQueryString('anthropicApiKey'),
+            $db->makeQueryInteger($this->_siteID)
+        ));
+
+        if (!empty($rs) && !empty($rs[0]['value']))
+        {
+            return $rs[0]['value'];
+        }
+
+        $envKey = getenv('ANTHROPIC_API_KEY');
+
+        return $envKey !== false ? $envKey : '';
+    }
+
+    /*
+     * Saves the site's Anthropic API key into the generic `settings` table,
+     * updating the existing row if one already exists.
+     */
+    private function saveAnthropicApiKeySetting($apiKey)
+    {
+        $db = DatabaseConnection::getInstance();
+        $existing = $db->getAllAssoc(sprintf(
+            "SELECT settings_id FROM settings
+             WHERE setting = %s AND site_id = %s
+             LIMIT 1",
+            $db->makeQueryString('anthropicApiKey'),
+            $db->makeQueryInteger($this->_siteID)
+        ));
+
+        if (!empty($existing))
+        {
+            $db->query(sprintf(
+                "UPDATE settings SET value = %s
+                 WHERE settings_id = %s",
+                $db->makeQueryString($apiKey),
+                $db->makeQueryInteger($existing[0]['settings_id'])
+            ));
+        }
+        else
+        {
+            $db->query(sprintf(
+                "INSERT INTO settings (setting, value, site_id, settings_type)
+                 VALUES (%s, %s, %s, %s)",
+                $db->makeQueryString('anthropicApiKey'),
+                $db->makeQueryString($apiKey),
+                $db->makeQueryInteger($this->_siteID),
+                $db->makeQueryInteger(SETTINGS_AI)
+            ));
+        }
+    }
+
+    /*
+     * Returns every pipeline_template for this site along with its ordered
+     * list of stage names, for display on the management page.
+     */
+    private function getPipelineTemplatesForDisplay()
+    {
+        $db = DatabaseConnection::getInstance();
+        $templatesRS = $db->getAllAssoc(sprintf(
+            "SELECT pt.template_id AS templateID, pt.name AS name,
+                    cd.name AS departmentName
+             FROM pipeline_template pt
+             LEFT JOIN company_department cd
+                 ON cd.company_department_id = pt.company_department_id
+             WHERE pt.site_id = %s
+             ORDER BY pt.name ASC",
+            $db->makeQueryInteger($this->_siteID)
+        ));
+
+        foreach ($templatesRS as &$template)
+        {
+            $stagesRS = $db->getAllAssoc(sprintf(
+                "SELECT cjs.short_description AS stageName
+                 FROM pipeline_template_stage pts
+                 INNER JOIN candidate_joborder_status cjs
+                     ON cjs.candidate_joborder_status_id = pts.candidate_joborder_status_id
+                 WHERE pts.template_id = %s AND pts.is_enabled = 1
+                 ORDER BY pts.stage_order ASC",
+                $db->makeQueryInteger($template['templateID'])
+            ));
+            $template['stageNames'] = array_map(function ($row) { return $row['stageName']; }, $stagesRS);
+        }
+
+        return $templatesRS;
+    }
+
+    /*
+     * Returns a flat list of (companyName - departmentName) options that a
+     * new pipeline template can optionally be defaulted to.
+     */
+    private function getDepartmentOptionsForTemplates()
+    {
+        $db = DatabaseConnection::getInstance();
+
+        return $db->getAllAssoc(sprintf(
+            "SELECT cd.company_department_id AS departmentID,
+                    c.name AS companyName,
+                    cd.name AS departmentName
+             FROM company_department cd
+             INNER JOIN company c ON c.company_id = cd.company_id
+             WHERE cd.site_id = %s
+             ORDER BY c.name ASC, cd.name ASC",
+            $db->makeQueryInteger($this->_siteID)
+        ));
+    }
+
+    /*
+     * Creates a new pipeline_template plus its ordered stages. Each stage
+     * name either reuses an existing candidate_joborder_status row (matched
+     * case-insensitively) or creates a new one in a reserved ID range
+     * (2000+) that never collides with the built-in fixed statuses.
+     */
+    private function createPipelineTemplate($templateName, $departmentID, $stagesText)
+    {
+        $db = DatabaseConnection::getInstance();
+
+        $db->query(sprintf(
+            "INSERT INTO pipeline_template (name, company_department_id, site_id)
+             VALUES (%s, %s, %s)",
+            $db->makeQueryString($templateName),
+            $departmentID !== null ? $db->makeQueryInteger($departmentID) : 'NULL',
+            $db->makeQueryInteger($this->_siteID)
+        ));
+        $templateID = $db->getLastInsertID();
+
+        $stageNames = array_filter(array_map('trim', explode("\n", str_replace("\r", '', $stagesText))));
+
+        $order = 0;
+        foreach ($stageNames as $stageName)
+        {
+            $existingRS = $db->getAllAssoc(sprintf(
+                "SELECT candidate_joborder_status_id FROM candidate_joborder_status
+                 WHERE LOWER(short_description) = LOWER(%s) LIMIT 1",
+                $db->makeQueryString($stageName)
+            ));
+
+            if (!empty($existingRS))
+            {
+                $statusID = $existingRS[0]['candidate_joborder_status_id'];
+            }
+            else
+            {
+                $nextIDRS = $db->getAllAssoc(
+                    "SELECT COALESCE(MAX(candidate_joborder_status_id), 1999) + 1 AS nextID
+                     FROM candidate_joborder_status
+                     WHERE candidate_joborder_status_id >= 2000"
+                );
+                $statusID = $nextIDRS[0]['nextID'];
+
+                $db->query(sprintf(
+                    "INSERT INTO candidate_joborder_status
+                        (candidate_joborder_status_id, short_description, can_be_scheduled, triggers_email, is_enabled)
+                     VALUES (%s, %s, 0, 0, 1)",
+                    $db->makeQueryInteger($statusID),
+                    $db->makeQueryString($stageName)
+                ));
+            }
+
+            $db->query(sprintf(
+                "INSERT INTO pipeline_template_stage
+                    (template_id, candidate_joborder_status_id, stage_order, stage_name, is_enabled)
+                 VALUES (%s, %s, %s, %s, 1)",
+                $db->makeQueryInteger($templateID),
+                $db->makeQueryInteger($statusID),
+                $db->makeQueryInteger($order),
+                $db->makeQueryString($stageName)
+            ));
+
+            $order++;
+        }
+    }
+
+    /*
+     * Deletes a pipeline template and its stages. Job orders that were using
+     * it fall back to the global status list (pipeline_template_id simply no
+     * longer resolves to a template, which getStatusesForPicking() already
+     * handles gracefully).
+     */
+    private function deletePipelineTemplate($templateID)
+    {
+        $db = DatabaseConnection::getInstance();
+
+        $db->query(sprintf(
+            "DELETE FROM pipeline_template_stage WHERE template_id = %s",
+            $db->makeQueryInteger($templateID)
+        ));
+        $db->query(sprintf(
+            "DELETE FROM pipeline_template WHERE template_id = %s AND site_id = %s",
+            $db->makeQueryInteger($templateID),
+            $db->makeQueryInteger($this->_siteID)
+        ));
     }
 
     /*

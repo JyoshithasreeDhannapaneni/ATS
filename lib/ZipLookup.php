@@ -20,10 +20,15 @@ class ZipLookup
 	$aAddress[2] = '';
 	$aAddress[3] = '';
 
+	$loc_level_1 = '';
+	$loc_level_2 = '';
+	$loc_level_3 = '';
+	$loc_level_4 = '';
+
 	$sUrl = 'http://maps.googleapis.com/maps/api/geocode/xml?sensor=false&address=';
 
 	if ($zip != '') {
-		if (($oXml = simplexml_load_file($sUrl . $zip))) {
+		if (($oXml = @simplexml_load_file($sUrl . $zip)) && isset($oXml->result->address_component)) {
 			foreach($oXml->result->address_component as $value) {
 				if ($value->type == 'route') {
 					$aAddress[1] = (string) $value->long_name;

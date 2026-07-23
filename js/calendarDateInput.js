@@ -572,15 +572,16 @@ function DateInput(DateName, Required, DateFormat, DefaultDate, TabIndex)
     var objectName = DateName + '_Object';
     eval('var object = ' + DateName + '_Object;');
 
-    /* Determine initial state of day and year inputs and the calendar icon. */
+    /* Always show the day/year inputs and calendar icon so a full date can be
+     * picked without first choosing a month (previously hidden until a month
+     * was selected, which made the picker look month-only). */
+    var initialStatus = '';
     if (Required || DefaultDate != '')
     {
-        var initialStatus = '';
         var initialDate = object.picked.formatted;
     }
     else
     {
-        var initialStatus = ' style="visibility:hidden"';
         var initialDate = '';
         object.setPicked(Today.getFullYear(), Today.getMonth(), Today.getDate());
     }
@@ -740,15 +741,16 @@ function DateInputForDOM(DateName, Required, DateFormat, DefaultDate, TabIndex)
     var objectName = DateName + '_Object';
     eval('var object = ' + DateName + '_Object;');
 
-    /* Determine initial state of day and year inputs and the calendar icon. */
+    /* Always show the day/year inputs and calendar icon so a full date can be
+     * picked without first choosing a month (previously hidden until a month
+     * was selected, which made the picker look month-only). */
+    var initialStatus = '';
     if (Required || DefaultDate != '')
     {
-        var initialStatus = '';
         var initialDate = object.picked.formatted;
     }
     else
     {
-        var initialStatus = ' style="visibility:hidden"';
         var initialDate = '';
         object.setPicked(Today.getFullYear(), Today.getMonth(), Today.getDate());
     }

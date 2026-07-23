@@ -1131,3 +1131,28 @@ function decode64(input)
 
    return output;
 }
+
+// Progressive disclosure toggle shared by every Add/Edit form's
+// "Show more fields" control (see .form-more-toggle / .form-additional-fields
+// in main.css). Pass the additional-fields container id, the toggle button
+// id, and optionally override the two label strings shown on the button.
+function toggleFormFields(containerID, btnID, showLabel, hideLabel)
+{
+   showLabel = showLabel || 'Show More Fields';
+   hideLabel = hideLabel || 'Show Less Fields';
+
+   var fields = document.getElementById(containerID);
+   var btn = document.getElementById(btnID);
+   if (!fields || !btn) return;
+
+   if (fields.classList.contains('show'))
+   {
+      fields.classList.remove('show');
+      btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> ' + showLabel;
+   }
+   else
+   {
+      fields.classList.add('show');
+      btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg> ' + hideLabel;
+   }
+}

@@ -84,7 +84,7 @@ function getSMeta($setting, $field, $meta, $default) {
 ?>
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+/* Inter is already loaded site-wide via inter.css in the common header. */
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 /* ── Reset ── */

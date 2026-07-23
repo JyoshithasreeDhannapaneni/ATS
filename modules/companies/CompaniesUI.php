@@ -55,11 +55,15 @@ class CompaniesUI extends UserInterface
         $this->_authenticationRequired = true;
         $this->_moduleDirectory = 'companies';
         $this->_moduleName = 'companies';
-        $this->_moduleTabText = 'Companies';
+        /* Companies is hidden from the main nav: this is an internal-org ATS
+         * with a single company record, not a staffing agency managing many
+         * clients, so there's nothing to browse/search here day-to-day.
+         * The module itself stays reachable (e.g. to edit the org's own
+         * company record) — see modules/settings for that entry point. */
+        $this->_moduleTabText = '';
         $this->_subTabs = array(
             'Add Company'     => CATSUtility::getIndexName() . '?m=companies&amp;a=add*al=' . ACCESS_LEVEL_EDIT . '@companies.add' . '*hrmode=0',
-            'Search Companies' => CATSUtility::getIndexName() . '?m=companies&amp;a=search*hrmode=0',
-            'Go To My Company' => CATSUtility::getIndexName() . '?m=companies&amp;a=internalPostings*hrmode=0'
+            'Search Companies' => CATSUtility::getIndexName() . '?m=companies&amp;a=search*hrmode=0'
         );
     }
 

@@ -55,6 +55,41 @@
                                 </td>
                             </tr>
                             <tr>
+                                <td width="230">
+                                    <img src="images/bullet_black.gif" alt="" />
+                                    <a href="<?php echo(CATSUtility::getIndexName()); ?>?m=settings&amp;a=administration&amp;s=aiSettings">
+                                        AI Integration
+                                    </a>
+                                </td>
+                                <td>
+                                    Configure the AI provider API key used to generate job descriptions from keywords.
+                                </td>
+                            </tr>
+                            <tr>
+                                <td width="230">
+                                    <img src="images/bullet_black.gif" alt="" />
+                                    <a href="<?php echo(CATSUtility::getIndexName()); ?>?m=settings&amp;a=administration&amp;s=pipelineTemplates">
+                                        Interview Process Templates
+                                    </a>
+                                </td>
+                                <td>
+                                    Define custom, ordered interview round templates that can be assigned per job order or department.
+                                </td>
+                            </tr>
+                            <?php if (!empty($this->defaultCompanyID)): ?>
+                            <tr>
+                                <td width="230">
+                                    <img src="images/bullet_black.gif" alt="" />
+                                    <a href="<?php echo(CATSUtility::getIndexName()); ?>?m=companies&amp;a=edit&amp;companyID=<?php echo($this->defaultCompanyID); ?>">
+                                        Company Profile
+                                    </a>
+                                </td>
+                                <td>
+                                    Edit your organization's own company record (name, address, phone) used across job orders.
+                                </td>
+                            </tr>
+                            <?php endif; ?>
+                            <tr>
                                 <td>
                                     <img src="images/bullet_black.gif" alt="" />
                                     <a href="<?php echo(CATSUtility::getIndexName()); ?>?m=settings&amp;a=manageUsers">

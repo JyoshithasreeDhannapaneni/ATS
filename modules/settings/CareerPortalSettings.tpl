@@ -21,7 +21,7 @@ function getTplMeta($name, $field, $default, $meta) {
 ?>
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+/* Inter is already loaded site-wide via inter.css in the common header. */
 
 /* ===== RESET & BASE ===== */
 .cps * { box-sizing: border-box; }

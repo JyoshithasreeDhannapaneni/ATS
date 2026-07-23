@@ -95,7 +95,7 @@ class JobOrders
     public function add($title, $companyId, $contactId, $description, $notes,
         $duration, $maxRate, $type, $isHot, $public, $openings, $companyJobId,
         $salary, $city, $state, $startDate, $enteredBy, $recruiter, $owner,
-        $department, $questionnaire = false)
+        $department, $questionnaire = false, $contactPhone = '', $pipelineTemplateId = null)
     {
         /* Get the department ID of the selected department. */
         // FIXME: Move this up to the UserInterface level. I don't like this
@@ -126,7 +126,9 @@ class JobOrders
             $recruiter,
             $owner,
             $departmentId,
-            $questionnaire
+            $questionnaire,
+            $contactPhone,
+            $pipelineTemplateId
         );
         $JobOrderRepository = new JobOrderRepository($this->_db);
         try {
@@ -164,7 +166,8 @@ class JobOrders
     public function update($jobOrderID, $title, $companyJobID, $companyID,
         $contactID, $description, $notes, $duration, $maxRate, $type, $isHot,
         $openings, $openingsAvailable, $salary, $city, $state, $startDate, $status, $recruiter,
-        $owner, $public, $email, $emailAddress, $department, $questionnaire = false)
+        $owner, $public, $email, $emailAddress, $department, $questionnaire = false, $contactPhone = '',
+        $pipelineTemplateId = null)
     {
         /* Get the department ID of the selected department. */
         // FIXME: Move this up to the UserInterface level. I don't like this
@@ -183,6 +186,7 @@ class JobOrders
                 client_job_id      = %s,
                 company_id         = %s,
                 contact_id         = %s,
+                contact_phone      = %s,
                 start_date         = %s,
                 description        = %s,
                 notes              = %s,
@@ -197,6 +201,7 @@ class JobOrders
                 city               = %s,
                 state              = %s,
                 company_department_id = %s,
+                pipeline_template_id = %s,
                 recruiter          = %s,
                 owner              = %s,
                 public             = %s,
@@ -210,6 +215,7 @@ class JobOrders
             $this->_db->makeQueryString($companyJobID),
             $this->_db->makeQueryInteger($companyID),
             $this->_db->makeQueryInteger($contactID),
+            $this->_db->makeQueryString($contactPhone),
             $this->_db->makeQueryStringOrNULL($startDate),
             $this->_db->makeQueryString($description),
             $this->_db->makeQueryString($notes),
@@ -224,6 +230,7 @@ class JobOrders
             $this->_db->makeQueryString($city),
             $this->_db->makeQueryString($state),
             $this->_db->makeQueryInteger($departmentID),
+            $pipelineTemplateId !== null && $pipelineTemplateId !== '' ? $this->_db->makeQueryInteger($pipelineTemplateId) : 'NULL',
             $this->_db->makeQueryInteger($recruiter),
             $this->_db->makeQueryInteger($owner),
             ($public ? '1' : '0'),
@@ -379,6 +386,7 @@ class JobOrders
                 joborder.joborder_id AS jobOrderID,
                 joborder.company_id AS companyID,
                 joborder.contact_id AS contactID,
+                joborder.contact_phone AS contactPhone,
                 joborder.client_job_id AS companyJobID,
                 joborder.title AS title,
                 joborder.description AS description,
@@ -493,6 +501,7 @@ class JobOrders
                 company.name AS companyName,
                 company_department.name AS department,
                 joborder.contact_id AS contactID,
+                joborder.contact_phone AS contactPhone,
                 joborder.client_job_id AS companyJobID,
                 joborder.title AS title,
                 joborder.description AS description,
@@ -512,9 +521,13 @@ class JobOrders
                 joborder.public AS public,
                 joborder.questionnaire_id as questionnaireID,
                 joborder.company_department_id AS departmentID,
+                joborder.pipeline_template_id AS pipelineTemplateID,
                 DATE_FORMAT(
                     joborder.start_date, '%%m-%%d-%%y'
-                ) AS startDate
+                ) AS startDate,
+                DATE_FORMAT(
+                    joborder.start_date, '%%H:%%i'
+                ) AS startTimeOfDay
             FROM
                 joborder
             LEFT JOIN company
@@ -955,10 +968,10 @@ class JobOrdersDataGrid extends DataGrid
                                       'filter'         => 'joborder.type'),
 
             'Status' =>         array('select'         => 'joborder.status AS status',
-                                      'pagerRender'    => 'return $rsData[\'status\'];',
+                                      'pagerRender'    => 'return \'<span class="jo-status-badge jo-status-\'.strtolower(str_replace(" ", "", $rsData[\'status\'])).\'">\'.htmlspecialchars($rsData[\'status\']).\'</span>\';',
                                       'exportRender'   => 'return $rsData[\'status\'];',
                                       'sortableColumn' => 'status',
-                                      'pagerWidth'     => 45,
+                                      'pagerWidth'     => 90,
                                       'pagerOptional'  => true,
                                       'alphaNavigation'=> false,
                                       'filter'         => 'joborder.status'),
@@ -1272,6 +1285,13 @@ class JobOrdersDataGrid extends DataGrid
         }
 
         if (!eval(Hooks::get('JOBORDER_DATAGRID_GETSQL'))) return;
+
+        /* The alpha-nav / sort-by HAVING clause references bare column
+         * names (e.g. "title"). Since this query also joins contact
+         * (which has its own title column), an unqualified "title" is
+         * ambiguous to PostgreSQL even though it unambiguously means the
+         * job order's title here. Qualify it explicitly. */
+        $havingSQL = preg_replace('/(?<!\.)\btitle\b/i', 'joborder.title', $havingSQL);
 
         $sql = sprintf(
             "SELECT SQL_CALC_FOUND_ROWS %s

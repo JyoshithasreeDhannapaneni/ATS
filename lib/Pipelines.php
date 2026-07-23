@@ -82,7 +82,8 @@ class Pipelines
             1050 => 'Offer Release',
             1060 => 'Onboarded',
             1070 => 'No Show',
-            1080 => 'Hired'
+            1080 => 'Hired',
+            1090 => 'Withdrawn'
         );
 
         foreach ($customStatuses as $statusID => $description) {
@@ -143,6 +144,8 @@ class Pipelines
      */
     private function logApplication($candidateID, $jobOrderID)
     {
+        $this->_initApplicationLog();
+
         $sql = sprintf(
             "INSERT INTO candidate_application_log
                 (site_id, candidate_id, joborder_id, date_applied)
@@ -505,8 +508,54 @@ class Pipelines
 
     // FIXME: Document me.
     // Throws out No Status.
-    public function getStatusesForPicking()
+    // If $jobOrderID is given and that job order has a pipeline_template_id
+    // set, returns that template's ordered stages instead of the global
+    // status list. A job order with no template (the default for every
+    // existing job order) is completely unaffected.
+    public function getStatusesForPicking($jobOrderID = null)
     {
+        $templateID = null;
+
+        if ($jobOrderID !== null)
+        {
+            $joRS = $this->_db->getAllAssoc(sprintf(
+                "SELECT pipeline_template_id FROM joborder WHERE joborder_id = %d",
+                (int) $jobOrderID
+            ));
+
+            if (!empty($joRS) && !empty($joRS[0]['pipeline_template_id']))
+            {
+                $templateID = (int) $joRS[0]['pipeline_template_id'];
+            }
+        }
+
+        if ($templateID !== null)
+        {
+            $templateSQL = sprintf(
+                "SELECT
+                    cjs.candidate_joborder_status_id AS statusID,
+                    cjs.short_description AS status,
+                    cjs.can_be_scheduled AS canBeScheduled,
+                    cjs.triggers_email AS triggersEmail
+                FROM pipeline_template_stage pts
+                INNER JOIN candidate_joborder_status cjs
+                    ON cjs.candidate_joborder_status_id = pts.candidate_joborder_status_id
+                WHERE pts.template_id = %d AND pts.is_enabled = 1
+                ORDER BY pts.stage_order ASC",
+                $templateID
+            );
+
+            $templateRS = $this->_db->getAllAssoc($templateSQL);
+
+            if (!empty($templateRS))
+            {
+                return $templateRS;
+            }
+
+            // Template exists but has no stages configured yet — fall back
+            // to the global list rather than showing an empty board.
+        }
+
         $sql = "SELECT
                 candidate_joborder_status_id AS statusID,
                 short_description AS status,

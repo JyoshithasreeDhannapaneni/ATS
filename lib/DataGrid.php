@@ -1743,6 +1743,7 @@ class DataGrid
         }
 
         /* Column headers */
+        $_keys_current_columns = array_keys($this->_currentColumns);
         foreach ($this->_currentColumns as $index => $data)
         {
             /* Is the column sizable?  If it is, then we need to make a second column to resize that appears to be part of the first column. */

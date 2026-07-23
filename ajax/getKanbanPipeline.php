@@ -22,7 +22,7 @@ $siteID = $interface->getSiteID();
 $jobOrderID = intval($_REQUEST['joborderID']);
 
 $pipelines = new Pipelines($siteID);
-$statuses = $pipelines->getStatusesForPicking();
+$statuses = $pipelines->getStatusesForPicking($jobOrderID);
 $pipelineRS = $pipelines->getJobOrderPipeline($jobOrderID);
 
 // Group candidates by status

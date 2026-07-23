@@ -434,7 +434,7 @@ class SearchCandidates
         $sql = sprintf(
             "SELECT
                 candidate.candidate_id AS candidateID,
-                IF(candidate_duplicates.new_candidate_id, 1, 0) AS isDuplicateCandidate,
+                IF(candidate_duplicates.new_candidate_id IS NOT NULL, 1, 0) AS isDuplicateCandidate,
                 candidate.first_name AS firstName,
                 candidate.last_name AS lastName,
                 candidate.city AS city,

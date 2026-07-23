@@ -65,29 +65,6 @@ class TemplateUtility
     {
         self::_printCommonHeader($pageTitle, $headIncludes);
         echo '<body style="background: #fff">', "\n";
-        echo '
-<div id="neutara-page-loader" style="position:fixed;inset:0;z-index:99999;background:#0f1623;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity 0.4s ease,visibility 0.4s ease;">
-  <div style="display:flex;flex-direction:column;align-items:center;gap:20px;">
-    <div style="width:64px;height:64px;background:linear-gradient(135deg,#2563eb,#1d4ed8);border-radius:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 32px rgba(37,99,235,0.45);">
-      <span style="color:#fff;font-size:32px;font-weight:900;font-family:\'Segoe UI\',sans-serif;letter-spacing:-1px;">N</span>
-    </div>
-    <div style="width:180px;height:3px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden;">
-      <div id="neutara-loader-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#2563eb,#60a5fa);border-radius:3px;transition:width 0.3s ease;animation:neutara-load 1.6s ease-in-out infinite;"></div>
-    </div>
-    <span style="color:rgba(255,255,255,0.45);font-size:12px;letter-spacing:0.08em;font-family:\'Segoe UI\',sans-serif;">NEUTARA ATS</span>
-  </div>
-</div>
-<style>@keyframes neutara-load{0%{width:0%;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0%;margin-left:100%}}</style>
-<script>
-(function(){
-  var loader = document.getElementById("neutara-page-loader");
-  function hideLoader(){if(loader){loader.style.opacity="0";loader.style.visibility="hidden";setTimeout(function(){if(loader)loader.style.display="none";},420);}}
-  if(document.readyState==="complete"){setTimeout(hideLoader,200);}
-  else{window.addEventListener("load",function(){setTimeout(hideLoader,200);});}
-  setTimeout(hideLoader,3000);
-})();
-</script>
-', "\n";
         self::_printQuickActionMenuHolder();
         self::printPopupContainer();
     }
@@ -123,15 +100,11 @@ class TemplateUtility
 
         echo '<div id="headerBlock">', "\n";
 
-        /* Left side — Burger button + Neutara Logo */
+        /* Left side — Sidebar toggle button (brand lives in the sidebar header now) */
         echo '<div id="headerLogo">', "\n";
         echo '<button class="sidebar-toggle-btn header-burger" onclick="toggleSidebar()" title="Toggle Sidebar">', "\n";
         echo '<svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>', "\n";
         echo '</button>', "\n";
-        echo '<a href="', $indexName, '?m=home" class="header-brand-link">', "\n";
-        echo '<img src="images/Neutaralogo.jpg" alt="Neutara ATS" onerror="this.style.display=\'none\';" />', "\n";
-        echo '<span>Neutara ATS</span>', "\n";
-        echo '</a>', "\n";
         echo '</div>', "\n";
 
         if (!eval(Hooks::get('TEMPLATE_LIVE_CHAT'))) return;
@@ -600,22 +573,35 @@ class TemplateUtility
                     shouldn't be drawn. */
 
         echo '<div id="header">', "\n";
-        
+
+        $indexNameForBrand = CATSUtility::getIndexName();
+        echo '<div class="sidebar-brand">', "\n";
+        echo '<a href="', $indexNameForBrand, '?m=home" class="sidebar-brand-link">', "\n";
+        echo '<span class="sidebar-brand-mark"><img src="images/neutara-icon.png" alt="" onerror="this.parentNode.textContent=\'N\';" /></span>', "\n";
+        echo '<span class="sidebar-brand-text">', "\n";
+        echo '<span class="sidebar-brand-title">Neutara ATS</span>', "\n";
+        echo '<span class="sidebar-brand-subtitle">Recruiting Suite</span>', "\n";
+        echo '</span>', "\n";
+        echo '</a>', "\n";
+        echo '</div>', "\n";
+
         echo '<ul id="primary">', "\n";
         
-        /* Add nav icons for visual enhancement */
+        /* Nav icons — flat line-style SVGs (no emoji, renders consistently
+         * across platforms and matches the minimal sidebar aesthetic). */
+        $svgAttrs = 'width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
         $navIcons = array(
-            'home' => '🏠',
-            'activity' => '📊',
-            'joborders' => '💼',
-            'candidates' => '👥',
-            'companies' => '🏢',
-            'contacts' => '📇',
-            'lists' => '📋',
-            'calendar' => '📅',
-            'reports' => '📈',
-            'settings' => '⚙️',
-            'orgchart' => '👤'
+            'home' => '<svg '.$svgAttrs.'><path d="M3 11l9-8 9 8"/><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/></svg>',
+            'activity' => '<svg '.$svgAttrs.'><polyline points="3 12 8 12 10 18 14 6 16 12 21 12"/></svg>',
+            'joborders' => '<svg '.$svgAttrs.'><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>',
+            'candidates' => '<svg '.$svgAttrs.'><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+            'companies' => '<svg '.$svgAttrs.'><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/></svg>',
+            'contacts' => '<svg '.$svgAttrs.'><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M15 8h4"/><path d="M15 12h4"/><path d="M5 16c1-2 3-3 4-3s3 1 4 3"/></svg>',
+            'lists' => '<svg '.$svgAttrs.'><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>',
+            'calendar' => '<svg '.$svgAttrs.'><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+            'reports' => '<svg '.$svgAttrs.'><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>',
+            'settings' => '<svg '.$svgAttrs.'><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+            'orgchart' => '<svg '.$svgAttrs.'><circle cx="12" cy="5" r="2.5"/><circle cx="5" cy="19" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M12 7.5v5"/><path d="M12 12.5H5v4"/><path d="M12 12.5h7v4"/></svg>'
         );
 
         $indexName = CATSUtility::getIndexName();
@@ -662,7 +648,7 @@ class TemplateUtility
                 $alPosition = strpos($tabText, "*al=");
                 if ($alPosition === false)
                 {
-                    $icon = isset($navIcons[strtolower($moduleName)]) ? $navIcons[strtolower($moduleName)] . ' ' : '';
+                    $icon = isset($navIcons[strtolower($moduleName)]) ? $navIcons[strtolower($moduleName)] : '';
                     echo '<li><a class="', $className, '" href="', $indexName,
                          '?m=', $moduleName, '" data-tooltip="', htmlspecialchars($tabText), '"><span class="nav-icon">', $icon, '</span>', $tabText, '</a></li>', "\n";
                 }
@@ -679,7 +665,7 @@ class TemplateUtility
                      if ($_SESSION['CATS']->getAccessLevel($soName) >= $al ||
                          $_SESSION['CATS']->isDemo())
                      {
-                        $icon = isset($navIcons[strtolower($moduleName)]) ? $navIcons[strtolower($moduleName)] . ' ' : '';
+                        $icon = isset($navIcons[strtolower($moduleName)]) ? $navIcons[strtolower($moduleName)] : '';
                         $displayText = substr($tabText, 0, $alPosition);
                         echo '<li><a class="', $className, '" href="', $indexName, '?m=', $moduleName, '" data-tooltip="', htmlspecialchars($displayText), '"><span class="nav-icon">', $icon, '</span>',
                              $displayText, '</a></li>', "\n";
@@ -700,7 +686,7 @@ class TemplateUtility
              * closed after subtabs are printed. */
             echo '<li>';
 
-            $icon = isset($navIcons[strtolower($moduleName)]) ? $navIcons[strtolower($moduleName)] . ' ' : '';
+            $icon = isset($navIcons[strtolower($moduleName)]) ? $navIcons[strtolower($moduleName)] : '';
             echo '<a class="active" href="', $indexName, '?m=', $moduleName,
                  '" data-tooltip="', htmlspecialchars($tabText), '"><span class="nav-icon">', $icon, '</span>', $tabText, '</a>', "\n";
 
@@ -832,6 +818,34 @@ class TemplateUtility
         echo '</a>';
         echo '</div>', "\n";
 
+        echo '</div>', "\n";
+    }
+
+    /**
+     * Prints the breadcrumb + title row used at the top of detail/show
+     * pages ("‹ List Name / Current Record›"), so every module reuses one
+     * markup shape instead of hand-copying its own breadcrumb HTML.
+     *
+     * @param string $listURL      href for the "back to list" link
+     * @param string $listLabel    label for the "back to list" link (e.g. 'Job Orders')
+     * @param string $currentLabel current record's display name (e.g. a candidate's full name)
+     * @param string $iconPath     optional module icon image path
+     * @return void
+     */
+    public static function printBreadcrumb($listURL, $listLabel, $currentLabel, $iconPath = null)
+    {
+        echo '<div class="page-header-row">', "\n";
+        echo '    <div class="page-header-left">', "\n";
+        if ($iconPath !== null)
+        {
+            echo '        <img src="', $iconPath, '" width="24" height="24" alt="" class="page-header-icon" />', "\n";
+        }
+        echo '        <h2 class="page-breadcrumb">';
+        echo '<a href="', $listURL, '">', htmlspecialchars($listLabel), '</a>';
+        echo '<span class="page-breadcrumb-sep">&rsaquo;</span>';
+        echo '<span class="page-breadcrumb-current">', htmlspecialchars($currentLabel), '</span>';
+        echo '</h2>', "\n";
+        echo '    </div>', "\n";
         echo '</div>', "\n";
     }
 
@@ -1252,22 +1266,22 @@ document.addEventListener("DOMContentLoaded", function() {
         echo '<title>Neutara ATS Tool - ', $pageTitle, '</title>', "\n";
         echo '<meta http-equiv="Content-Type" content="text/html; charset=', HTML_ENCODING, '" />', "\n";
         echo '<meta name="viewport" content="width=device-width, initial-scale=1.0" />', "\n";
-        echo '<link rel="preconnect" href="https://fonts.googleapis.com" />', "\n";
-        echo '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />', "\n";
-        echo '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />', "\n";
+        $faviconSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#0c18d4"/><text x="16" y="22" font-family="Arial, sans-serif" font-size="18" font-weight="800" fill="#fff" text-anchor="middle">N</text></svg>';
+        echo '<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,' . rawurlencode($faviconSvg) . '" />', "\n";
+        echo '<link href="inter.css'.$javascriptAntiCache.'" rel="stylesheet" />', "\n";
         echo '<link rel="alternate" type="application/rss+xml" title="RSS" href="',
              CATSUtility::getIndexName(), '?m=rss" />', "\n";
 
-        /* Core JS files */
-        echo '<script type="text/javascript" src="js/lib.js'.$javascriptAntiCache.'"></script>', "\n";
-        echo '<script type="text/javascript" src="js/quickAction.js'.$javascriptAntiCache.'"></script>', "\n";
-        echo '<script type="text/javascript" src="js/calendarDateInput.js'.$javascriptAntiCache.'"></script>', "\n";
-        echo '<script type="text/javascript" src="js/submodal/subModal.js'.$javascriptAntiCache.'"></script>', "\n";
+        /* Core JS files — lib.js, quickAction.js, calendarDateInput.js,
+         * and submodal/subModal.js are combined into one bundle
+         * (js/core-bundle.js) since they load unconditionally on every page;
+         * see that file's header comment for how to regenerate it. jQuery
+         * stays separate since it's vendored third-party code. */
+        echo '<script type="text/javascript" src="js/core-bundle.js'.$javascriptAntiCache.'"></script>', "\n";
         echo '<script type="text/javascript" src="js/jquery-1.3.2.min.js'.$javascriptAntiCache.'"></script>', "\n";
         echo '<script type="text/javascript">CATSIndexName = "'.CATSUtility::getIndexName().'";</script>', "\n";
 
        $headIncludes[] = 'main.css';
-        $headIncludes[] = 'js/ats3d.js';
 
         foreach ($headIncludes as $key => $filename)
         {

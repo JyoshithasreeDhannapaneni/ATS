@@ -217,7 +217,12 @@ function suggestListPopulate(focusID, sessionCookie, lookupText, maxResults, def
                     + 'document.getElementById(resultsElementID).style.display = \'none\'; '
                     + 'document.getElementById(IDElementID).value='
                     + IDNode.firstChild.nodeValue + ';'
-                    + 'dataValidInput = true;"'
+                    + 'dataValidInput = true;'
+                    /* Selecting a suggestion sets .value directly, which does not
+                     * fire a native change event; dispatch one so onchange="..."
+                     * handlers on the text input (e.g. auto-generating a Job ID
+                     * once a company is picked) still run. */
+                    + 'document.getElementById(textInputID).dispatchEvent(new Event(\'change\', {bubbles:true}));"'
                     + 'onmouseover="this.className += highlightClass" '
                     + 'onmouseout="this.className = this.className.replace(highlightClass, \'\')">'
                     + nameNodeValue + '</div>';

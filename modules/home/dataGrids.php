@@ -51,9 +51,9 @@ class ImportantPipelineDashboard extends DataGrid
         $this->ajaxMode = true;
         $this->showExportColumn = false;
         $this->showExportCheckboxes = false;
-        $this->showActionArea = true;
-        $this->showChooseColumnsBox = true;
-        $this->allowResizing = true;
+        $this->showActionArea = false;
+        $this->showChooseColumnsBox = false;
+        $this->allowResizing = false;
         $this->dateCriterion = '';
         $this->globalStyle = 'font-size:11px;';
         $this->ignoreSavedColumnLayouts = true;
@@ -212,10 +212,10 @@ class CallsDataGrid extends DataGrid
         $this->ajaxMode = true;
         $this->showExportColumn = false;
         $this->showExportCheckboxes = false;
-        $this->showActionArea = true;
+        $this->showActionArea = false;
         $this->allowSorting = false;
-        $this->showChooseColumnsBox = true;
-        $this->allowResizing = true;
+        $this->showChooseColumnsBox = false;
+        $this->allowResizing = false;
         $this->dateCriterion = '';
         $this->globalStyle = 'font-size:11px; margin:1px; padding:1px;';
         $this->listStyle = true;

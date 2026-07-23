@@ -24,6 +24,12 @@ vendor/
 # OS files
 .DS_Store
 
+# Local dev/QA artifacts (screenshots, MCP browser state, local Claude settings)
+/*.png
+.playwright-mcp/
+composer-setup.php
+.claude/settings.local.json
+
 # Development artifacts
 tools/
 dbcheck.php

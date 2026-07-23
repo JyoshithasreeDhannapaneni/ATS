@@ -3,8 +3,10 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html>
     <head>
-        <title>OpenCATS - Login</title>
+        <title>Neutara ATS Tool - Login</title>
         <meta http-equiv="Content-Type" content="text/html; charset=<?php echo(HTML_ENCODING); ?>">
+        <?php $faviconSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#0c18d4"/><text x="16" y="22" font-family="Arial, sans-serif" font-size="18" font-weight="800" fill="#fff" text-anchor="middle">N</text></svg>'; ?>
+        <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<?php echo(rawurlencode($faviconSvg)); ?>" />
         <style type="text/css" media="all">@import "modules/login/login.css";</style>
         <script type="text/javascript" src="js/lib.js"></script>
         <script type="text/javascript" src="modules/login/validator.js"></script>
@@ -13,7 +15,7 @@
     <body>
 
     <div id="headerBlock">
-        <span id="mainLogo">OpenCATS</span>
+        <span id="mainLogo">Neutara ATS</span>
     </div>
 
     <div id="contents">
@@ -51,7 +53,7 @@
 
             <div id="loginText">
                 <div class="ctr"><img src="images/security.gif" width="64" height="64" alt="security" /></div>
-                <p>Welcome to OpenCATS!</p>
+                <p>Welcome to Neutara ATS!</p>
             </div>
 
             <div style="clear: both;"></div>

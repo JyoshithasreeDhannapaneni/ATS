@@ -4,7 +4,7 @@
 <?php TemplateUtility::printTabs($this->active, '', 'settings'); ?>
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+/* Inter is already loaded site-wide via inter.css in the common header. */
 
 .bulk-import-container {
     max-width: 1000px;
@@ -703,7 +703,7 @@
 
             <!-- Import Type Tabs -->
             <div class="import-tabs">
-                <button class="import-tab active" data-tab="csv" onclick="switchTab('csv')">
+                <button class="import-tab" data-tab="csv" onclick="switchTab('csv')">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                         <polyline points="14 2 14 8 20 8"/>
@@ -712,7 +712,7 @@
                     </svg>
                     CSV / Excel Import
                 </button>
-                <button class="import-tab" data-tab="resume" onclick="switchTab('resume')">
+                <button class="import-tab active" data-tab="resume" onclick="switchTab('resume')">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
                         <polyline points="14 2 14 8 20 8"/>
@@ -722,7 +722,7 @@
             </div>
 
             <!-- CSV Import Tab -->
-            <div id="csvTab" class="tab-content active">
+            <div id="csvTab" class="tab-content">
                 <!-- Template Download Section -->
                 <div class="template-section">
                     <h4>
@@ -777,7 +777,7 @@
             </div>
 
             <!-- Resume Upload Tab -->
-            <div id="resumeTab" class="tab-content">
+            <div id="resumeTab" class="tab-content active">
                 <!-- Resume Upload Zone -->
                 <div class="upload-zone" id="resumeUploadZone" onclick="document.getElementById('resumeFileInput').click()">
                     <input type="file" id="resumeFileInput" class="hidden-input" accept=".pdf,.doc,.docx,.txt,.rtf,.csv" multiple onchange="handleResumeFiles(this.files)">
@@ -874,7 +874,7 @@
 
 <script>
 // State
-let currentTab = 'csv';
+let currentTab = 'resume';
 let csvData = [];
 let resumeFiles = [];
 

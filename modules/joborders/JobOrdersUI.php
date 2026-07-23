@@ -531,7 +531,27 @@ class JobOrdersUI extends UserInterface
             && $_GET['jobCreated'] === '1'
         );
 
+        /* Application status rollup (received / withdrawn / placed / etc.) */
+        $db = DatabaseConnection::getInstance();
+        $statusCountsRS = $db->getAllAssoc(sprintf(
+            "SELECT cjs.short_description AS statusName, COUNT(*) AS statusCount
+             FROM candidate_joborder cj
+             LEFT JOIN candidate_joborder_status cjs
+                 ON cjs.candidate_joborder_status_id = cj.status
+             WHERE cj.joborder_id = %d AND cj.site_id = %d
+             GROUP BY cjs.short_description
+             ORDER BY statusCount DESC",
+            $jobOrderID, $this->_siteID
+        ));
+        $totalApplications = 0;
+        foreach ($statusCountsRS as $row)
+        {
+            $totalApplications += (int) $row['statusCount'];
+        }
+
         $this->_template->assign('active', $this);
+        $this->_template->assign('statusCountsRS', $statusCountsRS);
+        $this->_template->assign('totalApplications', $totalApplications);
         $this->_template->assign('isPublic', $isPublic);
         $this->_template->assign('publicApplyUrl', $publicApplyUrl);
         $this->_template->assign('jobCreatedHighlight', $jobCreatedHighlight);
@@ -698,6 +718,13 @@ class JobOrdersUI extends UserInterface
         $this->_template->assign('sessionCookie', $_SESSION['CATS']->getCookie());
         $this->_template->assign('jobTypes', (new JobOrderTypes())->getAll());
 
+        $db = DatabaseConnection::getInstance();
+        $pipelineTemplatesRS = $db->getAllAssoc(sprintf(
+            "SELECT template_id AS templateID, name FROM pipeline_template WHERE site_id = %s ORDER BY name ASC",
+            $db->makeQueryInteger($this->_siteID)
+        ));
+        $this->_template->assign('pipelineTemplatesRS', $pipelineTemplatesRS);
+
         if (!eval(Hooks::get('JO_ADD'))) return;
 
         $this->_template->display('./modules/joborders/Add.tpl');
@@ -762,6 +789,15 @@ class JobOrdersUI extends UserInterface
             $startDate = DateUtility::convert(
                 '-', $startDate, $dateFormatFlag, DATE_FORMAT_YYYYMMDD
             );
+
+            /* Append the optional start time (HH:MM, from an <input type="time">)
+             * so the DATETIME column can carry a time-of-day, not just midnight.
+             */
+            $startTime = $this->getTrimmedInput('startTime', $_POST);
+            if (!empty($startTime) && preg_match('/^([01][0-9]|2[0-3]):[0-5][0-9]$/', $startTime))
+            {
+                $startDate .= ' ' . $startTime . ':00';
+            }
         }
 
         /* Hot job? */
@@ -806,12 +842,16 @@ class JobOrdersUI extends UserInterface
 
         if (!eval(Hooks::get('JO_ON_ADD'))) return;
 
+        $contactPhone = $this->getTrimmedInput('contactPhone', $_POST);
+        $pipelineTemplateID = $this->getTrimmedInput('pipelineTemplateID', $_POST);
+        $pipelineTemplateID = $pipelineTemplateID !== '' ? intval($pipelineTemplateID) : null;
+
         $jobOrders = new JobOrders($this->_siteID);
         $jobOrderID = $jobOrders->add(
             $title, $companyID, $contactID, $description, $notes, $duration,
             $maxRate, $type, $isHot, $isPublic, $openings, $companyJobID,
             $salary, $city, $state, $startDate, $this->_userID, $recruiter,
-            $owner, $department, $questionnaireID
+            $owner, $department, $questionnaireID, $contactPhone, $pipelineTemplateID
         );
 
         if ($jobOrderID <= 0)
@@ -904,6 +944,13 @@ class JobOrdersUI extends UserInterface
         /* Date format for DateInput()s. */
         $data['startDateUser'] = $data['startDate'];
 
+        /* Pre-fill the start-time <input type="time">; treat midnight as
+         * "no time set" since that's what a date-only save produces.
+         */
+        $data['startTimeUser'] = (!empty($data['startTimeOfDay']) && $data['startTimeOfDay'] !== '00:00')
+            ? $data['startTimeOfDay']
+            : '';
+
         /* Get extra fields. */
         $extraFieldRS = $jobOrders->extraFields->getValuesForEdit($jobOrderID);
 
@@ -958,6 +1005,13 @@ class JobOrdersUI extends UserInterface
         $this->_template->assign('sessionCookie', $_SESSION['CATS']->getCookie());
         $this->_template->assign('jobTypes', (new JobOrderTypes())->getAll());
         $this->_template->assign('jobOrderStatuses', (JobOrderStatuses::getAll()));
+
+        $db = DatabaseConnection::getInstance();
+        $pipelineTemplatesRS = $db->getAllAssoc(sprintf(
+            "SELECT template_id AS templateID, name FROM pipeline_template WHERE site_id = %s ORDER BY name ASC",
+            $db->makeQueryInteger($this->_siteID)
+        ));
+        $this->_template->assign('pipelineTemplatesRS', $pipelineTemplatesRS);
 
         if (!eval(Hooks::get('JO_EDIT'))) return;
 
@@ -1022,6 +1076,15 @@ class JobOrdersUI extends UserInterface
             $startDate = DateUtility::convert(
                 '-', $startDate, $dateFormatFlag, DATE_FORMAT_YYYYMMDD
             );
+
+            /* Append the optional start time (HH:MM, from an <input type="time">)
+             * so the DATETIME column can carry a time-of-day, not just midnight.
+             */
+            $startTime = $this->getTrimmedInput('startTime', $_POST);
+            if (!empty($startTime) && preg_match('/^([01][0-9]|2[0-3]):[0-5][0-9]$/', $startTime))
+            {
+                $startDate .= ' ' . $startTime . ':00';
+            }
         }
 
         /* Bail out if we received an invalid status. */
@@ -1145,10 +1208,15 @@ class JobOrdersUI extends UserInterface
 
         if (!eval(Hooks::get('JO_ON_EDIT_PRE'))) return;
 
+        $contactPhone = $this->getTrimmedInput('contactPhone', $_POST);
+        $pipelineTemplateID = $this->getTrimmedInput('pipelineTemplateID', $_POST);
+        $pipelineTemplateID = $pipelineTemplateID !== '' ? intval($pipelineTemplateID) : null;
+
         if (!$jobOrders->update($jobOrderID, $title, $companyJobID, $companyID, $contactID,
             $description, $notes, $duration, $maxRate, $type, $isHot,
             $openings, $openingsAvailable, $salary, $city, $state, $startDate, $status, $recruiter,
-            $owner, $public, $email, $emailAddress, $department, $questionnaireID))
+            $owner, $public, $email, $emailAddress, $department, $questionnaireID, $contactPhone,
+            $pipelineTemplateID))
         {
             CommonErrors::fatal(COMMONERROR_RECORDERROR, $this, 'Failed to update job order.');
         }

@@ -6,235 +6,189 @@
         <?php TemplateUtility::printQuickSearch(); ?>
 
         <div id="contents">
-            <table>
-                <tr>
-                    <td width="3%">
-                        <img src="images/contact.gif" width="24" height="24" border="0" alt="Contacts" style="margin-top: 3px;" />&nbsp;
-                    </td>
-                    <td><h2>Contacts: Add Contact</h2></td>
-                </tr>
-            </table>
+            <?php TemplateUtility::printBreadcrumb(
+                CATSUtility::getIndexName().'?m=contacts&amp;a=listRecent',
+                'Contacts',
+                'Add Contact',
+                'images/contact.gif'
+            ); ?>
 
             <form name="addContactForm" id="addContactForm" action="<?php echo(CATSUtility::getIndexName()); ?>?m=contacts&amp;a=add&amp;v=<?php if ($this->selectedCompanyID === false) { echo('-1'); } else { echo($this->selectedCompanyID); } ?>" method="post" onsubmit="return checkAddForm(document.addContactForm);" autocomplete="off">
                 <input type="hidden" name="postback" id="postback" value="postback" />
-                <table>
-                    <tr>
-                        <td width="50%" height="100%" valign="top">
-                            <p class="noteUnsized">Basic Information</p>
 
-                            <table class="editTable" width="100%" height="285">
-                                <tr>
-                                    <td class="tdVertical">
-                                        <label id="firstNameLabel" for="firstName">First Name:</label>
-                                    </td>
-                                    <td class="tdData">
-                                        <input type="text" name="firstName" id="firstName" class="inputbox" style="width: 150px" />&nbsp;*
-                                    </td>
-                                </tr>
+                <div class="form-container">
+                    <div class="form-header">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M15 8h4"/><path d="M15 12h4"/><path d="M5 16c1-2 3-3 4-3s3 1 4 3"/></svg>
+                        <h2>Add Contact</h2>
+                    </div>
 
-                                <tr>
-                                    <td class="tdVertical">
-                                        <label id="lastNameLabel" for="lastName">Last Name:</label>
-                                    </td>
-                                    <td class="tdData">
-                                        <input type="text" name="lastName" id="lastName" class="inputbox" style="width: 150px" />&nbsp;*
-                                    </td>
-                                </tr>
+                    <div class="form-grid">
+                        <div class="form-column">
+                            <div class="form-row">
+                                <label class="form-label">First Name:</label>
+                                <div class="form-input">
+                                    <input type="text" name="firstName" id="firstName" />
+                                    <span class="required">*</span>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <label class="form-label">Last Name:</label>
+                                <div class="form-input">
+                                    <input type="text" name="lastName" id="lastName" />
+                                    <span class="required">*</span>
+                                </div>
+                            </div>
+                            <div class="form-row" style="align-items: flex-start;">
+                                <label class="form-label" style="margin-top: 8px;">Company:</label>
+                                <div class="form-input" style="position: relative; flex-wrap: wrap;">
+                                    <input type="hidden" name="companyID" id="companyID" value="<?php if ($this->selectedCompanyID === false) { echo(0); } else { echo($this->selectedCompanyID); } ?>" />
+                                    <input type="text" name="companyName" id="companyName" value="<?php if ($this->selectedCompanyID !== false) { $this->_($this->companyRS['name']); } ?>" onFocus="suggestListActivate('getCompanyNames', 'companyName', 'CompanyResults', 'companyID', 'ajaxTextEntryHover', 0, '<?php echo($this->sessionCookie); ?>', 'helpShim');" <?php if ($this->selectedCompanyID !== false) { echo('disabled'); } ?> />
+                                    <span class="required">*</span>
+                                    <?php if ($this->defaultCompanyID !== false && $this->selectedCompanyID === false): ?>
+                                        <label style="font-size: 12px; font-weight: 500; color: var(--gray-600); display: flex; align-items: center; gap: 4px; width: 100%; margin-top: 6px;">
+                                            <input type="checkbox" id="defaultCompany" onchange="if (this.checked){ document.getElementById('companyName').disabled = true; document.getElementById('companyID').value = '<?php echo($this->defaultCompanyID); ?>'; document.getElementById('companyName').value = &quot;<?php $this->_($this->defaultCompanyRS['name']); ?>&quot;; } else { document.getElementById('companyName').disabled = false; }" />
+                                            Internal Contact
+                                        </label>
+                                    <?php endif; ?>
+                                    <script type="text/javascript">watchCompanyIDChange('<?php echo($this->sessionCookie); ?>');</script>
+                                    <iframe id="helpShim" src="javascript:void(0);" scrolling="no" frameborder="0" style="position:absolute; display:none;"></iframe>
+                                    <div id="CompanyResults" class="ajaxSearchResults"></div>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <label class="form-label">Title:</label>
+                                <div class="form-input">
+                                    <input type="text" name="title" id="title" />
+                                    <span class="required">*</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-column">
+                            <div class="form-row">
+                                <label class="form-label">E-Mail:</label>
+                                <div class="form-input">
+                                    <input type="text" name="email1" id="email1" />
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <label class="form-label">Cell Phone:</label>
+                                <div class="form-input">
+                                    <input type="text" name="phoneCell" id="phoneCell" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                                <tr>
-                                    <td class="tdVertical">
-                                        <label id="companyIDLabel" for="companyID">Company:</label>
-                                    </td>
-                                    <td class="tdData">
-                                        <input type="hidden" name="companyID" id="companyID" value="<?php if ($this->selectedCompanyID === false) { echo(0); } else { echo($this->selectedCompanyID); } ?>" />
-                                        <input type="text" name="companyName" id="companyName" value="<?php if ($this->selectedCompanyID !== false) { $this->_($this->companyRS['name']); } ?>" class="inputbox" style="width: 150px" onFocus="suggestListActivate('getCompanyNames', 'companyName', 'CompanyResults', 'companyID', 'ajaxTextEntryHover', 0, '<?php echo($this->sessionCookie); ?>', 'helpShim');" <?php if ($this->selectedCompanyID !== false) { echo('disabled'); } ?>/>&nbsp;*
-                                        <?php if ($this->defaultCompanyID !== false && $this->selectedCompanyID === false): ?>
-                                            <input type="checkbox" id="defaultCompany" onchange="if (this.checked){ document.getElementById('companyName').disabled = true; document.getElementById('companyID').value = '<?php echo($this->defaultCompanyID); ?>'; document.getElementById('companyName').value = &quot;<?php $this->_($this->defaultCompanyRS['name']); ?>&quot;; } else { document.getElementById('companyName').disabled = false; }">&nbsp;Internal Contact
-                                        <?php endif; ?>
-                                        <script type="text/javascript">watchCompanyIDChange('<?php echo($this->sessionCookie); ?>');</script>
-                                        <br />
-                                        <iframe id="helpShim" src="javascript:void(0);" scrolling="no" frameborder="0" style="position:absolute; display:none;"></iframe>
-                                        <div id="CompanyResults" class="ajaxSearchResults"></div>
-                                    </td>
-                                </tr>
+                    <div class="form-more-toggle">
+                        <button type="button" id="contactMoreFieldsBtn" onclick="toggleFormFields('contactMoreFields', 'contactMoreFieldsBtn');">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                            Show More Fields
+                        </button>
+                    </div>
 
-                                <tr>
-                                    <td class="tdVertical">
-                                        <label id="titleLabel" for="title">Title:</label>
-                                    </td>
-                                    <td class="tdData">
-                                        <input type="text" name="title" id="title" class="inputbox" style="width: 150px" />&nbsp;*
-                                    </td>
-                                </tr>
+                    <div id="contactMoreFields" class="form-grid form-additional-fields">
+                        <div class="form-column">
+                            <div class="form-row">
+                                <label class="form-label">Department:</label>
+                                <div class="form-input">
+                                    <select id="departmentSelect" name="department" onchange="if (this.value == 'edit') { listEditor('Departments', 'departmentSelect', 'departmentsCSV', false); this.value = '(none)'; } if (this.value == 'nullline') { this.value = '(none)'; }">
+                                        <option value="edit">(Edit Departments)</option>
+                                        <option value="nullline">-------------------------------</option>
+                                        <option value="(none)" selected="selected">(None)</option>
+                                    </select>
+                                    <input type="hidden" id="departmentsCSV" name="departmentsCSV" value="" />
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <label class="form-label">Reports To:</label>
+                                <div class="form-input">
+                                    <select id="reportsTo" name="reportsTo">
+                                        <option value="(none)" selected="selected">(None)</option>
+                                        <?php foreach ($this->reportsToRS as $index => $contact): ?>
+                                            <option value="<?php $this->_($contact['contactID']); ?>"><?php $this->_($contact['firstName'] . ' ' . $contact['lastName']); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <img src="images/indicator2.gif" alt="AJAX" id="ajaxIndicatorReportsTo" style="vertical-align: middle; visibility: hidden;" />
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <label class="form-label">Hot Contact:</label>
+                                <div class="form-input">
+                                    <input type="checkbox" id="isHot" name="isHot" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-column">
+                            <div class="form-row">
+                                <label class="form-label">2nd E-Mail:</label>
+                                <div class="form-input">
+                                    <input type="text" name="email2" id="email2" />
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <label class="form-label">Work Phone:</label>
+                                <div class="form-input">
+                                    <input type="text" name="phoneWork" id="phoneWork" />
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <label class="form-label">Other Phone:</label>
+                                <div class="form-input">
+                                    <input type="text" name="phoneOther" id="phoneOther" />
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <label class="form-label">Address:</label>
+                                <div class="form-input">
+                                    <textarea name="address" id="address"></textarea>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <label class="form-label">City:</label>
+                                <div class="form-input">
+                                    <input type="text" name="city" id="city" />
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <label class="form-label">State:</label>
+                                <div class="form-input">
+                                    <input type="text" name="state" id="state" />
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <label class="form-label">Postal Code:</label>
+                                <div class="form-input">
+                                    <input type="text" name="zip" id="zip" style="max-width: 110px;" />
+                                    <button type="button" class="form-btn form-btn-secondary" onclick="CityState_populate('zip', 'ajaxIndicator');">Lookup</button>
+                                    <img src="images/indicator2.gif" alt="AJAX" id="ajaxIndicator" style="vertical-align: middle; visibility: hidden;" />
+                                </div>
+                            </div>
+                        </div>
+                        <?php if (count($this->extraFieldRS) > 0): ?>
+                        <div class="form-column">
+                            <?php for ($i = 0; $i < count($this->extraFieldRS); $i++): ?>
+                            <div class="form-row">
+                                <label class="form-label" id="extraFieldTd<?php echo($i); ?>"><?php $this->_($this->extraFieldRS[$i]['fieldName']); ?>:</label>
+                                <div class="form-input" id="extraFieldData<?php echo($i); ?>">
+                                    <?php echo($this->extraFieldRS[$i]['addHTML']); ?>
+                                </div>
+                            </div>
+                            <?php endfor; ?>
+                        </div>
+                        <?php endif; ?>
+                    </div>
 
-                                <tr>
-                                    <td class="tdVertical">
-                                        <label id="departmentLabel" for="department">Department:</label>
-                                    </td>
-                                    <td class="tdData">
-                                        <select id="departmentSelect" name="department" class="inputbox" style="width: 150px;" onchange="if (this.value == 'edit') { listEditor('Departments', 'departmentSelect', 'departmentsCSV', false); this.value = '(none)'; } if (this.value == 'nullline') { this.value = '(none)'; }">
-                                            <option value="edit">(Edit Departments)</option>
-                                            <option value="nullline">-------------------------------</option>
-                                            <option value="(none)" selected="selected">(None)</option>
-                                        </select>
-                                        <input type="hidden" id="departmentsCSV" name="departmentsCSV" value="" />
-                                    </td>
-                                </tr>
+                    <div class="form-section">
+                        <div class="form-section-title">Misc. Notes:</div>
+                        <textarea name="notes" id="notes" rows="5"></textarea>
+                    </div>
 
-                                 <tr>
-                                    <td class="tdVertical">
-                                        <label id="departmentLabel" for="department">Reports to:</label>
-                                    </td>
-                                    <td class="tdData">
-                                        <select id="reportsTo" name="reportsTo" class="inputbox" style="width: 150px;" >
-                                            <option value="(none)" selected="selected">(None)</option>
-                                            <?php foreach ($this->reportsToRS as $index => $contact): ?>
-                                                <option value="<?php $this->_($contact['contactID']); ?>"><?php $this->_($contact['firstName'] . ' ' . $contact['lastName']); ?></option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                        &nbsp; <img src="images/indicator2.gif" alt="AJAX" id="ajaxIndicatorReportsTo" style="vertical-align: middle; visibility: hidden; margin-left: 5px;" />
-                                    </td>
-                                </tr>
-                                
-                               <tr>
-                                    <td class="tdVertical">
-                                        <label id="isHotLabel" for="isHot">Hot Contact:</label>
-                                    </td>
-                                    <td class="tdData">
-                                        <input type="checkbox" id="isHot" name="isHot" />&nbsp;
-                                    </td>
-                                </tr>
-
-                                <?php /* These empty rows force the other rows to group at the top and align with the right-side table. */ ?>
-                                <tr><td>&nbsp;</td></tr>
-                                <tr><td>&nbsp;</td></tr>
-                                <tr><td>&nbsp;</td></tr>
-                                <tr><td>&nbsp;</td></tr>
-                                <tr><td>&nbsp;</td></tr>
-                            </table>
-                        </td>
-
-                        <td width="50%" height="100%" valign="top">
-                            <p class="noteUnsized">Contact Information</p>
-
-                            <table class="editTable" width="100%" height="285">
-                                <tr>
-                                    <td class="tdVertical">
-                                        <label id="email1Label" for="email1">E-Mail:</label>
-                                    </td>
-                                    <td class="tdData">
-                                        <input type="text" name="email1" id="email1" class="inputbox" style="width: 150px" />
-                                    </td>
-                                </tr>
-
-                                <tr>
-                                    <td class="tdVertical">
-                                        <label id="email2Label" for="email2">2nd E-Mail:</label>
-                                    </td>
-                                    <td class="tdData">
-                                        <input type="text" name="email2" id="email2" class="inputbox" style="width: 150px" />
-                                    </td>
-                                </tr>
-
-                                <tr>
-                                    <td class="tdVertical">
-                                        <label id="phoneWorkLabel" for="phoneWork">Work Phone:</label>
-                                    </td>
-                                    <td class="tdData">
-                                        <input type="text" name="phoneWork" id="phoneWork" class="inputbox" style="width: 150px" />
-                                    </td>
-                                </tr>
-
-                                <tr>
-                                    <td class="tdVertical">
-                                        <label id="phoneCellLabel" for="phoneCell">Cell Phone:</label>
-                                    </td>
-                                    <td class="tdData">
-                                        <input type="text" name="phoneCell" id="phoneCell" class="inputbox" style="width: 150px" />
-                                    </td>
-                                </tr>
-
-                                <tr>
-                                    <td class="tdVertical">
-                                        <label id="phoneOtherLabel" for="phoneOther">Other Phone:</label>
-                                    </td>
-                                    <td class="tdData">
-                                        <input type="text" name="phoneOther" id="phoneOther" class="inputbox" style="width: 150px" />
-                                    </td>
-                                </tr>
-
-                                <tr>
-                                    <td class="tdVertical">
-                                        <label id="addressLabel" for="address">Address:</label>
-                                    </td>
-                                    <td class="tdData">
-                                        <textarea name="address" id="address" class="inputbox" style="width: 150px"></textarea>
-                                    </td>
-                                </tr>
-
-                                <tr>
-                                    <td class="tdVertical">
-                                        <label id="cityLabel" for="city">City:</label>
-                                    </td>
-                                    <td class="tdData">
-                                        <input type="text" name="city" id="city" class="inputbox" style="width: 150px" />
-                                    </td>
-                                </tr>
-
-                                <tr>
-                                    <td class="tdVertical">
-                                        <label id="stateLabel" for="state">State:</label>
-                                    </td>
-                                    <td class="tdData">
-                                        <input type="text" name="state" id="state" class="inputbox" style="width: 150px" />
-                                    </td>
-                                </tr>
-
-                                <tr>
-                                    <td class="tdVertical">
-                                        <label id="zipLabel" for="zip">Postal Code:</label>
-                                    </td>
-                                    <td class="tdData">
-                                        <input type="text" name="zip" id="zip" class="inputbox" style="width: 150px" />&nbsp;
-                                        <input type="button" class="button" onclick="CityState_populate('zip', 'ajaxIndicator');" value="Lookup" />
-                                        <img src="images/indicator2.gif" alt="AJAX" id="ajaxIndicator" style="vertical-align: middle; visibility: hidden; margin-left: 5px;" />
-                                    </td>
-                                </tr>
-
-                            </table>
-                        </td>
-                    </tr>
-                </table>
-
-                <p class="note">Other</p>
-
-                <table class="editTable">
-                    
-                    <?php for ($i = 0; $i < count($this->extraFieldRS); $i++): ?>
-                        <tr>
-                            <td class="tdVertical" id="extraFieldTd<?php echo($i); ?>">
-                                <label id="extraFieldLbl<?php echo($i); ?>">
-                                    <?php $this->_($this->extraFieldRS[$i]['fieldName']); ?>:
-                                </label>
-                            </td>
-                            <td class="tdData" id="extraFieldData<?php echo($i); ?>">
-                                <?php echo($this->extraFieldRS[$i]['addHTML']); ?>
-                            </td>
-                        </tr>
-                    <?php endfor; ?>
-
-                    <tr>
-                        <td class="tdVertical">
-                            <label id="notesLabel" for="notes">Misc. Notes:</label>
-                        </td>
-                        <td class="tdData">
-                            <textarea class="inputbox" name="notes" id="notes" rows="5" style="width: 400px;"></textarea>
-                        </td>
-                    </tr>
-                </table>
-                <input type="submit" class="button" value="Add Contact" />&nbsp;
-                <input type="reset"  class="button" value="Reset" />&nbsp;
-                <input type="button" class="button" value="Back to Contacts" onclick="javascript:goToURL('<?php echo(CATSUtility::getIndexName()); ?>?m=contacts&amp;a=listRecent');" />
+                    <div class="form-actions">
+                        <button type="submit" class="form-btn form-btn-primary">Add Contact</button>
+                        <button type="reset" class="form-btn form-btn-secondary">Reset</button>
+                        <button type="button" class="form-btn form-btn-dark" onclick="javascript:goToURL('<?php echo(CATSUtility::getIndexName()); ?>?m=contacts&amp;a=listRecent');">Back to Contacts</button>
+                    </div>
+                </div>
             </form>
 
             <script type="text/javascript">

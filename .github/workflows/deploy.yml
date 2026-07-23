@@ -1,9 +1,11 @@
 name: Deploy to Production
 
 # Manual trigger only — no push trigger. Deploying requires someone to
-# deliberately click "Run workflow" on the Actions tab (requires write access
-# to the repo, not admin). This is the approval gate: nothing deploys just
-# because code was pushed to main.
+# deliberately click "Run workflow" on the Actions tab and pick a branch
+# (requires write access to the repo, not admin). This is the approval gate:
+# nothing deploys just because code was pushed. Whichever branch/ref is
+# selected when dispatching is the branch that gets deployed — the server
+# checks out that exact ref rather than assuming main.
 on:
   workflow_dispatch: {}
 
@@ -21,5 +23,6 @@ jobs:
           script_stop: true
           script: |
             cd /opt/ATS
-            git pull origin main
+            git fetch origin
+            git checkout -B "${{ github.ref_name }}" "origin/${{ github.ref_name }}"
             docker compose -f docker-compose.local.yml up -d --build

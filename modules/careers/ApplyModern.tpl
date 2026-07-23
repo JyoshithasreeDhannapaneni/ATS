@@ -2,6 +2,7 @@
 global $careerPage;
 $jsBase = (isset($careerPage) && $careerPage == true) ? '../js/' : 'js/';
 $imgBase = (isset($careerPage) && $careerPage == true) ? '../images/' : 'images/';
+$rootBase = (isset($careerPage) && $careerPage == true) ? '../' : '';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -9,8 +10,7 @@ $imgBase = (isset($careerPage) && $careerPage == true) ? '../images/' : 'images/
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title><?php echo htmlspecialchars($this->siteName ?? 'Neutara'); ?> Careers – Apply</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="<?php echo($rootBase); ?>inter.css" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Inter',system-ui,sans-serif;background:#f8fafc;color:#1e293b;min-height:100vh;}
@@ -172,7 +172,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:#f8fafc;color:#1e293b;m
 <!-- ── Loader ── -->
 <div id="pageLoader">
   <div class="loader-logo">
-    <div class="loader-logo-box"><span>N</span></div>
+    <div class="loader-logo-box"><img src="<?php echo $imgBase; ?>Neutaralogo.jpg" alt="Neutara ATS" /></div>
     <div>
       <div class="loader-brand">Neutara ATS</div>
       <div class="loader-brand"><small>Applicant Tracking System</small></div>
@@ -184,7 +184,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:#f8fafc;color:#1e293b;m
 <!-- ── Navbar ── -->
 <nav class="cp-nav">
   <a href="<?php global $careerPage; echo (isset($careerPage)&&$careerPage)?'../index.php?m=careers&p=showAll':'index.php?m=careers&p=showAll'; ?>" class="cp-nav-brand">
-    <div class="cp-nav-logo"><span>N</span></div>
+    <div class="cp-nav-logo"><img src="<?php echo $imgBase; ?>Neutaralogo.jpg" alt="Neutara ATS" /></div>
     <div class="cp-nav-name">Neutara Careers<small>Applicant Tracking System</small></div>
   </a>
   <div class="cp-nav-links">

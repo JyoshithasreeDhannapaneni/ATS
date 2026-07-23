@@ -8,7 +8,7 @@ include_once(LEGACY_ROOT . '/lib/Analytics.php');
 
 $interface = new SecureAJAXInterface();
 
-if (!isset($_SESSION['CATS']) || $_SESSION['CATS']->getAccessLevel() < ACCESS_LEVEL_READ)
+if (!isset($_SESSION['CATS']) || $_SESSION['CATS']->getAccessLevel('reports.analyticsDashboard') < ACCESS_LEVEL_READ)
 {
     echo json_encode(['error' => 'Access denied.']);
     die();

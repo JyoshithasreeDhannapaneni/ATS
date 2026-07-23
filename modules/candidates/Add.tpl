@@ -408,7 +408,7 @@
         });
     }
     
-    (function() {
+    document.addEventListener("DOMContentLoaded", function() {
         var dropZone = document.getElementById("uploadContent");
         if (!dropZone) return;
         dropZone.addEventListener("dragover", function(e) { e.preventDefault(); dropZone.style.borderColor="#0078d4"; dropZone.style.background="#f0f8ff"; });
@@ -422,7 +422,7 @@
                 if (fi && window.DataTransfer) { var dt = new DataTransfer(); dt.items.add(files[0]); fi.files = dt.files; handleResumeUpload(); }
             }
         });
-    })();
+    });
 
     function fillFormFields(data) {
         var fieldMappings = {
@@ -593,7 +593,7 @@
                     <label for="jobOrderID">Add to Job Order Pipeline (Optional)</label>
                     <select name="jobOrderID" id="jobOrderID">
                         <option value="">-- Select Job Order --</option>
-                        <?php foreach ($jobOrders as $jobOrder): ?>
+                        <?php foreach ($this->jobOrders as $jobOrder): ?>
                             <option value="<?php echo $jobOrder['jobOrderID']; ?>"><?php echo htmlspecialchars($jobOrder['title']); ?> (<?php echo htmlspecialchars($jobOrder['companyName']); ?>)</option>
                         <?php endforeach; ?>
                     </select>

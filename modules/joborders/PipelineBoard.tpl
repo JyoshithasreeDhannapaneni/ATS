@@ -1,5 +1,5 @@
 <?php /* Neutara ATS - Kanban Pipeline Board */ ?>
-<?php TemplateUtility::printHeader('Pipeline Board', array('js/lib.js')); ?>
+<?php TemplateUtility::printHeader('Pipeline Board', array()); ?>
 <?php TemplateUtility::printHeaderBlock(); ?>
 <?php TemplateUtility::printTabs($this->active); ?>
 
@@ -7,7 +7,7 @@
     <?php TemplateUtility::printQuickSearch(); ?>
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        /* Inter is already loaded site-wide via inter.css in the common header. */
 
         :root {
             --kb-primary: #2563eb;

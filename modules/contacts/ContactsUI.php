@@ -68,8 +68,7 @@ class ContactsUI extends UserInterface
         $this->_moduleTabText = 'Contacts';
         $this->_subTabs = array(
             'Add Contact'     => CATSUtility::getIndexName() . '?m=contacts&amp;a=add*al=' . ACCESS_LEVEL_EDIT . '@contacts.add',
-            'Search Contacts' => CATSUtility::getIndexName() . '?m=contacts&amp;a=search',
-            'Cold Call List'  => CATSUtility::getIndexName() . '?m=contacts&amp;a=showColdCallList'
+            'Search Contacts' => CATSUtility::getIndexName() . '?m=contacts&amp;a=search'
         );
     }
 

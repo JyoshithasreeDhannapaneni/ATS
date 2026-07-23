@@ -174,7 +174,7 @@ class Analytics
                 AND cjo.date_created >= DATE_SUB(NOW(), INTERVAL %d DAY)
              WHERE u.site_id = %s AND u.is_demo = 0
              GROUP BY u.user_id, u.first_name, u.last_name
-             HAVING candidatesAdded > 0
+             HAVING COUNT(DISTINCT cjo.candidate_id) > 0
              ORDER BY placed DESC, submitted DESC",
             $this->_siteID,
             intval($periodDays),
@@ -218,7 +218,7 @@ class Analytics
                 SUM(CASE WHEN cjo.status >= 500 THEN 1 ELSE 0 END) AS interviewed,
                 SUM(CASE WHEN cjo.status = 800 THEN 1 ELSE 0 END) AS placed
              FROM candidate c
-             LEFT JOIN candidate_source cs ON c.source = cs.source_id
+             LEFT JOIN candidate_source cs ON c.source = cs.name
              LEFT JOIN candidate_joborder cjo
                 ON cjo.candidate_id = c.candidate_id AND cjo.site_id = c.site_id
              WHERE c.site_id = %s
@@ -264,11 +264,13 @@ class Analytics
         $summary['openPositions'] = intval($rs[0]['cnt']);
 
         // Placements this month
+        $firstOfMonth = date('Y-m-01 00:00:00');
         $sql = sprintf(
             "SELECT COUNT(*) AS cnt FROM candidate_joborder_status_history
              WHERE site_id = %s AND status_to = 800
-             AND date >= DATE_FORMAT(NOW(), '%%Y-%%m-01')",
-            $this->_siteID
+             AND date >= %s",
+            $this->_siteID,
+            $this->_db->makeQueryString($firstOfMonth)
         );
         $rs = $this->_db->getAllAssoc($sql);
         $summary['placementsThisMonth'] = intval($rs[0]['cnt']);

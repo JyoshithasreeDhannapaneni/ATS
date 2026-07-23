@@ -13,14 +13,12 @@ use OpenCATS\UI\QuickActionMenu;
         <?php TemplateUtility::printQuickSearch(); ?>
 
         <div id="contents">
-            <table>
-                <tr>
-                    <td width="3%">
-                        <img src="images/contact.gif" width="24" height="24" border="0" alt="Contacts" style="margin-top: 3px;" />&nbsp;
-                    </td>
-                    <td><h2>Contacts: Contact Details</h2></td>
-                </tr>
-            </table>
+            <?php TemplateUtility::printBreadcrumb(
+                CATSUtility::getIndexName().'?m=contacts&amp;a=listRecent',
+                'Contacts',
+                $this->data['firstName'].' '.$this->data['lastName'],
+                'images/contact.gif'
+            ); ?>
 
             <p class="note">Contact Details</p>
 
@@ -192,8 +190,8 @@ use OpenCATS\UI\QuickActionMenu;
                                     </div>
                                 <?php endforeach; ?>
                                 <?php if ($this->getUserAccessLevel('contacts.addActivityScheduleEvent') >= ACCESS_LEVEL_EDIT): ?>
-                                    <a href="#" onclick="showPopWin('<?php echo(CATSUtility::getIndexName()); ?>?m=contacts&amp;a=addActivityScheduleEvent&amp;contactID=<?php echo($this->contactID); ?>&amp;onlyScheduleEvent=true', 600, 200, null); return false;">
-                                        <img src="images/calendar_add.gif" width="16" height="16" border="0" alt="Schedule Event" class="absmiddle" />&nbsp;Schedule Event
+                                    <a href="#" class="detail-action-link" style="margin-top: 8px;" onclick="showPopWin('<?php echo(CATSUtility::getIndexName()); ?>?m=contacts&amp;a=addActivityScheduleEvent&amp;contactID=<?php echo($this->contactID); ?>&amp;onlyScheduleEvent=true', 600, 200, null); return false;">
+                                        <img src="images/calendar_add.gif" width="16" height="16" border="0" alt="" class="absmiddle" />Schedule Event
                                     </a>
                                 <?php endif; ?>
                                 </td>
@@ -202,27 +200,23 @@ use OpenCATS\UI\QuickActionMenu;
                     </td>
                 </tr>
             </table>
-            <?php if ($this->getUserAccessLevel('contacts.edit') >= ACCESS_LEVEL_EDIT): ?>
-                <a id="edit_link" href="<?php echo(CATSUtility::getIndexName()); ?>?m=contacts&amp;a=edit&amp;contactID=<?php echo($this->contactID); ?>">
-                    <img src="images/actions/edit.gif" width="16" height="16" class="absmiddle" alt="edit" border="0" />&nbsp;Edit
-                </a>
-                &nbsp;&nbsp;&nbsp;&nbsp;
-            <?php endif; ?>
-            <?php if ($this->getUserAccessLevel('contacts.delete') >= ACCESS_LEVEL_DELETE): ?>
-                <a id="delete_link" href="<?php echo(CATSUtility::getIndexName()); ?>?m=contacts&amp;a=delete&amp;contactID=<?php echo($this->contactID); ?>" onclick="javascript:return confirm('Delete this candidate?');">
-                    <img src="images/actions/delete.gif" width="16" height="16" class="absmiddle" alt="delete" border="0" />&nbsp;Delete
-                </a>
-                &nbsp;&nbsp;&nbsp;&nbsp;
-            <?php endif; ?>
-            <?php if ($this->privledgedUser): ?>
-                <a id="history_link" href="<?php echo(CATSUtility::getIndexName()); ?>?m=settings&amp;a=viewItemHistory&amp;dataItemType=300&amp;dataItemID=<?php echo($this->contactID); ?>">
-                    <img src="images/icon_clock.gif" width="16" height="16" class="absmiddle"  border="0" />&nbsp;View History
-                </a>
-                &nbsp;&nbsp;&nbsp;&nbsp;
-            <?php endif; ?>
-
-            <br clear="all" />
-            <br />
+            <div class="detail-actions">
+                <?php if ($this->getUserAccessLevel('contacts.edit') >= ACCESS_LEVEL_EDIT): ?>
+                    <a id="edit_link" class="detail-action-link" href="<?php echo(CATSUtility::getIndexName()); ?>?m=contacts&amp;a=edit&amp;contactID=<?php echo($this->contactID); ?>">
+                        <img src="images/actions/edit.gif" width="16" height="16" class="absmiddle" alt="" border="0" />Edit
+                    </a>
+                <?php endif; ?>
+                <?php if ($this->getUserAccessLevel('contacts.delete') >= ACCESS_LEVEL_DELETE): ?>
+                    <a id="delete_link" class="detail-action-link danger" href="<?php echo(CATSUtility::getIndexName()); ?>?m=contacts&amp;a=delete&amp;contactID=<?php echo($this->contactID); ?>" onclick="javascript:return confirm('Delete this candidate?');">
+                        <img src="images/actions/delete.gif" width="16" height="16" class="absmiddle" alt="" border="0" />Delete
+                    </a>
+                <?php endif; ?>
+                <?php if ($this->privledgedUser): ?>
+                    <a id="history_link" class="detail-action-link" href="<?php echo(CATSUtility::getIndexName()); ?>?m=settings&amp;a=viewItemHistory&amp;dataItemType=300&amp;dataItemID=<?php echo($this->contactID); ?>">
+                        <img src="images/icon_clock.gif" width="16" height="16" class="absmiddle" border="0" alt="" />View History
+                    </a>
+                <?php endif; ?>
+            </div>
 
             <p class="note">Job Orders</p>
             <table class="sortable">
@@ -296,10 +290,10 @@ use OpenCATS\UI\QuickActionMenu;
                     </tr>
                 <?php endforeach; ?>
             </table>
-            <div id="addActivityDiv">
+            <div id="addActivityDiv" class="detail-actions">
                 <?php if ($this->getUserAccessLevel('contacts.logActivityScheduleEvent') >= ACCESS_LEVEL_EDIT): ?>
-                    <a href="#" id="addActivityLink" title="Log an Activity / Schedule Event" onclick="showPopWin('<?php echo(CATSUtility::getIndexName()); ?>?m=contacts&amp;a=addActivityScheduleEvent&amp;contactID=<?php echo($this->contactID); ?>', 600, 375, null); return false;">
-                        <img src="images/new_activity_inline.gif" width="16" height="16" class="absmiddle" title="Log an Activity / Schedule Event" alt="Log an Activity / Schedule Event" border="0" />&nbsp;Log an Activity / Schedule Event
+                    <a href="#" id="addActivityLink" class="detail-action-link" title="Log an Activity / Schedule Event" onclick="showPopWin('<?php echo(CATSUtility::getIndexName()); ?>?m=contacts&amp;a=addActivityScheduleEvent&amp;contactID=<?php echo($this->contactID); ?>', 600, 375, null); return false;">
+                        <img src="images/new_activity_inline.gif" width="16" height="16" class="absmiddle" alt="" border="0" />Log an Activity / Schedule Event
                     </a>
                 <?php endif; ?>
                 <img src="images/indicator2.gif" id="addActivityIndicator" alt="" style="visibility: hidden; margin-left: 5px;" height="16" width="16" />

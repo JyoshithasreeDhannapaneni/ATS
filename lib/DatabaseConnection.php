@@ -847,6 +847,12 @@ class DatabaseConnection
         // 25. INSERT IGNORE INTO — keep as-is for MySQL/MariaDB
         // (ON CONFLICT DO NOTHING is PostgreSQL only)
 
+        // 25a. ON DUPLICATE KEY UPDATE ... → ON CONFLICT DO NOTHING
+        //      This codebase only uses this idiom for insert-or-ignore semantics
+        //      (e.g. "UPDATE version=version"), never a real update, so a no-op
+        //      conflict clause is equivalent on PostgreSQL.
+        $query = preg_replace('/\bON\s+DUPLICATE\s+KEY\s+UPDATE\s+.+$/is', 'ON CONFLICT DO NOTHING', $query);
+
         // 25d. TO_CHAR(...) = integer → TO_CHAR(...)::integer = integer
         //      (handles DATE_FORMAT('%%c') comparisons with integer values)
         $query = preg_replace_callback(

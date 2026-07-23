@@ -75,9 +75,8 @@ $ownerCheck = $db->getAllAssoc(sprintf(
     intval($candidateJobOrderID), intval($candidateID), intval($jobOrderID), $siteID
 ));
 if (empty($ownerCheck)) {
-    $template->assign('errorMessage', 'Invalid pipeline record.');
-    $template->display('Error.tpl');
-    exit;
+    $interface->outputXMLErrorPage(-1, 'Invalid pipeline record.');
+    die();
 }
 
 $pipelines = new Pipelines($siteID);

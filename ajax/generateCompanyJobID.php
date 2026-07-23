@@ -4,11 +4,23 @@
  * Called via AJAX when company is selected
  */
 
-include_once('../config.php');
-include_once('../constants.php');
-include_once('../lib/DatabaseConnection.php');
-include_once('../lib/Companies.php');
+/* This endpoint is fetched directly (not routed through ajax.php?f=...
+ * like every other AJAX call in this app), so PHP's working directory is
+ * this file's own folder rather than the project root. That broke relative
+ * includes inside Companies.php (e.g. ./vendor/autoload.php). Fix the
+ * working directory first so all downstream relative includes resolve
+ * the same way they do when entered through the normal front controller. */
+chdir(__DIR__ . '/..');
 
+include_once('config.php');
+include_once('constants.php');
+include_once('lib/DatabaseConnection.php');
+/* CATSSession (stored in $_SESSION['CATS']) must be defined before
+ * session_start() triggers unserialize() on the existing session data. */
+include_once('lib/Session.php');
+include_once('lib/Companies.php');
+
+session_name(CATS_SESSION_NAME);
 session_start();
 if (!isset($_SESSION['CATS']) || !$_SESSION['CATS']->isLoggedIn()) {
     http_response_code(403);
@@ -32,7 +44,7 @@ try {
 
     // Get company details
     $companySQL = sprintf(
-        "SELECT company_name FROM company WHERE company_id = %d AND site_id = %d",
+        "SELECT name AS company_name FROM company WHERE company_id = %d AND site_id = %d",
         $companyID,
         $siteID
     );
@@ -58,10 +70,12 @@ try {
         $abbrev = strtoupper(substr($companyName, 0, 2));
     }
 
-    // Get the highest numbered job ID for this company+abbrev combination
+    // Get existing job IDs for this company that start with the abbreviation;
+    // the loop below re-validates the numeric suffix and finds the max, so this
+    // just needs a portable (MySQL- and PostgreSQL-safe) prefix filter.
     $maxNumSQL = sprintf(
-        "SELECT client_job_id FROM joborder WHERE company_id = %d AND site_id = %d AND client_job_id REGEXP '^[A-Z]+[0-9]+$' ORDER BY CAST(SUBSTRING(client_job_id, %d) AS UNSIGNED) DESC LIMIT 10",
-        $companyID, $siteID, strlen($abbrev) + 1
+        "SELECT client_job_id FROM joborder WHERE company_id = %d AND site_id = %d AND client_job_id LIKE %s",
+        $companyID, $siteID, $db->makeQueryString($abbrev . '%')
     );
 
     $maxNumResults = $db->getAllAssoc($maxNumSQL);

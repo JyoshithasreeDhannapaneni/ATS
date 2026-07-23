@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?php echo htmlspecialchars($this->siteName); ?> — Careers</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <?php global $careerPage; ?>
+  <link href="<?php echo((isset($careerPage) && $careerPage == true) ? '../' : ''); ?>inter.css" rel="stylesheet">
   <script src="../js/careerPortalApply.js"></script>
-  <?php global $careerPage; if (isset($careerPage) && $careerPage == true): ?>
+  <?php if (isset($careerPage) && $careerPage == true): ?>
   <script src="../js/lib.js"></script><script src="../js/sorttable.js"></script><script src="../js/calendarDateInput.js"></script>
   <?php else: ?>
   <script src="js/lib.js"></script><script src="js/sorttable.js"></script><script src="js/calendarDateInput.js"></script><script src="js/careersPage.js"></script>

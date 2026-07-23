@@ -42,10 +42,10 @@ class OrgChartUI extends UserInterface
     {
         $db = DatabaseConnection::getInstance();
         // Add reports_to and department columns if they don't exist
-        try { $db->query("ALTER TABLE \"user\" ADD COLUMN IF NOT EXISTS reports_to INTEGER DEFAULT NULL", true); } catch (Exception $e) {}
-        try { $db->query("ALTER TABLE \"user\" ADD COLUMN IF NOT EXISTS department VARCHAR(100) DEFAULT NULL", true); } catch (Exception $e) {}
-        try { $db->query("ALTER TABLE \"user\" ADD COLUMN IF NOT EXISTS employee_id VARCHAR(20) DEFAULT NULL", true); } catch (Exception $e) {}
-        try { $db->query("ALTER TABLE \"user\" ADD COLUMN IF NOT EXISTS org_status VARCHAR(20) DEFAULT 'active'", true); } catch (Exception $e) {}
+        try { $db->query("ALTER TABLE user ADD COLUMN IF NOT EXISTS reports_to INTEGER DEFAULT NULL", true); } catch (Exception $e) {}
+        try { $db->query("ALTER TABLE user ADD COLUMN IF NOT EXISTS department VARCHAR(100) DEFAULT NULL", true); } catch (Exception $e) {}
+        try { $db->query("ALTER TABLE user ADD COLUMN IF NOT EXISTS employee_id VARCHAR(20) DEFAULT NULL", true); } catch (Exception $e) {}
+        try { $db->query("ALTER TABLE user ADD COLUMN IF NOT EXISTS org_status VARCHAR(20) DEFAULT 'active'", true); } catch (Exception $e) {}
     }
 
     private function show()
@@ -69,7 +69,7 @@ class OrgChartUI extends UserInterface
                 u.org_status         AS orgStatus,
                 al.short_description AS accessLevel,
                 al.access_level_id   AS accessLevelID
-             FROM \"user\" u
+             FROM user u
              LEFT JOIN access_level al ON u.access_level = al.access_level_id
              WHERE u.site_id = %s
                AND u.access_level > 0
@@ -109,7 +109,7 @@ class OrgChartUI extends UserInterface
         if (!$userID) { echo json_encode(['success' => false, 'error' => 'Invalid user']); die(); }
 
         $sql = sprintf(
-            "UPDATE \"user\" SET
+            "UPDATE user SET
                 first_name  = %s,
                 last_name   = %s,
                 title       = %s,
@@ -146,12 +146,12 @@ class OrgChartUI extends UserInterface
 
         // Reassign their direct reports to their manager
         $db->query(sprintf(
-            "UPDATE \"user\" SET reports_to = (SELECT reports_to FROM \"user\" WHERE user_id = %s) WHERE reports_to = %s AND site_id = %s",
+            "UPDATE user SET reports_to = (SELECT reports_to FROM user WHERE user_id = %s) WHERE reports_to = %s AND site_id = %s",
             $userID, $userID, $db->makeQueryInteger($siteID)
         ));
 
         $db->query(sprintf(
-            "UPDATE \"user\" SET access_level = 0 WHERE user_id = %s AND site_id = %s",
+            "UPDATE user SET access_level = 0 WHERE user_id = %s AND site_id = %s",
             $userID, $db->makeQueryInteger($siteID)
         ));
 
@@ -169,7 +169,7 @@ class OrgChartUI extends UserInterface
         if (!$userID) { echo json_encode(['success' => false]); die(); }
 
         $db->query(sprintf(
-            "UPDATE \"user\" SET org_status = %s WHERE user_id = %s AND site_id = %s",
+            "UPDATE user SET org_status = %s WHERE user_id = %s AND site_id = %s",
             $db->makeQueryString($status),
             $userID,
             $db->makeQueryInteger($siteID)
@@ -187,7 +187,7 @@ class OrgChartUI extends UserInterface
 
         $sql = sprintf(
             "SELECT u.*, al.short_description AS accessLevel
-             FROM \"user\" u
+             FROM user u
              LEFT JOIN access_level al ON u.access_level = al.access_level_id
              WHERE u.user_id = %s AND u.site_id = %s",
             $userID, $db->makeQueryInteger($siteID)

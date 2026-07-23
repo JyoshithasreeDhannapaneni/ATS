@@ -282,11 +282,15 @@ class CommonErrors
     private static function isExceptionLoggingEnabled()
     {
         $db = DatabaseConnection::getInstance();
-        $tables = array();
-        $rs = $db->query("SELECT table_name AS tablename FROM information_schema.tables WHERE table_schema = DATABASE()");
-        while ($tbl = ($rs ? mysqli_fetch_row($rs) : null)) $tables[] = $tbl[0];
-        if (in_array('exceptions', $tables)) return true;
-        else return false;
+        if ($db->isMysql())
+        {
+            $rs = $db->query("SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'exceptions'");
+        }
+        else
+        {
+            $rs = $db->query("SELECT table_name FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = 'exceptions'");
+        }
+        return ($rs && $rs->fetch(PDO::FETCH_NUM)) ? true : false;
     }
 
     private static function getBacktrace()

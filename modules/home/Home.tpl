@@ -128,6 +128,25 @@
 .db-view-all:hover, .db-view-all:link, .db-view-all:visited { color: #2563eb; text-decoration: none; }
 .db-view-all:hover { color: #1d4ed8; }
 .db-card-body { padding: 0; }
+/* Thin, flat scrollbar for scrollable card bodies (e.g. My Recent Calls) —
+ * avoids the browser's default scrollbar with bulky up/down arrow buttons. */
+.db-card-body::-webkit-scrollbar { width: 6px; }
+.db-card-body::-webkit-scrollbar-track { background: transparent; }
+.db-card-body::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 3px; }
+.db-card-body::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
+.db-card-body { scrollbar-width: thin; scrollbar-color: #e2e8f0 transparent; }
+/* The Recent Calls / Important Candidates rows are rendered by the legacy
+ * DataGrid engine as plain inline spans — align the icon to the text
+ * baseline and give each row some breathing room. */
+.db-card-body span[style*="font-size:11px"] {
+    display: block;
+    padding: 10px 16px;
+    font-size: 13px !important;
+    border-bottom: 1px solid #f1f5f9;
+}
+.db-card-body span[style*="font-size:11px"]:last-child { border-bottom: none; }
+.db-card-body span[style*="font-size:11px"] img { vertical-align: middle; margin: 0 2px 2px 2px; }
+.db-card-body span[style*="font-size:11px"] a { font-size: 13px !important; }
 
 /* ── Call List ───────────────────────────────────── */
 .db-call-row {

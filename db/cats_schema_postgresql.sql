@@ -702,6 +702,7 @@ CREATE TABLE joborder (
   joborder_id SERIAL NOT NULL,
   recruiter INTEGER DEFAULT NULL,
   contact_id INTEGER DEFAULT NULL,
+  contact_phone VARCHAR(40) DEFAULT NULL,
   company_id INTEGER DEFAULT NULL,
   entered_by INTEGER NOT NULL DEFAULT 0,
   owner INTEGER DEFAULT NULL,
@@ -1422,6 +1423,7 @@ ALTER TABLE "user" ADD COLUMN IF NOT EXISTS is_demo INTEGER DEFAULT 0;
 
 UPDATE system SET schema_version = 802;
 ALTER TABLE email_template ADD COLUMN IF NOT EXISTS disabled INTEGER DEFAULT 0;
+ALTER TABLE email_template ADD COLUMN IF NOT EXISTS subject VARCHAR(255) DEFAULT NULL;
 
 UPDATE system SET schema_version = 803;
 UPDATE candidate_joborder_status SET short_description = 'Client Declined' WHERE candidate_joborder_status_id = 700;
@@ -1462,6 +1464,8 @@ CREATE TABLE email_history (
 
 UPDATE system SET schema_version = 904;
 ALTER TABLE email_history ADD COLUMN IF NOT EXISTS date TIMESTAMP DEFAULT NULL;
+ALTER TABLE email_history ADD COLUMN IF NOT EXISTS candidate_id INTEGER DEFAULT NULL;
+ALTER TABLE email_history ADD COLUMN IF NOT EXISTS subject VARCHAR(255) DEFAULT NULL;
 
 -- =====================================================================
 -- UPGRADE: 0.6.x to 0.7.0
@@ -1773,3 +1777,27 @@ INSERT INTO candidate_joborder_status
 (candidate_joborder_status_id, short_description, can_be_scheduled, triggers_email, is_enabled)
 VALUES (1070, 'No Show', 0, 0, 1)
 ON CONFLICT DO NOTHING;
+
+-- Configurable interview/pipeline round templates, assignable per job order
+-- (optionally defaulted per department). A joborder with no template keeps
+-- using the fixed global status list above — this is purely additive.
+
+CREATE TABLE IF NOT EXISTS pipeline_template (
+  template_id SERIAL NOT NULL,
+  name VARCHAR(128) NOT NULL,
+  company_department_id INTEGER DEFAULT NULL,
+  site_id INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (template_id)
+);
+
+CREATE TABLE IF NOT EXISTS pipeline_template_stage (
+  stage_id SERIAL NOT NULL,
+  template_id INTEGER NOT NULL,
+  candidate_joborder_status_id INTEGER NOT NULL,
+  stage_order INTEGER NOT NULL DEFAULT 0,
+  stage_name VARCHAR(64) NOT NULL,
+  is_enabled INTEGER NOT NULL DEFAULT 1,
+  PRIMARY KEY (stage_id)
+);
+
+ALTER TABLE joborder ADD COLUMN IF NOT EXISTS pipeline_template_id INTEGER DEFAULT NULL;

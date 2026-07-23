@@ -20,16 +20,12 @@ function jo_display($value, $fallback = '&mdash;') {
 
         <div id="contents">
             <!-- BREADCRUMB + TITLE -->
-            <div class="page-header-row" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-                <div class="page-header-left" style="display: flex; align-items: center; gap: 8px;">
-                    <img src="images/job_orders.gif" width="24" height="24" border="0" alt="Job Orders" style="border: none;" />
-                    <h2 style="margin: 0;">
-                        <a href="<?php echo CATSUtility::getIndexName(); ?>?m=joborders&amp;a=listByView" style="color: #6b7280; text-decoration: none; font-weight: 500;">Job Orders</a>
-                        <span style="color: #9ca3af; margin: 0 6px;">&rsaquo;</span>
-                        <span style="color: #111827;"><?php $this->_($this->data['title']); ?></span>
-                    </h2>
-                </div>
-            </div>
+            <?php TemplateUtility::printBreadcrumb(
+                CATSUtility::getIndexName().'?m=joborders&amp;a=listByView',
+                'Job Orders',
+                $this->data['title'],
+                'images/job_orders.gif'
+            ); ?>
 
 <?php if (!$this->isPopup): ?>
             <!-- ACTION BAR — moved to top -->
@@ -344,6 +340,19 @@ function jo_display($value, $fallback = '&mdash;') {
                                 <td class="vertical">Submitted:</td>
                                 <td class="data"><?php $this->_($this->data['submitted']) ?></td>
                             </tr>
+
+                            <?php if (!empty($this->statusCountsRS)): ?>
+                            <tr>
+                                <td class="vertical">Applications:</td>
+                                <td class="data">
+                                    <strong><?php $this->_($this->totalApplications); ?> total</strong>
+                                    &nbsp;&mdash;&nbsp;
+                                    <?php foreach ($this->statusCountsRS as $index => $statusRow): ?>
+                                        <?php if ($index > 0): ?>, <?php endif; ?><?php $this->_($statusRow['statusName'] !== '' ? $statusRow['statusName'] : 'No Status'); ?>: <?php $this->_($statusRow['statusCount']); ?>
+                                    <?php endforeach; ?>
+                                </td>
+                            </tr>
+                            <?php endif; ?>
 
                             <tr>
                                 <td class="vertical">Posted:</td>

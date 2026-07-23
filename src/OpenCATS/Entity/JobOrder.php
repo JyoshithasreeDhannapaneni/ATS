@@ -9,6 +9,7 @@ class JobOrder
     private $title;
     private $companyId;
     private $contactId;
+    private $contactPhone;
     private $description;
     private $notes;
     private $duration;
@@ -30,6 +31,7 @@ class JobOrder
     private $questionnaire;
     private $siteId;
     private $status;
+    private $pipelineTemplateId;
     
     function __construct(
         $siteId,
@@ -85,7 +87,17 @@ class JobOrder
     {
         $this->contactId = $value;
     }
-    
+
+    function getContactPhone()
+    {
+        return $this->contactPhone;
+    }
+
+    function setContactPhone($value)
+    {
+        $this->contactPhone = $value;
+    }
+
     function getDescription()
     {
         return $this->description;
@@ -266,7 +278,17 @@ class JobOrder
     {
         return $this->status;
     }
-    
+
+    function getPipelineTemplateId()
+    {
+        return $this->pipelineTemplateId;
+    }
+
+    function setPipelineTemplateId($value)
+    {
+        $this->pipelineTemplateId = $value;
+    }
+
     static function create(
         $siteId,
         $title,
@@ -289,7 +311,9 @@ class JobOrder
         $recruiter,
         $owner,
         $departmentId,
-        $questionnaire
+        $questionnaire,
+        $contactPhone = '',
+        $pipelineTemplateId = null
     ) {
         $instance = new JobOrder(
             $siteId,
@@ -304,6 +328,7 @@ class JobOrder
         $instance->setCompanyJobId($companyJobId);
         $instance->setCompanyId($companyId);
         $instance->setContactId($contactID);
+        $instance->setContactPhone($contactPhone);
         $instance->setDescription($description);
         $instance->setNotes($notes);
         $instance->setDuration($duration);
@@ -318,6 +343,7 @@ class JobOrder
         $instance->setRecruiter($recruiter);
         $instance->setOwner($owner);
         $instance->setQuestionnaire($questionnaire);
+        $instance->setPipelineTemplateId($pipelineTemplateId);
         return $instance;
     }
 }
