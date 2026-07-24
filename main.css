@@ -661,7 +661,7 @@ body.sidebar-collapsed #contents .summary-cards {
     width: 100%;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     min-height: 52px;
     flex-wrap: nowrap;
     box-shadow: 0 1px 2px rgba(0,0,0,0.03);
@@ -678,7 +678,15 @@ body.sidebar-collapsed #contents .summary-cards {
     overflow: hidden;
     min-width: 0;
     gap: 8px;
-    flex: 1;
+    /* Grow:0 so this doesn't stretch past its actual content and leave a
+     * dead gap before Quick Search; shrink:1 so it still yields room to
+     * Quick Search (never the other way around) if space is tight. */
+    flex: 0 1 auto;
+}
+
+#quickSearchForm {
+    flex-shrink: 0;
+    margin-left: 20px;
 }
 
 #MRUBlock span.MRUTitle {
@@ -765,6 +773,12 @@ body.sidebar-collapsed #contents .summary-cards {
     font-size: 13px;
     width: 200px;
     transition: var(--transition-fast);
+    /* The "Quick Search:" label right next to this box already says what
+     * it's for - the magnifying-glass icon from the shared .quickSearchBox
+     * rule (meant for other, unlabeled search boxes) was overlapping the
+     * placeholder text here since this rule's padding doesn't reserve
+     * room for it. Simplest fix: no icon on this particular instance. */
+    background-image: none;
 }
 
 #quickSearchBlock .quickSearchBox:focus {
