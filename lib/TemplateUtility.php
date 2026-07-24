@@ -577,7 +577,7 @@ class TemplateUtility
         $indexNameForBrand = CATSUtility::getIndexName();
         echo '<div class="sidebar-brand">', "\n";
         echo '<a href="', $indexNameForBrand, '?m=home" class="sidebar-brand-link">', "\n";
-        echo '<span class="sidebar-brand-mark"><img src="images/neutara-icon.png" alt="" onerror="this.parentNode.textContent=\'N\';" /></span>', "\n";
+        echo '<span class="sidebar-brand-mark"><img src="images/Neutaralogo.jpg" alt="" onerror="this.parentNode.textContent=\'N\';" /></span>', "\n";
         echo '<span class="sidebar-brand-text">', "\n";
         echo '<span class="sidebar-brand-title">Neutara ATS</span>', "\n";
         echo '<span class="sidebar-brand-subtitle">Recruiting Suite</span>', "\n";

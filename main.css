@@ -260,9 +260,9 @@ body.sidebar-collapsed #headerBlock {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 49px;
-    padding: 6px;
+    width: 48px;
+    height: 48px;
+    padding: 5px;
     box-sizing: border-box;
     flex-shrink: 0;
     overflow: hidden;
@@ -276,7 +276,7 @@ body.sidebar-collapsed #headerBlock {
 .sidebar-brand-mark img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
 }
 .sidebar-brand-text {
     display: flex;
