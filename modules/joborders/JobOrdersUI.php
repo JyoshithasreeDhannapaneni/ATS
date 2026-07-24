@@ -753,12 +753,6 @@ class JobOrdersUI extends UserInterface
             CommonErrors::fatal(COMMONERROR_BADINDEX, $this, 'Invalid owner user ID.');
         }
 
-        /* Bail out if we don't have a valid number of openings. */
-        if (!$this->isRequiredIDValid('openings', $_POST))
-        {
-            CommonErrors::fatal(COMMONERROR_MISSINGFIELDS, $this, 'Invalid number of openings.');
-        }
-
         /* Bail out if we don't have a valid contact ID. */
         if (!$this->isOptionalIDValid('contactID', $_POST))
         {
@@ -820,7 +814,7 @@ class JobOrdersUI extends UserInterface
         $contactID   = $_POST['contactID'];
         $recruiter   = $_POST['recruiter'];
         $owner       = $_POST['owner'];
-        $openings    = $_POST['openings'];
+        $openings    = (isset($_POST['openings']) && trim($_POST['openings']) !== '') ? trim($_POST['openings']) : 1;
 
         $title       = $this->getSanitisedInput('title', $_POST);
         $companyJobID = $this->getTrimmedInput('companyJobID', $_POST);

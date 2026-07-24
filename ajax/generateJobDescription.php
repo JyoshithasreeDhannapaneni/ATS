@@ -1,8 +1,9 @@
 <?php
 /**
- * Generate a job description draft via the Anthropic API from a job title
- * and a few recruiter-supplied keywords. Called via AJAX from the Add/Edit
- * Job Order form's "Generate with AI" button.
+ * Generate a job description draft via the configured AI provider
+ * (Anthropic or OpenAI) from a job title and a few recruiter-supplied
+ * keywords. Called via AJAX from the Add/Edit Job Order form's
+ * "Generate with AI" button.
  */
 
 /* Same working-directory fix as generateCompanyJobID.php — this endpoint is
@@ -35,23 +36,45 @@ if ($title === '' && $keywords === '') {
     exit;
 }
 
-/* Look up the configured Anthropic API key: the `settings` key-value table
- * first (set via Settings > Administration > AI Integration), falling back
- * to the ANTHROPIC_API_KEY environment variable. */
-$db = DatabaseConnection::getInstance();
-$keyRS = $db->getAllAssoc(sprintf(
-    "SELECT value FROM settings WHERE setting = %s AND site_id = %s LIMIT 1",
-    $db->makeQueryString('anthropicApiKey'),
-    $db->makeQueryInteger($siteID)
-));
+/* Look up the active AI provider and its key from the `settings` key-value
+ * table (set via Settings > Administration > AI Integration), falling back
+ * to the provider's environment variable. */
+function getAiSettingValue($db, $siteID, $settingKey) {
+    $rs = $db->getAllAssoc(sprintf(
+        "SELECT value FROM settings WHERE setting = %s AND site_id = %s LIMIT 1",
+        $db->makeQueryString($settingKey),
+        $db->makeQueryInteger($siteID)
+    ));
 
-$apiKey = (!empty($keyRS) && !empty($keyRS[0]['value'])) ? $keyRS[0]['value'] : getenv('ANTHROPIC_API_KEY');
+    return (!empty($rs) && !empty($rs[0]['value'])) ? $rs[0]['value'] : '';
+}
+
+$db = DatabaseConnection::getInstance();
+
+$provider = getAiSettingValue($db, $siteID, 'aiProvider');
+if ($provider !== 'openai') {
+    $provider = 'anthropic';
+}
+
+if ($provider === 'openai') {
+    $apiKey = getAiSettingValue($db, $siteID, 'openaiApiKey');
+    if (empty($apiKey)) {
+        $apiKey = getenv('OPENAI_API_KEY');
+    }
+    $providerLabel = 'an OpenAI';
+} else {
+    $apiKey = getAiSettingValue($db, $siteID, 'anthropicApiKey');
+    if (empty($apiKey)) {
+        $apiKey = getenv('ANTHROPIC_API_KEY');
+    }
+    $providerLabel = 'an Anthropic';
+}
 
 if (empty($apiKey)) {
     echo json_encode([
         'success' => false,
         'notConfigured' => true,
-        'error' => 'AI generation is not configured yet. Add an Anthropic API key under Settings > Administration > AI Integration.'
+        'error' => "AI generation is not configured yet. Add {$providerLabel} API key under Settings > Administration > AI Integration."
     ]);
     exit;
 }
@@ -68,24 +91,41 @@ $userPrompt = "Write a professional job description for an internal applicant tr
     . "Do not include a job title heading, salary, or company boilerplate/legal text. "
     . "Return only the HTML fragment, no markdown code fences, no commentary before or after.";
 
-$requestBody = json_encode([
-    'model' => 'claude-sonnet-5',
-    'max_tokens' => 1024,
-    'messages' => [
-        ['role' => 'user', 'content' => $userPrompt]
-    ]
-]);
+if ($provider === 'openai') {
+    $requestUrl = 'https://api.openai.com/v1/chat/completions';
+    $requestBody = json_encode([
+        'model' => 'gpt-4o-mini',
+        'max_tokens' => 1024,
+        'messages' => [
+            ['role' => 'user', 'content' => $userPrompt]
+        ]
+    ]);
+    $requestHeaders = [
+        'Content-Type: application/json',
+        'Authorization: Bearer ' . $apiKey
+    ];
+} else {
+    $requestUrl = 'https://api.anthropic.com/v1/messages';
+    $requestBody = json_encode([
+        'model' => 'claude-sonnet-5',
+        'max_tokens' => 1024,
+        'messages' => [
+            ['role' => 'user', 'content' => $userPrompt]
+        ]
+    ]);
+    $requestHeaders = [
+        'Content-Type: application/json',
+        'x-api-key: ' . $apiKey,
+        'anthropic-version: 2023-06-01'
+    ];
+}
 
-$ch = curl_init('https://api.anthropic.com/v1/messages');
+$ch = curl_init($requestUrl);
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_POST => true,
     CURLOPT_POSTFIELDS => $requestBody,
-    CURLOPT_HTTPHEADER => [
-        'Content-Type: application/json',
-        'x-api-key: ' . $apiKey,
-        'anthropic-version: 2023-06-01'
-    ],
+    CURLOPT_HTTPHEADER => $requestHeaders,
     CURLOPT_CONNECTTIMEOUT => 10,
     CURLOPT_TIMEOUT => 30
 ]);
@@ -109,10 +149,18 @@ if ($httpStatus !== 200 || !is_array($responseData)) {
 }
 
 $generatedText = '';
-if (!empty($responseData['content']) && is_array($responseData['content'])) {
-    foreach ($responseData['content'] as $block) {
-        if (isset($block['type']) && $block['type'] === 'text') {
-            $generatedText .= $block['text'];
+if ($provider === 'openai') {
+    if (!empty($responseData['choices']) && is_array($responseData['choices'])) {
+        $generatedText = isset($responseData['choices'][0]['message']['content'])
+            ? $responseData['choices'][0]['message']['content']
+            : '';
+    }
+} else {
+    if (!empty($responseData['content']) && is_array($responseData['content'])) {
+        foreach ($responseData['content'] as $block) {
+            if (isset($block['type']) && $block['type'] === 'text') {
+                $generatedText .= $block['text'];
+            }
         }
     }
 }

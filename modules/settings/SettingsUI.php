@@ -2578,12 +2578,22 @@ class SettingsUI extends UserInterface
                     break;
 
                 case 'aiSettings':
-                    $existingKey = $this->getAnthropicApiKeySetting();
-                    $this->_template->assign('anthropicApiKeyConfigured', $existingKey !== '');
-                    /* Never echo the real key back into the page; leaving the field
+                    $existingAnthropicKey = $this->getAiSetting('anthropicApiKey', 'ANTHROPIC_API_KEY');
+                    $existingOpenAiKey = $this->getAiSetting('openaiApiKey', 'OPENAI_API_KEY');
+                    $aiProvider = $this->getAiSetting('aiProvider');
+                    if ($aiProvider === '')
+                    {
+                        $aiProvider = 'anthropic';
+                    }
+
+                    $this->_template->assign('anthropicApiKeyConfigured', $existingAnthropicKey !== '');
+                    $this->_template->assign('openaiApiKeyConfigured', $existingOpenAiKey !== '');
+                    $this->_template->assign('aiProvider', $aiProvider);
+                    /* Never echo the real keys back into the page; leaving a field
                      * blank on load means "keep existing" unless the admin types a
                      * new one. */
                     $this->_template->assign('anthropicApiKeyMasked', '');
+                    $this->_template->assign('openaiApiKeyMasked', '');
                     $templateFile = './modules/settings/AISettings.tpl';
                     break;
 
@@ -2799,12 +2809,24 @@ class SettingsUI extends UserInterface
                 }
 
                 $anthropicApiKey = $this->getTrimmedInput('anthropicApiKey', $_POST);
+                $openaiApiKey = $this->getTrimmedInput('openaiApiKey', $_POST);
+                $aiProvider = $this->getTrimmedInput('aiProvider', $_POST);
 
-                /* Blank submission means "keep the existing key unchanged" —
-                 * the field is never pre-filled with the real value. */
+                /* Blank key submission means "keep the existing key unchanged" —
+                 * the fields are never pre-filled with the real values. */
                 if ($anthropicApiKey !== '')
                 {
-                    $this->saveAnthropicApiKeySetting($anthropicApiKey);
+                    $this->saveAiSetting('anthropicApiKey', $anthropicApiKey);
+                }
+
+                if ($openaiApiKey !== '')
+                {
+                    $this->saveAiSetting('openaiApiKey', $openaiApiKey);
+                }
+
+                if ($aiProvider === 'openai' || $aiProvider === 'anthropic')
+                {
+                    $this->saveAiSetting('aiProvider', $aiProvider);
                 }
 
                 CATSUtility::transferRelativeURI('m=settings&a=administration&s=aiSettings');
@@ -2878,18 +2900,19 @@ class SettingsUI extends UserInterface
     }
 
     /*
-     * Reads the site's configured Anthropic API key from the generic
-     * key-value `settings` table, falling back to the ANTHROPIC_API_KEY
-     * environment variable if nothing has been saved through the UI yet.
+     * Reads a named AI-related setting (e.g. 'anthropicApiKey', 'openaiApiKey',
+     * 'aiProvider') from the generic key-value `settings` table, optionally
+     * falling back to an environment variable if nothing has been saved
+     * through the UI yet.
      */
-    private function getAnthropicApiKeySetting()
+    private function getAiSetting($settingKey, $envVarName = null)
     {
         $db = DatabaseConnection::getInstance();
         $rs = $db->getAllAssoc(sprintf(
             "SELECT value FROM settings
              WHERE setting = %s AND site_id = %s
              LIMIT 1",
-            $db->makeQueryString('anthropicApiKey'),
+            $db->makeQueryString($settingKey),
             $db->makeQueryInteger($this->_siteID)
         ));
 
@@ -2898,23 +2921,30 @@ class SettingsUI extends UserInterface
             return $rs[0]['value'];
         }
 
-        $envKey = getenv('ANTHROPIC_API_KEY');
+        if ($envVarName !== null)
+        {
+            $envValue = getenv($envVarName);
+            if ($envValue !== false)
+            {
+                return $envValue;
+            }
+        }
 
-        return $envKey !== false ? $envKey : '';
+        return '';
     }
 
     /*
-     * Saves the site's Anthropic API key into the generic `settings` table,
+     * Saves a named AI-related setting into the generic `settings` table,
      * updating the existing row if one already exists.
      */
-    private function saveAnthropicApiKeySetting($apiKey)
+    private function saveAiSetting($settingKey, $value)
     {
         $db = DatabaseConnection::getInstance();
         $existing = $db->getAllAssoc(sprintf(
             "SELECT settings_id FROM settings
              WHERE setting = %s AND site_id = %s
              LIMIT 1",
-            $db->makeQueryString('anthropicApiKey'),
+            $db->makeQueryString($settingKey),
             $db->makeQueryInteger($this->_siteID)
         ));
 
@@ -2923,7 +2953,7 @@ class SettingsUI extends UserInterface
             $db->query(sprintf(
                 "UPDATE settings SET value = %s
                  WHERE settings_id = %s",
-                $db->makeQueryString($apiKey),
+                $db->makeQueryString($value),
                 $db->makeQueryInteger($existing[0]['settings_id'])
             ));
         }
@@ -2932,8 +2962,8 @@ class SettingsUI extends UserInterface
             $db->query(sprintf(
                 "INSERT INTO settings (setting, value, site_id, settings_type)
                  VALUES (%s, %s, %s, %s)",
-                $db->makeQueryString('anthropicApiKey'),
-                $db->makeQueryString($apiKey),
+                $db->makeQueryString($settingKey),
+                $db->makeQueryString($value),
                 $db->makeQueryInteger($this->_siteID),
                 $db->makeQueryInteger(SETTINGS_AI)
             ));

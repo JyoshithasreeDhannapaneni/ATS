@@ -181,7 +181,6 @@
                                 <label class="form-label">Openings:</label>
                                 <div class="form-input">
                                     <input type="text" id="openings" name="openings" tabindex="15" value="<?php echo isset($this->jobOrderSourceRS['openings']) ? $this->jobOrderSourceRS['openings'] : '1'; ?>" />
-                                    <span class="required">*</span>
                                 </div>
                             </div>
 
