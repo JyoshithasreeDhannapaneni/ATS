@@ -11,43 +11,49 @@
 /* ── Reset & Base ────────────────────────────────── */
 .db-wrap { font-family: 'Inter', system-ui, sans-serif; color: #111827; }
 
-/* ── Welcome Banner ──────────────────────────────── */
-.db-banner {
-    position: relative;
-    background: linear-gradient(135deg, #1e40af 0%, #2563eb 60%, #3b82f6 100%);
-    border-radius: 16px;
-    padding: 28px 32px;
-    margin-bottom: 24px;
-    overflow: hidden;
+/* ── Page Header ─────────────────────────────────── */
+.db-page-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    min-height: 100px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
 }
-.db-banner::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background:
-        radial-gradient(ellipse 60% 80% at 90% 50%, rgba(255,255,255,0.08) 0%, transparent 60%),
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 60'%3E%3Cpath d='M0 50 Q30 20 60 40 Q90 55 120 25 Q150 5 180 30 L200 20 L200 60 L0 60Z' fill='rgba(255,255,255,0.06)'/%3E%3C/svg%3E") right bottom / 55% auto no-repeat;
-    pointer-events: none;
+.db-page-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
-.db-banner-text h2 {
-    font-size: 22px; font-weight: 700; color: #fff; margin: 0 0 4px; letter-spacing: -0.02em;
+.db-page-title h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: #111827;
+    letter-spacing: -0.01em;
 }
-.db-banner-text p { font-size: 13px; color: rgba(255,255,255,0.75); margin: 0; }
-.db-banner-badge {
-    padding: 5px 14px; background: rgba(255,255,255,0.18); color: #fff;
-    border-radius: 20px; font-size: 12px; font-weight: 600;
-    border: 1px solid rgba(255,255,255,0.25); white-space: nowrap;
-    backdrop-filter: blur(4px);
+.db-page-title .page-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, #eff6ff, #dbeafe);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
 }
-.db-banner-graphic {
-    position: absolute; right: 120px; bottom: 0; top: 0;
-    display: flex; align-items: flex-end; opacity: 0.18; pointer-events: none;
+.db-page-subtitle {
+    font-size: 13px;
+    color: #6b7280;
+    margin-top: 2px;
 }
-.db-banner-graphic svg { height: 80px; width: auto; }
+.db-role-badge {
+    padding: 5px 14px;
+    background: #eff6ff;
+    color: #2563eb;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid #dbeafe;
+    white-space: nowrap;
+}
 
 /* ── Stat Cards ──────────────────────────────────── */
 .db-stats {
@@ -270,25 +276,18 @@ $roleInfo = $roleLabels[$role] ?? $roleLabels['admin'];
 
 <div class="db-wrap">
 
-    <!-- ── Welcome Banner ──────────────────────────── -->
-    <div class="db-banner">
-        <div class="db-banner-text">
-            <h2>Welcome, <?php echo htmlspecialchars($this->userFullName ?? 'User'); ?></h2>
-            <p><?php echo $roleInfo['desc']; ?></p>
+    <!-- ── Page Header ─────────────────────────────── -->
+    <div class="db-page-header">
+        <div class="db-page-title">
+            <div class="page-icon">
+                <svg width="18" height="18" fill="none" stroke="#2563eb" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M9 22V12h6v10"/></svg>
+            </div>
+            <div>
+                <h2>Welcome, <?php echo htmlspecialchars($this->userFullName ?? 'User'); ?></h2>
+                <div class="db-page-subtitle"><?php echo $roleInfo['desc']; ?></div>
+            </div>
         </div>
-        <!-- Decorative chart bars -->
-        <div class="db-banner-graphic">
-            <svg viewBox="0 0 120 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="0"  y="50" width="14" height="30" rx="3" fill="white"/>
-                <rect x="18" y="35" width="14" height="45" rx="3" fill="white"/>
-                <rect x="36" y="20" width="14" height="60" rx="3" fill="white"/>
-                <rect x="54" y="40" width="14" height="40" rx="3" fill="white"/>
-                <rect x="72" y="10" width="14" height="70" rx="3" fill="white"/>
-                <rect x="90" y="28" width="14" height="52" rx="3" fill="white"/>
-                <rect x="108" y="45" width="12" height="35" rx="3" fill="white"/>
-            </svg>
-        </div>
-        <span class="db-banner-badge"><?php echo htmlspecialchars($roleInfo['label']); ?></span>
+        <span class="db-role-badge"><?php echo htmlspecialchars($roleInfo['label']); ?></span>
     </div>
 
     <?php if ($role === 'admin' || $role === 'recruiter'): ?>
