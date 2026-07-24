@@ -297,16 +297,32 @@ class TemplateUtility
         container.style.flexWrap = 'nowrap';
 
         var containerWidth = container.clientWidth;
-        var runningWidth = 0;
+        var itemWidths = items.map(function(it) {
+            return it.link.offsetWidth + (it.sep ? it.sep.offsetWidth : 0);
+        });
+        var totalWidth = itemWidths.reduce(function(a, b) { return a + b; }, 0);
         var cutoffIndex = -1;
 
-        for (var j = 0; j < items.length; j++) {
-            var w = items[j].link.offsetWidth + (items[j].sep ? items[j].sep.offsetWidth : 0);
-            runningWidth += w;
-            var reserve = (j === items.length - 1) ? 0 : 80;
-            if (runningWidth + reserve > containerWidth) {
-                cutoffIndex = j;
-                break;
+        if (totalWidth > containerWidth) {
+            /* Only reserve room for the "+N more" button once we know a
+             * cutoff is actually needed - otherwise reserving space
+             * pre-emptively could cut items that would've fit fine on
+             * their own (there's nothing to reserve room FOR yet). */
+            var btnReserve = 70;
+            var runningWidth = 0;
+            for (var j = 0; j < items.length; j++) {
+                runningWidth += itemWidths[j];
+                if (runningWidth + btnReserve > containerWidth) {
+                    cutoffIndex = j;
+                    break;
+                }
+            }
+            /* Always show at least the first item, even if it alone
+             * doesn't leave room for the button - an empty "Recent:" row
+             * with just a lone "+N more" pill is worse than one item
+             * plus a slightly tight button. */
+            if (cutoffIndex === 0) {
+                cutoffIndex = 1;
             }
         }
 
