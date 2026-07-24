@@ -40,8 +40,7 @@ jobs:
             docker exec ats-app test -f /var/www/html/INSTALL_BLOCK || docker exec ats-app touch /var/www/html/INSTALL_BLOCK
             test -f ./config.php || docker cp ats-app:/var/www/html/config.php ./config.php
             test -f ./INSTALL_BLOCK || docker cp ats-app:/var/www/html/INSTALL_BLOCK ./INSTALL_BLOCK
-            # ONE-OFF: apply pending migrations never run against production
-            # (db/upgrade-*.sql is a manual step, not part of this pipeline -
-            # this block will be removed after this run).
-            docker exec ats-app bash -c 'mysql --skip-ssl -h "$DATABASE_HOST" -P "$DATABASE_PORT" -u "$DATABASE_USER" -p"$DATABASE_PASS" "$DATABASE_NAME" < /var/www/html/db/upgrade-pipeline-templates.sql'
-            docker exec ats-app bash -c 'mysql --skip-ssl -h "$DATABASE_HOST" -P "$DATABASE_PORT" -u "$DATABASE_USER" -p"$DATABASE_PASS" "$DATABASE_NAME" < /var/www/html/db/upgrade-add-contact-phone.sql'
+            # ONE-OFF: enable HR mode in production (was only ever set on the
+            # local dev DB, never here) - this block will be removed after
+            # this run.
+            docker exec ats-app bash -c 'mysql --skip-ssl -h "$DATABASE_HOST" -P "$DATABASE_PORT" -u "$DATABASE_USER" -p"$DATABASE_PASS" "$DATABASE_NAME" -e "UPDATE site SET is_hr_mode = 1; UPDATE company SET default_company = 0; UPDATE company SET default_company = 1, date_modified = NOW() WHERE company_id = 3;"'
