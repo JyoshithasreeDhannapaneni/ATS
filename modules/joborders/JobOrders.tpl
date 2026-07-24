@@ -125,7 +125,7 @@
                     to the pipeline with their status (interviewing, qualifying, etc.)
                     </div>
 
-                    <a href="javascript:void(0);"  onclick="showPopWin('<?php echo CATSUtility::getIndexName(); ?>?m=joborders&amp;a=addJobOrderPopup', 400, 250, null);">
+                    <a href="javascript:void(0);"  onclick="showPopWin('<?php echo CATSUtility::getIndexName(); ?>?m=joborders&amp;a=addJobOrderPopup', 420, 320, null);">
                     <div class="addJobOrderButton">&nbsp;</div>
                     </a>
                 </td>
