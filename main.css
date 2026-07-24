@@ -663,7 +663,7 @@ body.sidebar-collapsed #contents .summary-cards {
     align-items: center;
     justify-content: space-between;
     min-height: 52px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     box-shadow: 0 1px 2px rgba(0,0,0,0.03);
 }
 
@@ -674,7 +674,9 @@ body.sidebar-collapsed #contents .summary-cards {
     color: var(--gray-700);
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    overflow: hidden;
+    min-width: 0;
     gap: 8px;
     flex: 1;
 }
@@ -685,6 +687,34 @@ body.sidebar-collapsed #contents .summary-cards {
     text-transform: uppercase;
     letter-spacing: 0.08em;
     margin-right: 4px;
+    flex-shrink: 0;
+}
+
+#MRUItems {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    overflow: hidden;
+    min-width: 0;
+}
+
+.MRUMoreBtn {
+    flex-shrink: 0;
+    margin-left: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font: 500 12px var(--font-family);
+    color: var(--primary);
+    background: var(--primary-50);
+    border: 1px solid var(--primary-light);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: var(--transition-fast);
+}
+
+.MRUMoreBtn:hover {
+    background: var(--primary-light);
+    border-color: var(--primary);
 }
 
 #MRUBlock a {
@@ -696,6 +726,13 @@ body.sidebar-collapsed #contents .summary-cards {
     transition: var(--transition-fast);
     background: var(--gray-100);
     border: 1px solid var(--gray-200);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+#MRUItems span {
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 #MRUBlock a:hover {
@@ -2309,8 +2346,9 @@ select[name*="Rows"]:focus {
     #MRUPanel {
         margin-left: 0 !important;
         width: 100% !important;
+        flex-wrap: wrap !important;
     }
-    
+
     .footerBlock {
         margin-left: 0 !important;
         width: 100% !important;

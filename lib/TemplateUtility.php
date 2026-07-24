@@ -248,7 +248,9 @@ class TemplateUtility
 
         if (!empty($MRU))
         {
-            echo '<span class="MRUTitle">Recent:&nbsp;</span>&nbsp;', $MRU, "\n";
+            echo '<span class="MRUTitle">Recent:&nbsp;</span>', "\n";
+            echo '<span class="MRUItems" id="MRUItems">', $MRU, '</span>', "\n";
+            echo '<button type="button" class="MRUMoreBtn" id="MRUMoreBtn" style="display:none;" onclick="toggleMRUOverflow(this);"></button>', "\n";
         }
         else
         {
@@ -256,6 +258,106 @@ class TemplateUtility
         }
 
         echo '</div>', "\n\n";
+
+        if (!empty($MRU))
+        {
+            /* Recent items can be longer than the available row width (it
+             * varies with sidebar state, window size, and how many/how long
+             * the MRU entries are) - rather than wrapping to a second row
+             * (which also throws off the Quick Search box's vertical
+             * alignment), clip whatever doesn't fit on one line and expose
+             * the rest behind a "+N more" toggle. */
+            echo '<script type="text/javascript">', "\n";
+            echo <<<'JS'
+(function() {
+    function getItems(container) {
+        var nodes = Array.prototype.slice.call(container.children);
+        var items = [];
+        for (var i = 0; i < nodes.length; i++) {
+            if (nodes[i].tagName === 'A') {
+                var sep = (nodes[i + 1] && nodes[i + 1].tagName === 'SPAN') ? nodes[i + 1] : null;
+                items.push({ link: nodes[i], sep: sep });
+                if (sep) { i++; }
+            }
+        }
+        return items;
+    }
+
+    window.initMRUOverflow = function() {
+        var container = document.getElementById('MRUItems');
+        var moreBtn = document.getElementById('MRUMoreBtn');
+        if (!container || !moreBtn) { return; }
+
+        var items = getItems(container);
+        items.forEach(function(it) {
+            it.link.style.display = '';
+            if (it.sep) { it.sep.style.display = ''; }
+        });
+        moreBtn.style.display = 'none';
+        container.style.flexWrap = 'nowrap';
+
+        var containerWidth = container.clientWidth;
+        var runningWidth = 0;
+        var cutoffIndex = -1;
+
+        for (var j = 0; j < items.length; j++) {
+            var w = items[j].link.offsetWidth + (items[j].sep ? items[j].sep.offsetWidth : 0);
+            runningWidth += w;
+            var reserve = (j === items.length - 1) ? 0 : 80;
+            if (runningWidth + reserve > containerWidth) {
+                cutoffIndex = j;
+                break;
+            }
+        }
+
+        if (cutoffIndex >= 0) {
+            for (var k = cutoffIndex; k < items.length; k++) {
+                items[k].link.style.display = 'none';
+                if (items[k].sep) { items[k].sep.style.display = 'none'; }
+            }
+            if (cutoffIndex > 0 && items[cutoffIndex - 1].sep) {
+                items[cutoffIndex - 1].sep.style.display = 'none';
+            }
+            moreBtn.textContent = '+' + (items.length - cutoffIndex) + ' more';
+            moreBtn.style.display = 'inline-block';
+            moreBtn.setAttribute('data-expanded', 'false');
+        }
+    };
+
+    window.toggleMRUOverflow = function(btn) {
+        var container = document.getElementById('MRUItems');
+        if (!container) { return; }
+        if (btn.getAttribute('data-expanded') === 'true') {
+            window.initMRUOverflow();
+            return;
+        }
+        getItems(container).forEach(function(it) {
+            it.link.style.display = '';
+            if (it.sep) { it.sep.style.display = ''; }
+        });
+        container.style.flexWrap = 'wrap';
+        btn.textContent = 'Show less';
+        btn.setAttribute('data-expanded', 'true');
+    };
+
+    var resizeTimer;
+    function scheduleRemeasure() {
+        var btn = document.getElementById('MRUMoreBtn');
+        if (btn && btn.getAttribute('data-expanded') === 'true') { return; }
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(window.initMRUOverflow, 150);
+    }
+
+    if (document.readyState === 'complete') {
+        window.initMRUOverflow();
+    } else {
+        window.addEventListener('load', window.initMRUOverflow);
+    }
+    window.addEventListener('resize', scheduleRemeasure);
+})();
+JS;
+            echo "\n", '</script>', "\n";
+        }
 
         /* Quick Search */
         echo '<form id="quickSearchForm" action="', $indexName,
