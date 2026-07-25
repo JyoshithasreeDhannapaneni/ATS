@@ -25,10 +25,14 @@ jobs:
           php-version: '8.1'
 
       - name: Resolve composer.lock against composer.json
-        # Scoped to firebase/php-jwt specifically (plus its own dependency tree)
-        # rather than a bare `composer update`, so phpmailer/ckeditor don't
-        # silently drift to newer versions as a side effect of this fix.
-        run: composer update firebase/php-jwt --with-all-dependencies --no-interaction
+        # A scope limited to firebase/php-jwt fails here: composer.lock was
+        # already out of sync with composer.json for unrelated require-dev
+        # packages (phpunit locked below the ^9.5 constraint, mink-goutte-driver
+        # incompatible with PHP 8.1) before this workflow ever ran, so Composer
+        # refuses a partial update. A full update re-resolves everything,
+        # fixing that pre-existing drift as a side effect; require-dev packages
+        # never ship to production (Dockerfile uses --no-dev).
+        run: composer update --no-interaction
 
       - name: Validate composer files
         run: composer validate --no-check-all
