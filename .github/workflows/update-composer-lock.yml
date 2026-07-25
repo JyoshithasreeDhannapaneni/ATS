@@ -1,0 +1,46 @@
+name: Update Composer Lock
+
+# Manual trigger only, same convention as deploy.yml — nothing runs
+# automatically on push. Pick the branch that needs its composer.lock
+# regenerated (e.g. the branch with an in-progress composer.json change)
+# when dispatching this from the Actions tab.
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  update-lock:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+
+      - name: Resolve composer.lock against composer.json
+        # Scoped to firebase/php-jwt specifically (plus its own dependency tree)
+        # rather than a bare `composer update`, so phpmailer/ckeditor don't
+        # silently drift to newer versions as a side effect of this fix.
+        run: composer update firebase/php-jwt --with-all-dependencies --no-interaction
+
+      - name: Validate composer files
+        run: composer validate --no-check-all
+
+      - name: Commit updated lock file
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add composer.lock
+          if git diff --cached --quiet; then
+            echo "composer.lock already up to date — nothing to commit."
+          else
+            git commit -m "Update composer.lock (automated via Update Composer Lock workflow)"
+            git push origin HEAD:${{ github.ref_name }}
+          fi
