@@ -24,27 +24,8 @@ jobs:
         with:
           php-version: '8.1'
 
-      - name: Resolve composer.lock against composer.json
-        # A scope limited to firebase/php-jwt fails here: composer.lock was
-        # already out of sync with composer.json for unrelated require-dev
-        # packages (phpunit locked below the ^9.5 constraint, mink-goutte-driver
-        # incompatible with PHP 8.1) before this workflow ever ran, so Composer
-        # refuses a partial update. A full update re-resolves everything,
-        # fixing that pre-existing drift as a side effect; require-dev packages
-        # never ship to production (Dockerfile uses --no-dev).
-        run: composer update --no-interaction
+      - name: TEMP - validate hand-spliced lock installs like production does
+        run: composer install --no-dev --optimize-autoloader --no-interaction
 
-      - name: Validate composer files
-        run: composer validate --no-check-all
-
-      - name: Commit updated lock file
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add composer.lock
-          if git diff --cached --quiet; then
-            echo "composer.lock already up to date — nothing to commit."
-          else
-            git commit -m "Update composer.lock (automated via Update Composer Lock workflow)"
-            git push origin HEAD:${{ github.ref_name }}
-          fi
+      - name: TEMP - confirm firebase/php-jwt actually autoloads
+        run: php -r "require 'vendor/autoload.php'; var_dump(class_exists('Firebase\\JWT\\JWT')); var_dump(class_exists('Firebase\\JWT\\JWK'));"

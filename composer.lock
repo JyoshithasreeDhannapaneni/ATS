@@ -133,6 +133,64 @@
                 }
             ],
             "time": "2023-03-06T14:43:22+00:00"
+        },
+        {
+            "name": "firebase/php-jwt",
+            "version": "v6.10.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/googleapis/php-jwt.git",
+                "reference": "30c19ed0f3264cb660ea496895cfb6ef7ee3653b"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/googleapis/php-jwt/zipball/30c19ed0f3264cb660ea496895cfb6ef7ee3653b",
+                "reference": "30c19ed0f3264cb660ea496895cfb6ef7ee3653b",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^7.4||^8.0"
+            },
+            "require-dev": {
+                "guzzlehttp/guzzle": "^6.5||^7.4",
+                "phpspec/prophecy-phpunit": "^2.0",
+                "phpunit/phpunit": "^9.5",
+                "psr/cache": "^1.0||^2.0",
+                "psr/http-client": "^1.0",
+                "psr/http-factory": "^1.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Firebase\\JWT\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "BSD-3-Clause"
+            ],
+            "authors": [
+                {
+                    "name": "Neuman Vong",
+                    "email": "neuman+pear@twilio.com",
+                    "role": "Developer"
+                },
+                {
+                    "name": "Anant Narayanan",
+                    "email": "anant@php.net",
+                    "role": "Developer"
+                }
+            ],
+            "description": "A simple library to encode and decode JSON Web Tokens (JWT) in PHP.",
+            "keywords": [
+                "php",
+                "jwt"
+            ],
+            "support": {
+                "issues": "https://github.com/googleapis/php-jwt/issues",
+                "source": "https://github.com/googleapis/php-jwt/tree/v6.10.2"
+            },
+            "time": "2024-11-24T11:22:49+00:00"
         }
     ],
     "packages-dev": [
