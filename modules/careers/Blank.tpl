@@ -236,6 +236,9 @@
 <body>
 
 <!-- ═══════ NAV ═══════ -->
+<?php if (!empty($this->template['Header'])): ?>
+<?php echo($this->template['Header']); ?>
+<?php else: ?>
 <nav class="nav">
   <a class="nav-brand" href="index.php?m=careers">
     <div class="nav-logo">
@@ -256,7 +259,14 @@
     <a class="nav-cta" href="#open-roles">View Open Roles</a>
   </div>
 </nav>
+<?php endif; ?>
 
+<?php if (!empty($this->template['Header'])): ?>
+<!-- A custom template (Header/Content-Main/Footer all populated) supplies its own
+     full page layout via Content, in place of this file's built-in hero/perks/
+     process/testimonials/jobs sections. -->
+<div class="inner-page"><?php echo($this->template['Content']); ?></div>
+<?php else: ?>
 <?php if ($this->template['_page'] === 'showAll' || $this->template['_page'] === ''): ?>
 
 <!-- ═══════ HERO ═══════ -->
@@ -550,8 +560,12 @@
   <?php echo($this->template['Content']); ?>
 </div>
 <?php endif; ?>
+<?php endif; ?>
 
 <!-- ═══════ FOOTER ═══════ -->
+<?php if (!empty($this->template['Footer'])): ?>
+<?php echo($this->template['Footer']); ?>
+<?php else: ?>
 <footer class="footer">
   <div class="footer-brand">
     <div class="footer-logo"><span>N</span></div>
@@ -561,6 +575,7 @@
   <span class="footer-copy">&copy; <?php echo date('Y'); ?> <?php echo htmlspecialchars($this->siteName); ?> &mdash; All Rights Reserved</span>
   <a class="footer-link" href="index.php?m=careers&p=showAll">All Jobs</a>
 </footer>
+<?php endif; ?>
 
 <script>
 // Scroll-in animation
