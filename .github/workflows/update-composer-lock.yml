@@ -24,8 +24,26 @@ jobs:
         with:
           php-version: '8.1'
 
-      - name: TEMP - validate hand-spliced lock installs like production does
-        run: composer install --no-dev --optimize-autoloader --no-interaction
+      - name: Resolve composer.lock against composer.json
+        # Full update, not scoped to one package: this project's require-dev
+        # constraints (phpunit, behat, mink-goutte-driver) were already out of
+        # sync with PHP 8.1 before this workflow existed, and a scoped partial
+        # update can't work around that pre-existing drift. require-dev
+        # packages never ship to production (Dockerfile uses --no-dev), so
+        # resolving them to something installable is a safe side effect here.
+        run: composer update --no-interaction
 
-      - name: TEMP - confirm firebase/php-jwt actually autoloads
-        run: php -r "require 'vendor/autoload.php'; var_dump(class_exists('Firebase\\JWT\\JWT')); var_dump(class_exists('Firebase\\JWT\\JWK'));"
+      - name: Validate composer files
+        run: composer validate --no-check-all
+
+      - name: Commit updated lock file
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add composer.lock
+          if git diff --cached --quiet; then
+            echo "composer.lock already up to date — nothing to commit."
+          else
+            git commit -m "Update composer.lock (automated via Update Composer Lock workflow)"
+            git push origin HEAD:${{ github.ref_name }}
+          fi
