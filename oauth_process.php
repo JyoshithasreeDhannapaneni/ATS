@@ -9,6 +9,10 @@ include_once('./constants.php');
 include_once('./lib/Session.php');
 include_once('./lib/DatabaseConnection.php');
 include_once('./lib/Users.php');
+require_once('./vendor/autoload.php');
+
+use Firebase\JWT\JWT;
+use Firebase\JWT\JWK;
 
 @session_name(CATS_SESSION_NAME);
 session_start();
@@ -40,17 +44,55 @@ if (count($parts) !== 3) {
     exit;
 }
 
-// Decode header and payload
-$header = json_decode(base64_decode(str_replace(['-', '_'], ['+', '/'], $parts[0])), true);
-$payload = json_decode(base64_decode(str_replace(['-', '_'], ['+', '/'], $parts[1])), true);
+// INF-3: Verify the JWT's cryptographic signature against Microsoft's published
+// signing keys before trusting anything in the payload. Without this, any claim
+// below (email, aud, iss, exp) is attacker-controlled and worthless as a check.
+$tenantId = defined('MICROSOFT_SSO_TENANT_ID') ? MICROSOFT_SSO_TENANT_ID : 'common';
+$jwksUrl = 'https://login.microsoftonline.com/' . $tenantId . '/discovery/v2.0/keys';
+
+$ch = curl_init($jwksUrl);
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_CONNECTTIMEOUT => 10,
+    CURLOPT_TIMEOUT => 15
+]);
+$jwksResponse = curl_exec($ch);
+$jwksHttpStatus = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+$jwksCurlError = curl_error($ch);
+curl_close($ch);
+
+if ($jwksResponse === false || $jwksHttpStatus !== 200) {
+    error_log('OAuth: Could not fetch Microsoft signing keys (HTTP ' . $jwksHttpStatus . '): ' . $jwksCurlError);
+    header('Location: index.php?m=login&loginError=sso_failed');
+    exit;
+}
+
+$jwks = json_decode($jwksResponse, true);
+if (empty($jwks['keys'])) {
+    error_log('OAuth: Microsoft signing key response had no keys');
+    header('Location: index.php?m=login&loginError=sso_failed');
+    exit;
+}
+
+try {
+    // Microsoft's published JWKS entries don't always include an explicit "alg"
+    // field, so pin the default explicitly rather than let it vary by key.
+    $decoded = JWT::decode($idToken, JWK::parseKeySet($jwks, 'RS256'));
+    $payload = json_decode(json_encode($decoded), true);
+} catch (\Throwable $e) {
+    error_log('OAuth: JWT signature verification failed: ' . $e->getMessage());
+    header('Location: index.php?m=login&loginError=sso_failed');
+    exit;
+}
 
 if (!$payload) {
     header('Location: index.php?m=login&message=' . urlencode('Could not decode token'));
     exit;
 }
 
-// SECURITY WARNING: JWT cryptographic signature not yet verified (INF-3)
-// Validate issuer and audience as minimum check until firebase/php-jwt is added
+// The signature is now verified — these claim checks are meaningful defense in
+// depth (confirm this token was actually issued for THIS app) rather than the
+// only line of defense.
 if (empty($payload['iss']) || strpos($payload['iss'], 'microsoftonline.com') === false) {
     error_log('OAuth: Invalid JWT issuer: ' . ($payload['iss'] ?? 'none'));
     header('Location: index.php?m=login&loginError=sso_failed');
@@ -59,17 +101,6 @@ if (empty($payload['iss']) || strpos($payload['iss'], 'microsoftonline.com') ===
 if (empty($payload['aud']) || $payload['aud'] !== MICROSOFT_SSO_CLIENT_ID) {
     error_log('OAuth: Invalid JWT audience');
     header('Location: index.php?m=login&loginError=sso_failed');
-    exit;
-}
-
-// Validate token claims
-if (!isset($payload['aud']) || $payload['aud'] !== $clientId) {
-    header('Location: index.php?m=login&message=' . urlencode('Token audience mismatch'));
-    exit;
-}
-
-if (isset($payload['exp']) && $payload['exp'] < time()) {
-    header('Location: index.php?m=login&message=' . urlencode('Token has expired. Please try again.'));
     exit;
 }
 
