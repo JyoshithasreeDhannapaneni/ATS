@@ -33,6 +33,29 @@
     margin: 0;
 }
 
+.cand-source-tabs {
+    display: flex; align-items: stretch; gap: 0;
+    background: #fff; border: 1px solid #e5e7eb;
+    border-radius: 10px; margin-bottom: 20px;
+    overflow: hidden; max-width: 900px;
+}
+.cand-source-tab {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 22px; font-size: 13px; font-weight: 600;
+    color: #6b7280; border: none; background: none;
+    border-right: 1px solid #f3f4f6; transition: all .15s;
+    white-space: nowrap; position: relative; text-decoration: none;
+}
+.cand-source-tab:last-child { border-right: none; }
+.cand-source-tab:hover { background: #f9fafb; color: #374151; }
+.cand-source-tab.active {
+    color: #2563eb; background: #eff6ff;
+}
+.cand-source-tab.active::after {
+    content: ''; position: absolute; bottom: 0; left: 0; right: 0;
+    height: 3px; background: #2563eb; border-radius: 3px 3px 0 0;
+}
+
 .import-tabs {
     display: flex;
     gap: 0;
@@ -701,6 +724,17 @@
                 <p>Import multiple candidates at once using CSV/Excel files or by uploading multiple resumes</p>
             </div>
 
+            <div class="cand-source-tabs">
+                <a class="cand-source-tab" href="<?php echo(CATSUtility::getIndexName()); ?>?m=candidates&amp;a=add">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    Add One Candidate
+                </a>
+                <a class="cand-source-tab active" href="javascript:void(0);">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    Bulk Import
+                </a>
+            </div>
+
             <!-- Import Type Tabs -->
             <div class="import-tabs">
                 <button class="import-tab" data-tab="csv" onclick="switchTab('csv')">
@@ -854,7 +888,7 @@
                     <label for="jobOrderID">Add to Job Order Pipeline (Optional):</label>
                     <select name="jobOrderID" id="jobOrderID">
                         <option value="">-- Select Job Order --</option>
-                        <?php foreach ($jobOrders as $jobOrder): ?>
+                        <?php foreach ($this->jobOrders as $jobOrder): ?>
                             <option value="<?php echo $jobOrder['jobOrderID']; ?>"><?php echo htmlspecialchars($jobOrder['title']); ?> (<?php echo htmlspecialchars($jobOrder['companyName']); ?>)</option>
                         <?php endforeach; ?>
                     </select>

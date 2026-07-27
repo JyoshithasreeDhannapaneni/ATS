@@ -60,6 +60,28 @@
 .form-section-title svg {
     color: #6b7280;
 }
+.cand-source-tabs {
+    display: flex; align-items: stretch; gap: 0;
+    background: #fff; border: 1px solid #e5e7eb;
+    border-radius: 10px; margin-bottom: 20px;
+    overflow: hidden; max-width: 900px;
+}
+.cand-source-tab {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 22px; font-size: 13px; font-weight: 600;
+    color: #6b7280; border: none; background: none;
+    border-right: 1px solid #f3f4f6; transition: all .15s;
+    white-space: nowrap; position: relative; text-decoration: none;
+}
+.cand-source-tab:last-child { border-right: none; }
+.cand-source-tab:hover { background: #f9fafb; color: #374151; }
+.cand-source-tab.active {
+    color: #2563eb; background: #eff6ff;
+}
+.cand-source-tab.active::after {
+    content: ''; position: absolute; bottom: 0; left: 0; right: 0;
+    height: 3px; background: #2563eb; border-radius: 3px 3px 0 0;
+}
 .form-group {
     margin-bottom: 16px;
 }
@@ -520,6 +542,19 @@
         </svg>
         <h2>Add New Candidate</h2>
     </div>
+
+    <?php if (!$this->isModal): ?>
+    <div class="cand-source-tabs">
+        <a class="cand-source-tab active" href="javascript:void(0);">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            Add One Candidate
+        </a>
+        <a class="cand-source-tab" href="<?php echo(CATSUtility::getIndexName()); ?>?m=import&amp;a=bulkImport">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Bulk Import
+        </a>
+    </div>
+    <?php endif; ?>
 
     <div id="candidateAlreadyInSystemTable" class="duplicate-warning">
         This profile may already be in the system. Possible duplicate: 
