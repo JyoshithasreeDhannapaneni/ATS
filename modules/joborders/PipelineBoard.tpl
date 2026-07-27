@@ -596,6 +596,20 @@
             xhr.send();
         }
 
+        // Pre-select the job order when arriving from its own detail page
+        // (e.g. "View Pipeline Board" link with ?jobOrderID=123), instead of
+        // always landing on the empty "-- Select a Job Order --" state.
+        (function () {
+            var presetID = new URLSearchParams(window.location.search).get('jobOrderID');
+            if (presetID) {
+                var select = document.getElementById('jobOrderSelect');
+                select.value = presetID;
+                if (select.value === presetID) {
+                    loadPipeline(presetID);
+                }
+            }
+        })();
+
         function renderBoard(data) {
             var board = document.getElementById('kanbanBoard');
             board.innerHTML = '';

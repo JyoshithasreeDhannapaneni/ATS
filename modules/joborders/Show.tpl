@@ -36,6 +36,9 @@ function jo_display($value, $fallback = '&mdash;') {
                             <img src="images/actions/edit.gif" width="14" height="14" class="absmiddle" alt="edit" border="0" style="filter: brightness(0) invert(1);" /> Edit
                         </a>
                     <?php endif; ?>
+                    <a id="pipeline_board_link" href="<?php echo(CATSUtility::getIndexName()); ?>?m=joborders&amp;a=pipelineBoard&amp;jobOrderID=<?php echo($this->jobOrderID); ?>" style="display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; background: #fff; color: #374151; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; font-weight: 500; text-decoration: none;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absmiddle"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg> Pipeline Board
+                    </a>
                     <?php if ($this->getUserAccessLevel('joborders.delete') >= ACCESS_LEVEL_DELETE): ?>
                         <a id="delete_link" href="<?php echo(CATSUtility::getIndexName()); ?>?m=joborders&amp;a=delete&amp;jobOrderID=<?php echo($this->jobOrderID); ?>" onclick="javascript:return confirm('Delete this job order?');" style="display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; background: #fff; color: #dc2626; border: 1px solid #fca5a5; border-radius: 6px; font-size: 12px; font-weight: 600; text-decoration: none;">
                             <img src="images/actions/delete.gif" width="14" height="14" class="absmiddle" alt="delete" border="0" /> Delete

@@ -84,8 +84,7 @@ class JobOrdersUI extends UserInterface
         $this->_subTabs = array(
             //'Add Job Order'     => CATSUtility::getIndexName() . '?m=joborders&amp;a=add*al=' . ACCESS_LEVEL_EDIT . '@joborders.add',
             'Add Job Order' => 'javascript:void(0);*js=showPopWin(\''.CATSUtility::getIndexName().'?m=joborders&amp;a=addJobOrderPopup\', 420, 320, null);*al=' . ACCESS_LEVEL_EDIT . '@joborders.add',
-            'Search Job Orders' => CATSUtility::getIndexName() . '?m=joborders&amp;a=search',
-            'Pipeline Board' => CATSUtility::getIndexName() . '?m=joborders&amp;a=pipelineBoard'
+            'Search Job Orders' => CATSUtility::getIndexName() . '?m=joborders&amp;a=search'
         );
     }
 
