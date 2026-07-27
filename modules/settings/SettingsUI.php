@@ -2180,26 +2180,12 @@ class SettingsUI extends UserInterface
             }
         }
 
-        $candidateJoborderStatusSendsMessage = unserialize($mailerSettingsRS['candidateJoborderStatusSendsMessage']);
-
-        $candidateJoborderStatusSendsMessage[PIPELINE_STATUS_CONTACTED] = (UserInterface::isChecked('statusChangeContacted', $_POST) ? 1 : 0);
-        $candidateJoborderStatusSendsMessage[PIPELINE_STATUS_CANDIDATE_REPLIED] = (UserInterface::isChecked('statusChangeReplied', $_POST) ? 1 : 0);
-        $candidateJoborderStatusSendsMessage[PIPELINE_STATUS_QUALIFYING] = (UserInterface::isChecked('statusChangeQualifying', $_POST) ? 1 : 0);
-        $candidateJoborderStatusSendsMessage[PIPELINE_STATUS_SUBMITTED] = (UserInterface::isChecked('statusChangeSubmitted', $_POST) ? 1 : 0);
-        $candidateJoborderStatusSendsMessage[PIPELINE_STATUS_INTERVIEWING] = (UserInterface::isChecked('statusChangeInterviewing', $_POST) ? 1 : 0);
-        $candidateJoborderStatusSendsMessage[PIPELINE_STATUS_OFFERED] = (UserInterface::isChecked('statusChangeOffered', $_POST) ? 1 : 0);
-        $candidateJoborderStatusSendsMessage[PIPELINE_STATUS_CLIENTDECLINED] = (UserInterface::isChecked('statusChangeDeclined', $_POST) ? 1 : 0);
-        $candidateJoborderStatusSendsMessage[PIPELINE_STATUS_PLACED] = (UserInterface::isChecked('statusChangePlaced', $_POST) ? 1 : 0);
-
-        $mailerSettings->set('candidateJoborderStatusSendsMessage', serialize($candidateJoborderStatusSendsMessage));
-
-        $emailTemplates = new EmailTemplates($this->_siteID);
-        $emailTemplatesRS = $emailTemplates->getAll();
-
-        foreach ($emailTemplatesRS as $index => $data)
-        {
-            $emailTemplates->updateIsActive($data['emailTemplateID'], (UserInterface::isChecked('useThisTemplate'.$data['emailTemplateID'], $_POST) ? 0 : 1));
-        }
+        /* Pipeline status notification toggles and per-template active state are
+         * no longer editable from this simplified (SMTP-only) page - leave
+         * candidateJoborderStatusSendsMessage and email template isActive flags
+         * exactly as they already are in the database rather than reprocessing
+         * checkboxes that no longer exist in the form (which would read as
+         * "everything unchecked" and silently disable them all on every save). */
 
         /* Save SMTP / mailer settings back to config.php */
         $configPath = realpath(dirname(__FILE__) . '/../../config.php');
@@ -2217,25 +2203,41 @@ class SettingsUI extends UserInterface
                 'MAIL_SENDMAIL_PATH'=> isset($_POST['sendmailPath']) ? trim($_POST['sendmailPath'])            : null,
             );
 
+            /* The previous version of this code assumed each constant was already
+             * written as a bare `define('X', 123)` or `define('X', "text")` - but
+             * config.php actually defines these as e.g.
+             * define('MAIL_SMTP_HOST', getenv('MAIL_SMTP_HOST') ?: 'localhost');
+             * which never matched, so almost none of these fields ever actually
+             * saved. Match the whole statement regardless of its current
+             * expression, and replace it with a plain literal reflecting exactly
+             * what was just submitted. */
             foreach ($smtpUpdates as $constant => $newVal)
             {
                 if ($newVal === null) continue;
-                if (is_int($newVal) || $constant === 'MAIL_MAILER' || $constant === 'MAIL_SMTP_PORT')
+
+                $replacement = is_int($newVal)
+                    ? "define('" . $constant . "', " . $newVal . ");"
+                    : "define('" . $constant . "', '" . addslashes($newVal) . "');";
+
+                $pattern = "/define\s*\(\s*'" . preg_quote($constant, '/') . "'\s*,.*?\)\s*;/";
+
+                if (preg_match($pattern, $cfg))
                 {
-                    $cfg = preg_replace(
-                        "/define\('" . preg_quote($constant, '/') . "',\s*[0-9]+\)/",
-                        "define('" . $constant . "', " . (int)$newVal . ")",
-                        $cfg
-                    );
+                    $cfg = preg_replace($pattern, $replacement, $cfg, 1);
                 }
                 else
                 {
-                    $escaped = addslashes($newVal);
-                    $cfg = preg_replace(
-                        "/define\('" . preg_quote($constant, '/') . "',\s*\"[^\"]*\"\)/",
-                        "define('" . $constant . "', \"" . $escaped . "\")",
-                        $cfg
-                    );
+                    /* Constant isn't defined in config.php at all yet - append it
+                     * before the closing PHP tag (if any) rather than silently
+                     * dropping the value. */
+                    if (preg_match('/\?>\s*$/', $cfg))
+                    {
+                        $cfg = preg_replace('/\?>\s*$/', $replacement . "\n?>", $cfg);
+                    }
+                    else
+                    {
+                        $cfg = rtrim($cfg) . "\n" . $replacement . "\n";
+                    }
                 }
             }
 

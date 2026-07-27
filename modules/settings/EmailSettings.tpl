@@ -117,11 +117,11 @@
         </div>
         <div>
           <h1>Email Configuration</h1>
-          <p>Configure outgoing email, SMTP settings, and notification preferences</p>
+          <p>SMTP server credentials for sending outgoing email from Neutara ATS</p>
         </div>
         <div style="margin-left:auto;">
           <?php $mailerMode = defined('MAIL_MAILER') ? MAIL_MAILER : 0; ?>
-          <?php if ($mailerMode == 3 || $mailerMode == 1 || $mailerMode == 2): ?>
+          <?php if ($mailerMode == 3): ?>
           <span class="em-badge em-badge-ok"><span class="em-badge-dot"></span> Email Active</span>
           <?php else: ?>
           <span class="em-badge em-badge-off"><span class="em-badge-dot"></span> Email Disabled</span>
@@ -134,45 +134,12 @@
             method="post">
         <input type="hidden" name="postback"   value="postback" />
         <input type="hidden" name="configured" value="1" />
-
-        <!-- ── MAILER MODE ── -->
-        <div class="em-card">
-          <div class="em-card-header">
-            <div class="em-card-icon" style="background:#eff6ff;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
-            </div>
-            <div>
-              <div class="em-card-title">Sending Method</div>
-              <div class="em-card-subtitle">Choose how emails are delivered from Neutara ATS</div>
-            </div>
-          </div>
-          <div class="em-card-body">
-            <div class="em-mode-grid">
-              <?php
-              $modes = [
-                0 => ['icon'=>'🚫','name'=>'Disabled',    'desc'=>'No emails sent'],
-                1 => ['icon'=>'🐘','name'=>'PHP Mail',    'desc'=>"Server's built-in mail()"],
-                2 => ['icon'=>'📮','name'=>'Sendmail',    'desc'=>'Local sendmail binary'],
-                3 => ['icon'=>'🔒','name'=>'SMTP',        'desc'=>'Recommended · Gmail / relay'],
-              ];
-              foreach ($modes as $val => $m):
-              ?>
-              <label class="em-mode-card<?php if ($mailerMode == $val): ?> selected<?php endif; ?>"
-                     onclick="onModeChange(<?php echo $val; ?>)">
-                <input type="radio" name="mailMailer" value="<?php echo $val; ?>"
-                       <?php if ($mailerMode == $val): ?>checked<?php endif; ?>>
-                <div class="em-mode-card-icon"><?php echo $m['icon']; ?></div>
-                <div class="em-mode-card-name"><?php echo $m['name']; ?></div>
-                <div class="em-mode-card-desc"><?php echo $m['desc']; ?></div>
-              </label>
-              <?php endforeach; ?>
-            </div>
-          </div>
-        </div>
+        <!-- SMTP is the only supported sending method here; saving these
+             settings turns email sending on via SMTP. -->
+        <input type="hidden" name="mailMailer" value="3" />
 
         <!-- ── SMTP SETTINGS ── -->
-        <div class="em-card em-smtp-section" id="smtpCard"
-             style="<?php if ($mailerMode != 3): ?>display:none;<?php endif; ?>">
+        <div class="em-card em-smtp-section" id="smtpCard">
           <div class="em-card-header">
             <div class="em-card-icon" style="background:#fef3c7;">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -231,27 +198,6 @@
           </div>
         </div>
 
-        <!-- ── SENDMAIL SETTINGS ── -->
-        <div class="em-card" id="sendmailCard"
-             style="<?php if ($mailerMode != 2): ?>display:none;<?php endif; ?>">
-          <div class="em-card-header">
-            <div class="em-card-icon" style="background:#f0fdf4;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>
-            </div>
-            <div>
-              <div class="em-card-title">Sendmail Path</div>
-              <div class="em-card-subtitle">Path to the sendmail binary on your server</div>
-            </div>
-          </div>
-          <div class="em-card-body">
-            <div class="em-field" style="max-width:400px;">
-              <label>Sendmail Binary Path</label>
-              <input type="text" name="sendmailPath" placeholder="/usr/sbin/sendmail"
-                     value="<?php echo htmlspecialchars(defined('MAIL_SENDMAIL_PATH') ? MAIL_SENDMAIL_PATH : '/usr/sbin/sendmail'); ?>" />
-            </div>
-          </div>
-        </div>
-
         <!-- ── FROM ADDRESS + TEST ── -->
         <div class="em-card">
           <div class="em-card-header">
@@ -296,77 +242,6 @@
           </div>
         </div>
 
-        <!-- ── PIPELINE STATUS NOTIFICATIONS ── -->
-        <div class="em-card">
-          <div class="em-card-header">
-            <div class="em-card-icon" style="background:#fef9c3;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ca8a04" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-            </div>
-            <div>
-              <div class="em-card-title">Pipeline Status Notifications</div>
-              <div class="em-card-subtitle">Send automatic emails when a candidate's pipeline status changes</div>
-            </div>
-          </div>
-          <div class="em-card-body">
-            <?php
-            $statusFields = [
-              'statusChangeContacted'    => ['name'=>'Contacted',          'const'=>'PIPELINE_STATUS_CONTACTED'],
-              'statusChangeReplied'      => ['name'=>'Candidate Replied',  'const'=>'PIPELINE_STATUS_CANDIDATE_REPLIED'],
-              'statusChangeQualifying'   => ['name'=>'Qualifying',         'const'=>'PIPELINE_STATUS_QUALIFYING'],
-              'statusChangeSubmitted'    => ['name'=>'Submitted',          'const'=>'PIPELINE_STATUS_SUBMITTED'],
-              'statusChangeInterviewing' => ['name'=>'Interviewing',       'const'=>'PIPELINE_STATUS_INTERVIEWING'],
-              'statusChangeOffered'      => ['name'=>'Offered',            'const'=>'PIPELINE_STATUS_OFFERED'],
-              'statusChangeDeclined'     => ['name'=>'Declined by Client', 'const'=>'PIPELINE_STATUS_CLIENTDECLINED'],
-              'statusChangePlaced'       => ['name'=>'Placed',             'const'=>'PIPELINE_STATUS_PLACED'],
-            ];
-            $descriptions = [
-              'Contacted'          => 'Email sent when a recruiter first contacts a candidate',
-              'Candidate Replied'  => 'Email sent when the candidate has replied',
-              'Qualifying'         => 'Email sent when moving candidate to qualifying stage',
-              'Submitted'          => 'Email sent when candidate is submitted to the client',
-              'Interviewing'       => 'Email sent when an interview is scheduled',
-              'Offered'            => 'Email sent when an offer is extended',
-              'Declined by Client' => 'Email sent when client declines the candidate',
-              'Placed'             => 'Email sent upon successful placement',
-            ];
-            foreach ($statusFields as $fieldName => $data):
-              $constName = $data['const'];
-              $constVal  = defined($constName) ? constant($constName) : null;
-              $isChecked = ($constVal !== null && isset($this->candidateJoborderStatusSendsMessage[$constVal]) && $this->candidateJoborderStatusSendsMessage[$constVal] == 1);
-            ?>
-            <div class="em-toggle-row">
-              <div class="em-toggle-info">
-                <h4><?php echo htmlspecialchars($data['name']); ?></h4>
-                <p><?php echo htmlspecialchars($descriptions[$data['name']] ?? ''); ?></p>
-              </div>
-              <label class="em-toggle">
-                <input type="checkbox" name="<?php echo $fieldName; ?>" <?php if($isChecked): ?>checked<?php endif; ?>>
-                <span class="em-slider"></span>
-              </label>
-            </div>
-            <?php endforeach; ?>
-
-            <?php if (!empty($this->emailTemplatesRS)): ?>
-            <div style="margin-top:18px;padding-top:16px;border-top:1px solid #f3f4f6;">
-              <div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em;">Custom Email Templates</div>
-              <?php foreach ($this->emailTemplatesRS as $index => $data): ?>
-              <div class="em-toggle-row">
-                <div class="em-toggle-info">
-                  <h4><?php echo htmlspecialchars($data['emailTemplateTitle']); ?></h4>
-                </div>
-                <label class="em-toggle">
-                  <input type="checkbox" name="useThisTemplate<?php echo $data['emailTemplateID']; ?>"
-                         id="useThisTemplate<?php echo $data['emailTemplateID']; ?>"
-                         <?php if ($data['disabled'] == 0): ?>checked<?php endif; ?>>
-                  <span class="em-slider"></span>
-                </label>
-              </div>
-              <?php endforeach; ?>
-            </div>
-            <?php endif; ?>
-          </div>
-        </div>
-
         <!-- Save row -->
         <div class="em-btn-row">
           <button type="submit" class="em-save-btn">Save Email Settings</button>
@@ -384,17 +259,6 @@
 
 <script>
 var sessionCookie = '<?php echo $this->sessionCookie; ?>';
-
-/* Mailer mode card toggle */
-function onModeChange(val) {
-  document.querySelectorAll('.em-mode-card').forEach(function(c){ c.classList.remove('selected'); });
-  var radios = document.querySelectorAll('input[name="mailMailer"]');
-  radios.forEach(function(r){
-    if (parseInt(r.value) === val) { r.checked = true; r.closest('.em-mode-card').classList.add('selected'); }
-  });
-  document.getElementById('smtpCard').style.display     = (val === 3) ? '' : 'none';
-  document.getElementById('sendmailCard').style.display = (val === 2) ? '' : 'none';
-}
 
 /* Password visibility toggle */
 function togglePass() {
