@@ -40,16 +40,13 @@ jobs:
             docker exec ats-app test -f /var/www/html/INSTALL_BLOCK || docker exec ats-app touch /var/www/html/INSTALL_BLOCK
             test -f ./config.php || docker cp ats-app:/var/www/html/config.php ./config.php
             test -f ./INSTALL_BLOCK || docker cp ats-app:/var/www/html/INSTALL_BLOCK ./INSTALL_BLOCK
-            # TEMP diagnostic: why isn't the Email Settings save persisting?
-            echo "--- host-side config.php ---"
-            ls -la ./config.php
-            echo "--- container-side config.php (as seen by PHP/Apache) ---"
-            docker exec ats-app ls -la /var/www/html/config.php
-            docker exec ats-app whoami
-            docker exec ats-app id www-data
-            echo "--- is_writable() from PHP's own perspective ---"
-            docker exec ats-app php -r "var_dump(is_writable('/var/www/html/config.php')); var_dump(realpath('/var/www/html/config.php'));"
-            echo "--- current MAIL_SMTP_HOST line in the file right now ---"
-            docker exec ats-app grep -n "MAIL_SMTP_HOST" /var/www/html/config.php
-            echo "--- is /var/www/html itself a bind mount or overlay, and is it mounted read-only? ---"
-            docker exec ats-app mount | grep -i "www/html "
+            # config.php/INSTALL_BLOCK are bind-mounted from the host, so they keep
+            # whatever ownership they had when copied out (root, since deploy runs
+            # as root over SSH) rather than the image's own build-time
+            # `chown -R www-data` layer. Apache's actual request-handling workers
+            # run as www-data, so a root-owned 644 file is read-only to them -
+            # SettingsUI.php's is_writable() check on the SMTP settings save
+            # silently fails and the whole config.php rewrite no-ops. Re-assert
+            # www-data ownership every deploy (idempotent, cheap) so it self-heals
+            # even if it ever drifts back.
+            docker exec ats-app chown www-data:www-data /var/www/html/config.php /var/www/html/INSTALL_BLOCK
