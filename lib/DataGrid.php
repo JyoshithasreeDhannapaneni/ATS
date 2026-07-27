@@ -463,6 +463,15 @@ class DataGrid
              die ('Parameter sortBy is not a valid sortable column.');
          }
 
+         //sortDirection - concatenated directly into a raw ORDER BY clause below, so it must be
+         //exactly ASC or DESC. Unlike sortBy, don't die() on an invalid value here: fall back to
+         //this grid's own default rather than trusting anything else the client supplied.
+         if (!isset($this->_parameters['sortDirection']) ||
+             !in_array($this->_parameters['sortDirection'], array('ASC', 'DESC'), true))
+         {
+             $this->_parameters['sortDirection'] = $this->defaultSortDirection;
+         }
+
          //rangeStart - should be an integer or a character between A and Z.  If not set, set to 0.
          if (!isset($this->_parameters['rangeStart']))
          {
