@@ -50,9 +50,11 @@ jobs:
             # www-data ownership every deploy (idempotent, cheap) so it self-heals
             # even if it ever drifts back.
             docker exec ats-app chown www-data:www-data /var/www/html/config.php /var/www/html/INSTALL_BLOCK
-            # TEMP diagnostic: is_admin_hidden wasn't it (all 20 rows have
-            # 0). Checking site_id distribution and the exact getCount()
-            # query next. Read-only.
-            docker exec ats-mysql sh -c 'mysql -uatsuser -p"$MYSQL_PASSWORD" opencats -e "SELECT site_id, COUNT(*) FROM candidate GROUP BY site_id"'
-            docker exec ats-mysql sh -c 'mysql -uatsuser -p"$MYSQL_PASSWORD" opencats -e "SELECT COUNT(*) AS totalCandidates FROM candidate WHERE candidate.site_id = 1 AND candidate.is_admin_hidden = 0"'
-            docker exec ats-mysql sh -c 'mysql -uatsuser -p"$MYSQL_PASSWORD" opencats -e "SELECT user_id, first_name, last_name, site_id, access_level FROM user WHERE username = \"admin\""'
+            # TEMP diagnostic: Candidates::getCount() is fine (verified:
+            # 20, correct) - but the header text actually comes from
+            # DataGrid::getNumberOfRows(), a completely different query
+            # with SQL_CALC_FOUND_ROWS + a LEFT JOIN + GROUP BY. Testing
+            # whether that combination is what's returning the wrong
+            # FOUND_ROWS() value on this MySQL version. Read-only.
+            docker exec ats-mysql sh -c 'mysql -uatsuser -p"$MYSQL_PASSWORD" opencats -e "SELECT SQL_CALC_FOUND_ROWS candidate.candidate_id, candidate.date_modified FROM candidate LEFT JOIN saved_list_entry ON saved_list_entry.data_item_type = 100 AND saved_list_entry.data_item_id = candidate.candidate_id AND saved_list_entry.site_id = 1 WHERE candidate.site_id = 1 GROUP BY candidate.candidate_id ORDER BY candidate.date_modified DESC LIMIT 0, 25; SELECT FOUND_ROWS() AS rowCount;"'
+            docker exec ats-mysql sh -c 'mysql -uatsuser -p"$MYSQL_PASSWORD" opencats -e "SELECT VERSION()"'
