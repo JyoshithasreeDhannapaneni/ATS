@@ -50,11 +50,3 @@ jobs:
             # www-data ownership every deploy (idempotent, cheap) so it self-heals
             # even if it ever drifts back.
             docker exec ats-app chown www-data:www-data /var/www/html/config.php /var/www/html/INSTALL_BLOCK
-            # TEMP one-time: the careers portal's site name was still the
-            # stock OpenCATS default "testdomain.com" (shows in every
-            # careers page <title> and in generated mailto links) - the
-            # setup wizard step that normally sets this was apparently
-            # never run for this deployment. Idempotent (plain UPDATE),
-            # will remove this step right after confirming.
-            docker exec ats-mysql sh -c 'mysql -uatsuser -p"$MYSQL_PASSWORD" opencats -e "UPDATE site SET name = \"Neutara\" WHERE name = \"testdomain.com\""'
-            docker exec ats-mysql sh -c 'mysql -uatsuser -p"$MYSQL_PASSWORD" opencats -e "SELECT site_id, name FROM site"'
