@@ -50,3 +50,9 @@ jobs:
             # www-data ownership every deploy (idempotent, cheap) so it self-heals
             # even if it ever drifts back.
             docker exec ats-app chown www-data:www-data /var/www/html/config.php /var/www/html/INSTALL_BLOCK
+            # TEMP one-time: apply the Hired/Withdrawn pipeline email
+            # templates migration. Idempotent via WHERE NOT EXISTS in the
+            # file itself. Will remove this step right after confirming.
+            docker exec -i ats-mysql sh -c 'mysql -uatsuser -p"$MYSQL_PASSWORD" opencats' < db/upgrade-pipeline-email-templates-hired-withdrawn.sql
+            docker exec ats-mysql sh -c 'mysql -uatsuser -p"$MYSQL_PASSWORD" opencats -e "SELECT tag, subject FROM email_template WHERE tag IN (\"PIPELINE_STATUS_1080\",\"PIPELINE_STATUS_1090\") ORDER BY tag"'
+            docker exec ats-mysql sh -c 'mysql -uatsuser -p"$MYSQL_PASSWORD" opencats -e "SELECT candidate_joborder_status_id, short_description, triggers_email FROM candidate_joborder_status WHERE candidate_joborder_status_id IN (1080,1090)"'
