@@ -1120,7 +1120,7 @@ HTML;
                 $jobTitle = htmlspecialchars($jobOrderData['title'] ?? 'Position');
                 $backUrl  = CATSUtility::getIndexName() . '?m=careers' . (isset($_GET['templateName']) ? '&templateName='.urlencode($_GET['templateName']) : '') . '&p=showAll';
                 echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
-<link href="inter.css" rel="stylesheet">
+<link href="../inter.css" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:Inter,sans-serif;background:#f1f5f9;display:flex;align-items:center;justify-content:center;min-height:100vh;}
@@ -1817,7 +1817,7 @@ h1{font-size:24px;font-weight:800;color:#064e3b;margin-bottom:8px;}
             $jobOrderData2 = $jobOrders->get($jobOrderID);
             $jobTitle2 = htmlspecialchars($jobOrderData2['title'] ?? 'this position');
             echo '<!DOCTYPE html><html><head><meta charset="UTF-8">
-<link href="inter.css" rel="stylesheet">
+<link href="../inter.css" rel="stylesheet">
 <style>body{font-family:Inter,sans-serif;background:#f8fafc;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}
 .box{background:#fff;border-radius:16px;padding:48px 40px;text-align:center;max-width:440px;box-shadow:0 4px 24px rgba(0,0,0,.08);}
 .icon{width:64px;height:64px;background:#fef3c7;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;}
