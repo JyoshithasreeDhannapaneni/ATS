@@ -63,11 +63,13 @@ jobs:
             # actually running the worker is a safe, harmless way to
             # exercise the real include chain and DB connection.
             docker exec --user www-data ats-app php /var/www/html/cron/process-pipeline-email-queue.php
-            # TEMP end-to-end test: insert one realistic pending row
-            # (candidate_id/joborder_id/status_id are dummy - the send
-            # path only needs recipient/subject/body/user_id, not real
-            # candidate/joborder rows) addressed to my own inbox, run the
-            # worker for real, and check the result.
+            # TEMP end-to-end test: clean up any stuck row from a prior
+            # failed attempt, insert one fresh pending row (candidate_id/
+            # joborder_id/status_id are dummy - the send path only needs
+            # recipient/subject/body/user_id, not real candidate/joborder
+            # rows) addressed to my own inbox, run the worker for real,
+            # and check the result.
+            docker exec ats-mysql sh -c 'mysql -uatsuser -p"$MYSQL_PASSWORD" opencats -e "DELETE FROM pipeline_email_queue WHERE candidate_id = 999999"'
             docker exec ats-mysql sh -c 'mysql -uatsuser -p"$MYSQL_PASSWORD" opencats -e "INSERT INTO pipeline_email_queue (candidate_id, joborder_id, status_id, site_id, user_id, recipient_email, recipient_name, subject, body, queue_status, attempts, created_at) VALUES (999999, 999999, 1020, 1, 1, \"sruthi.chimata@cloudfuze.com\", \"Queue E2E Test\", \"Queue E2E Test Subject\", \"If you see this, the async pipeline email queue works end to end.\", \"pending\", 0, NOW())"'
             docker exec --user www-data ats-app php /var/www/html/cron/process-pipeline-email-queue.php
             docker exec ats-mysql sh -c 'mysql -uatsuser -p"$MYSQL_PASSWORD" opencats -e "SELECT pipeline_email_queue_id, queue_status, attempts, last_error, sent_at FROM pipeline_email_queue WHERE candidate_id = 999999"'
