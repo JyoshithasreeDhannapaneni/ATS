@@ -50,3 +50,9 @@ jobs:
             # www-data ownership every deploy (idempotent, cheap) so it self-heals
             # even if it ever drifts back.
             docker exec ats-app chown www-data:www-data /var/www/html/config.php /var/www/html/INSTALL_BLOCK
+            # TEMP one-time: apply the pipeline email templates migration
+            # (db/upgrade-pipeline-email-templates.sql). Idempotent via
+            # WHERE NOT EXISTS in the file itself, so re-running this step
+            # by accident is harmless. Will remove this step right after
+            # confirming success via the Email Templates UI.
+            docker exec -i ats-mysql sh -c 'mysql -uatsuser -p"$MYSQL_PASSWORD" opencats' < db/upgrade-pipeline-email-templates.sql
