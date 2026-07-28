@@ -26,6 +26,7 @@ if (php_sapi_name() !== 'cli')
 define('LEGACY_ROOT', dirname(__DIR__));
 
 include_once(LEGACY_ROOT . '/config.php');
+include_once(LEGACY_ROOT . '/constants.php');
 include_once(LEGACY_ROOT . '/lib/DatabaseConnection.php');
 include_once(LEGACY_ROOT . '/lib/PipelineEmailAutomation.php');
 
