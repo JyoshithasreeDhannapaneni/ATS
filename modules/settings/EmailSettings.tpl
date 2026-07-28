@@ -160,7 +160,7 @@
             <div class="em-grid">
               <div class="em-field em-grid-full" style="grid-column:1/2;">
                 <label>SMTP Host</label>
-                <input type="text" name="smtpHost" placeholder="smtp.gmail.com"
+                <input type="text" name="smtpHost" placeholder="smtp.gmail.com" autocomplete="off"
                        value="<?php echo htmlspecialchars(defined('MAIL_SMTP_HOST') ? MAIL_SMTP_HOST : ''); ?>" />
                 <span class="em-hint">e.g. smtp.gmail.com · smtp.office365.com · mail.yourdomain.com</span>
               </div>
@@ -180,7 +180,13 @@
               </div>
               <div class="em-field">
                 <label>SMTP Username</label>
-                <input type="email" name="smtpUser" placeholder="you@gmail.com"
+                <!-- type="text", not "email": many SMTP providers (self-hosted
+                     mail servers in particular) use plain usernames, not email
+                     addresses. type="email" silently blocks form submission via
+                     native browser validation - with no visible error - the
+                     instant the value isn't shaped like an address, which reads
+                     to the user as "my save just did nothing." -->
+                <input type="text" name="smtpUser" placeholder="you@gmail.com" autocomplete="off"
                        value="<?php echo htmlspecialchars(defined('MAIL_SMTP_USER') ? MAIL_SMTP_USER : ''); ?>" />
               </div>
               <div class="em-field">
