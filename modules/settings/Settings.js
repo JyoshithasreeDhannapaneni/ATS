@@ -82,7 +82,7 @@ function customizeDashboard_moveComponent(componentID, position, columnID)
  */
 function testEmailSettings(sessionCookie)
 {
-    var testButton = document.getElementById('test');
+    var testButton = document.getElementById('testBtn');
 
     var testEmailAddress = document.getElementById('testEmailAddress').value;
     var fromAddress      = document.getElementById('fromAddress').value;
