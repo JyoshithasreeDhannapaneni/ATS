@@ -20,7 +20,7 @@
 -- audit trail (attempts, last_error) and the retry mechanism (stays
 -- 'pending' until MAX_ATTEMPTS, then flips to 'failed').
 
-CREATE TABLE `pipeline_email_queue` (
+CREATE TABLE IF NOT EXISTS `pipeline_email_queue` (
   `pipeline_email_queue_id` int(11) NOT NULL AUTO_INCREMENT,
   `candidate_id` int(11) NOT NULL,
   `joborder_id` int(11) NOT NULL,
