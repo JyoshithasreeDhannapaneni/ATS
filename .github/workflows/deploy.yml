@@ -50,3 +50,6 @@ jobs:
             # www-data ownership every deploy (idempotent, cheap) so it self-heals
             # even if it ever drifts back.
             docker exec ats-app chown www-data:www-data /var/www/html/config.php /var/www/html/INSTALL_BLOCK
+            # TEMP: verify the real pipeline-status-change flow queued and
+            # sent an email for the end-to-end test candidate. Read-only.
+            docker exec ats-mysql sh -c 'mysql -uatsuser -p"$MYSQL_PASSWORD" opencats -e "SELECT pipeline_email_queue_id, status_id, subject, queue_status, attempts, last_error, sent_at FROM pipeline_email_queue WHERE candidate_id = 62 ORDER BY pipeline_email_queue_id"'
