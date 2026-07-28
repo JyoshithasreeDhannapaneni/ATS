@@ -132,14 +132,14 @@ class PipelineEmailAutomation
         // Check for custom template in email_template table
         $tag = 'PIPELINE_STATUS_' . $statusID;
         $sql = sprintf(
-            "SELECT text AS body, title AS subject FROM email_template
+            "SELECT text AS body, subject FROM email_template
              WHERE tag = %s AND site_id = %s AND disabled = 0",
             $this->_db->makeQueryString($tag),
             $this->_siteID
         );
 
         $rs = $this->_db->getAllAssoc($sql);
-        if (!empty($rs))
+        if (!empty($rs) && !empty($rs[0]['subject']))
         {
             return array(
                 'subject' => $rs[0]['subject'],
