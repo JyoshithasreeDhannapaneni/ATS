@@ -50,6 +50,16 @@ jobs:
             # www-data ownership every deploy (idempotent, cheap) so it self-heals
             # even if it ever drifts back.
             docker exec ats-app chown www-data:www-data /var/www/html/config.php /var/www/html/INSTALL_BLOCK
-            # TEMP diagnostic: is exec()/proc_open() available for background
-            # email-queue dispatch, and as www-data (not root)? Read-only.
-            docker exec --user www-data ats-app php -r "var_dump(function_exists('exec')); var_dump(function_exists('proc_open')); \$d = ini_get('disable_functions'); var_dump(\$d); echo shell_exec('whoami'); echo shell_exec('echo test-exec-works');"
+            # TEMP: pre-flight syntax check on the new pipeline email queue
+            # code before it's exposed to any real status change, plus
+            # create the queue table it depends on. Will remove once the
+            # feature is confirmed working end-to-end.
+            docker exec ats-app php -l /var/www/html/lib/PipelineEmailAutomation.php
+            docker exec ats-app php -l /var/www/html/cron/process-pipeline-email-queue.php
+            docker exec -i ats-mysql sh -c 'mysql -uatsuser -p"$MYSQL_PASSWORD" opencats' < db/upgrade-pipeline-email-queue.sql
+            docker exec ats-mysql sh -c 'mysql -uatsuser -p"$MYSQL_PASSWORD" opencats -e "DESCRIBE pipeline_email_queue"'
+            # -l only checks syntax, not undefined constants/classes that
+            # only surface at runtime - the queue is empty right now, so
+            # actually running the worker is a safe, harmless way to
+            # exercise the real include chain and DB connection.
+            docker exec --user www-data ats-app php /var/www/html/cron/process-pipeline-email-queue.php

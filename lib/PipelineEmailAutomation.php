@@ -14,6 +14,7 @@ class PipelineEmailAutomation
 {
     private $_db;
     private $_siteID;
+    private $_lastSendError = '';
 
     /* Default email templates for each pipeline status change */
     private static $_defaultTemplates = array(
@@ -62,11 +63,17 @@ class PipelineEmailAutomation
      * Trigger email automation when a pipeline status changes.
      * Called after Pipelines::setStatus().
      *
+     * Queues the send rather than blocking this request on the full SMTP
+     * round trip (a slow/unreachable mail server would otherwise stall
+     * every status-change click), then kicks a background worker so the
+     * queued row is picked up within seconds rather than waiting on a
+     * polling interval.
+     *
      * @param int $candidateID
      * @param int $jobOrderID
      * @param int $newStatusID The new pipeline status ID
      * @param int $userID The user who triggered the change
-     * @return bool Whether email was sent successfully
+     * @return bool Whether the email was queued successfully
      */
     public function onStatusChange($candidateID, $jobOrderID, $newStatusID, $userID = -1)
     {
@@ -100,12 +107,36 @@ class PipelineEmailAutomation
             return false;
         }
 
-        // Perform variable substitution
+        // Perform variable substitution now, while $_SESSION (used for
+        // %SITENAME%) is still available - the background worker that
+        // actually sends this runs as a CLI process with no session.
         $subject = $this->_substituteVars($template['subject'], $candidate, $jobOrder, $recruiter);
         $body    = $this->_substituteVars($template['body'], $candidate, $jobOrder, $recruiter);
 
-        // Send the email
-        return $this->_sendEmail($candidate, $subject, $body, $userID);
+        $recipientName = trim($candidate['firstName'] . ' ' . $candidate['lastName']);
+
+        // Resolve the -1 "use the current session user" sentinel now,
+        // while there still is a session - the queue worker that later
+        // reads this row back runs as a CLI process with none.
+        if ($userID == -1 && isset($_SESSION['CATS']))
+        {
+            $userID = $_SESSION['CATS']->getUserID();
+        }
+
+        $queued = $this->_enqueueEmail(
+            $candidateID, $jobOrderID, $newStatusID,
+            $candidate['email1'], $recipientName,
+            $subject, $body, $userID
+        );
+
+        if (!$queued)
+        {
+            return false;
+        }
+
+        $this->_dispatchQueueWorker();
+
+        return true;
     }
 
     /**
@@ -181,10 +212,65 @@ class PipelineEmailAutomation
     }
 
     /**
-     * Send the email using the Mailer class.
+     * Insert a pending row for the background worker to pick up.
+     *
+     * @return int|false the new queue row's ID, or false on failure
      */
-    private function _sendEmail($candidate, $subject, $body, $userID)
+    private function _enqueueEmail($candidateID, $jobOrderID, $statusID, $recipientEmail,
+        $recipientName, $subject, $body, $userID)
     {
+        $sql = sprintf(
+            "INSERT INTO pipeline_email_queue
+                (candidate_id, joborder_id, status_id, site_id, user_id,
+                 recipient_email, recipient_name, subject, body,
+                 queue_status, attempts, created_at)
+             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 'pending', 0, NOW())",
+            intval($candidateID),
+            intval($jobOrderID),
+            intval($statusID),
+            intval($this->_siteID),
+            intval($userID),
+            $this->_db->makeQueryString($recipientEmail),
+            $this->_db->makeQueryString($recipientName),
+            $this->_db->makeQueryString($subject),
+            $this->_db->makeQueryString($body)
+        );
+
+        return $this->_db->query($sql, true) ? $this->_db->getLastInsertID() : false;
+    }
+
+    /**
+     * Spawn the queue worker as a detached background process so the
+     * just-enqueued row (and any other pending rows) gets sent within
+     * seconds, without making the caller wait on it. Fire-and-forget by
+     * design: if this fails silently (exec() disabled, php not on PATH),
+     * the row is still queued and will eventually be picked up on a
+     * subsequent status change's own dispatch attempt.
+     */
+    private function _dispatchQueueWorker()
+    {
+        if (!function_exists('exec'))
+        {
+            return;
+        }
+
+        $script = dirname(__DIR__) . '/cron/process-pipeline-email-queue.php';
+        exec('php ' . escapeshellarg($script) . ' > /dev/null 2>&1 &');
+    }
+
+    /**
+     * Actually send one already-rendered email. Called by the queue
+     * worker (cron/process-pipeline-email-queue.php), which runs as a CLI
+     * process with no $_SESSION - callers must pass a real $userID (not
+     * -1) since Mailer falls back to $_SESSION['CATS'] otherwise.
+     *
+     * @return bool whether the send succeeded; check getLastSendError()
+     *              for details on failure
+     */
+    public function sendQueuedEmailNow($recipientEmail, $recipientName, $subject, $body, $userID)
+    {
+        $this->_lastSendError = '';
+
         try
         {
             $mailer = new Mailer($this->_siteID, $userID);
@@ -195,23 +281,38 @@ class PipelineEmailAutomation
             $fromAddress = $settings['fromAddress'] ?? 'noreply@neutara.com';
             $fromName = 'Neutara ATS';
 
-            $recipients = array(array($candidate['email1'], $candidate['firstName'] . ' ' . $candidate['lastName']));
+            $recipients = array(array($recipientEmail, $recipientName));
 
-            return $mailer->send(
+            $sent = $mailer->send(
                 array($fromAddress, $fromName),
                 $recipients,
                 $subject,
                 $body,
                 false, // not HTML
-                true   // log
+                true   // log to email_history on success
             );
+
+            if (!$sent)
+            {
+                $this->_lastSendError = $mailer->getError();
+            }
+
+            return $sent;
         }
         catch (\Exception $e)
         {
-            // Log the error but don't break the pipeline status change
+            $this->_lastSendError = $e->getMessage();
             error_log('PipelineEmailAutomation: Failed to send email - ' . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * @return string the error from the most recent sendQueuedEmailNow() call
+     */
+    public function getLastSendError()
+    {
+        return $this->_lastSendError;
     }
 
     /**
