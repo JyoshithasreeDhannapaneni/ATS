@@ -50,10 +50,9 @@ jobs:
             # www-data ownership every deploy (idempotent, cheap) so it self-heals
             # even if it ever drifts back.
             docker exec ats-app chown www-data:www-data /var/www/html/config.php /var/www/html/INSTALL_BLOCK
-            # TEMP diagnostic: investigating a reported header-count-vs-
-            # table-body mismatch (Candidates header said "1 total" while
-            # the table showed 20 rows). Candidates::getCount() always
-            # applies "is_admin_hidden = 0"; the DataGrid list query only
-            # applies it for non-super-admin users. Read-only.
-            docker exec ats-mysql sh -c 'mysql -uatsuser -p"$MYSQL_PASSWORD" opencats -e "SELECT is_admin_hidden, COUNT(*) FROM candidate GROUP BY is_admin_hidden"'
-            docker exec ats-mysql sh -c 'mysql -uatsuser -p"$MYSQL_PASSWORD" opencats -e "SELECT candidate_id, first_name, last_name, is_admin_hidden, source FROM candidate ORDER BY candidate_id"'
+            # TEMP diagnostic: is_admin_hidden wasn't it (all 20 rows have
+            # 0). Checking site_id distribution and the exact getCount()
+            # query next. Read-only.
+            docker exec ats-mysql sh -c 'mysql -uatsuser -p"$MYSQL_PASSWORD" opencats -e "SELECT site_id, COUNT(*) FROM candidate GROUP BY site_id"'
+            docker exec ats-mysql sh -c 'mysql -uatsuser -p"$MYSQL_PASSWORD" opencats -e "SELECT COUNT(*) AS totalCandidates FROM candidate WHERE candidate.site_id = 1 AND candidate.is_admin_hidden = 0"'
+            docker exec ats-mysql sh -c 'mysql -uatsuser -p"$MYSQL_PASSWORD" opencats -e "SELECT user_id, first_name, last_name, site_id, access_level FROM user WHERE username = \"admin\""'
