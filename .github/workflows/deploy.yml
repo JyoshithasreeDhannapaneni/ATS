@@ -50,9 +50,3 @@ jobs:
             # www-data ownership every deploy (idempotent, cheap) so it self-heals
             # even if it ever drifts back.
             docker exec ats-app chown www-data:www-data /var/www/html/config.php /var/www/html/INSTALL_BLOCK
-            # TEMP: investigating a report that only the most recent
-            # candidate document upload shows in the list, even though
-            # the duplicate-file check found an earlier upload by hash -
-            # meaning the row exists but isn't listed. Read-only.
-            docker exec ats-mysql sh -c 'mysql -uatsuser -p"$MYSQL_PASSWORD" opencats -e "SELECT document_id, candidate_id, site_id, token_id, document_type, original_filename, file_hash, uploaded_date FROM candidate_document WHERE candidate_id = 62 ORDER BY document_id"'
-            docker exec ats-mysql sh -c 'mysql -uatsuser -p"$MYSQL_PASSWORD" opencats -e "SHOW CREATE TABLE candidate_document"'
