@@ -98,7 +98,6 @@ function testEmailSettings(sessionCookie)
     /* Anonymous callback function triggered when HTTP response is received. */
     var callBack = function ()
     {
-        document.getElementById('testButtonSpan').style.display='';
         document.getElementById('testButtonSpanActive').style.display='none';
 
         if (http.readyState != 4)
@@ -146,7 +145,6 @@ function testEmailSettings(sessionCookie)
         false
     );
 
-    document.getElementById('testButtonSpan').style.display='none';
     document.getElementById('testButtonSpanActive').style.display='';
 }
 

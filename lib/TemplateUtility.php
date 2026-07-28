@@ -1352,6 +1352,30 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     /**
+     * Appends a cache-busting query string to a JS/CSS asset path. Keys it
+     * on the file's own mtime rather than $javascriptAntiCache (the app
+     * version string) whenever the file exists on disk, since the version
+     * string only changes on a version bump - not on every deploy - which
+     * left already-loaded browsers silently serving a stale cached copy of
+     * any JS/CSS-only fix indefinitely. Falls back to $javascriptAntiCache
+     * for anything not found relative to the working directory (e.g. a
+     * remote URL).
+     *
+     * @param string $filename relative or absolute asset path
+     * @param string $javascriptAntiCache fallback query string (e.g. '?v=123')
+     * @return string
+     */
+    private static function _cacheBustedAsset($filename, $javascriptAntiCache)
+    {
+        if (file_exists($filename))
+        {
+            return $filename . '?m=' . filemtime($filename);
+        }
+
+        return $filename . $javascriptAntiCache;
+    }
+
+    /**
      * Prints template header HTML.
      *
      * @param string page title
@@ -1386,7 +1410,7 @@ document.addEventListener("DOMContentLoaded", function() {
         echo '<meta name="viewport" content="width=device-width, initial-scale=1.0" />', "\n";
         $faviconSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#0c18d4"/><text x="16" y="22" font-family="Arial, sans-serif" font-size="18" font-weight="800" fill="#fff" text-anchor="middle">N</text></svg>';
         echo '<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,' . rawurlencode($faviconSvg) . '" />', "\n";
-        echo '<link href="inter.css'.$javascriptAntiCache.'" rel="stylesheet" />', "\n";
+        echo '<link href="', self::_cacheBustedAsset('inter.css', $javascriptAntiCache), '" rel="stylesheet" />', "\n";
         echo '<link rel="alternate" type="application/rss+xml" title="RSS" href="',
              CATSUtility::getIndexName(), '?m=rss" />', "\n";
 
@@ -1395,8 +1419,8 @@ document.addEventListener("DOMContentLoaded", function() {
          * (js/core-bundle.js) since they load unconditionally on every page;
          * see that file's header comment for how to regenerate it. jQuery
          * stays separate since it's vendored third-party code. */
-        echo '<script type="text/javascript" src="js/core-bundle.js'.$javascriptAntiCache.'"></script>', "\n";
-        echo '<script type="text/javascript" src="js/jquery-1.3.2.min.js'.$javascriptAntiCache.'"></script>', "\n";
+        echo '<script type="text/javascript" src="', self::_cacheBustedAsset('js/core-bundle.js', $javascriptAntiCache), '"></script>', "\n";
+        echo '<script type="text/javascript" src="', self::_cacheBustedAsset('js/jquery-1.3.2.min.js', $javascriptAntiCache), '"></script>', "\n";
         echo '<script type="text/javascript">CATSIndexName = "'.CATSUtility::getIndexName().'";</script>', "\n";
 
        $headIncludes[] = 'main.css';
@@ -1404,20 +1428,7 @@ document.addEventListener("DOMContentLoaded", function() {
         foreach ($headIncludes as $key => $filename)
         {
             $extension = substr($filename, strrpos($filename, '.') + 1);
-
-            /* main.css changes far more often than the version string does
-             * (which is what $javascriptAntiCache is normally keyed on), so
-             * a stale browser cache can silently keep serving an old
-             * stylesheet indefinitely. Key it on the file's own mtime instead
-             * so every edit busts the cache automatically. */
-            if ($filename === 'main.css' && file_exists($filename))
-            {
-                $filename .= '?m=' . filemtime($filename);
-            }
-            else
-            {
-                $filename .= $javascriptAntiCache;
-            }
+            $filename = self::_cacheBustedAsset($filename, $javascriptAntiCache);
 
             if ($extension == 'js')
             {
