@@ -50,9 +50,8 @@ jobs:
             # www-data ownership every deploy (idempotent, cheap) so it self-heals
             # even if it ever drifts back.
             docker exec ats-app chown www-data:www-data /var/www/html/config.php /var/www/html/INSTALL_BLOCK
-            # TEMP one-time: apply the pipeline email templates migration
-            # (db/upgrade-pipeline-email-templates.sql). Idempotent via
-            # WHERE NOT EXISTS in the file itself, so re-running this step
-            # by accident is harmless. Will remove this step right after
-            # confirming success via the Email Templates UI.
-            docker exec -i ats-mysql sh -c 'mysql -uatsuser -p"$MYSQL_PASSWORD" opencats' < db/upgrade-pipeline-email-templates.sql
+            # TEMP: verify the pipeline email templates migration landed
+            # (already applied in a prior deploy run). Read-only. Will
+            # remove this step right after confirming the count.
+            docker exec ats-mysql sh -c 'mysql -uatsuser -p"$MYSQL_PASSWORD" opencats -e "SELECT tag, subject FROM email_template WHERE tag LIKE \"PIPELINE_STATUS_10%\" ORDER BY tag"'
+            docker exec ats-mysql sh -c 'mysql -uatsuser -p"$MYSQL_PASSWORD" opencats -e "SELECT candidate_joborder_status_id, short_description, triggers_email FROM candidate_joborder_status WHERE candidate_joborder_status_id >= 1000 ORDER BY candidate_joborder_status_id"'
