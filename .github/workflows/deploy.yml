@@ -57,9 +57,8 @@ jobs:
             # inline multi-line PHP, since something in the SSH script
             # transport was mangling literal $ variables in an inline -r/heredoc.
             docker exec ats-app php /var/www/html/cron/diagnose-email-history.php
-            # TEMP DIAGNOSTIC: figure out where PHP/Apache errors actually go
-            # before trying to read them - error.log is very often a symlink
-            # to /dev/stderr in Apache docker images, and tailing that from a
-            # fresh docker exec session blocks forever (nothing writes to a
-            # new session's own stderr). Metadata-only checks first, no reads.
-            docker exec ats-app sh -c 'ls -la /var/log/apache2/ 2>&1; echo ---; find /var/log/apache2/error.log -maxdepth 0 -printf "SIZE=%s TYPE=%y LINK=%l\n" 2>&1; echo ---; php -i 2>&1 | grep -i error_log'
+            # TEMP DIAGNOSTIC: error.log is a symlink to /dev/stderr, so the
+            # real error stream is captured by Docker itself. A fresh test
+            # application (NTA-F26D8D) was just submitted live - check the
+            # container's own log output for anything from that request.
+            docker logs --since 30m ats-app 2>&1 | tail -n 300
