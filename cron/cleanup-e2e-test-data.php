@@ -58,7 +58,7 @@ if (!empty($jobSiteRS))
 
 foreach ($candidateIDs as $candidateID)
 {
-    $db->query(sprintf("DELETE FROM activity_entry WHERE data_item_id = %d AND data_item_type = %d", $candidateID, DATA_ITEM_CANDIDATE));
+    $db->query(sprintf("DELETE FROM activity WHERE data_item_id = %d AND data_item_type = %d", $candidateID, DATA_ITEM_CANDIDATE));
     $db->query(sprintf("DELETE FROM candidate_joborder_status_history WHERE candidate_id = %d", $candidateID));
     $db->query(sprintf("DELETE FROM candidate_joborder WHERE candidate_id = %d", $candidateID));
     $db->query(sprintf("DELETE FROM saved_list_entry WHERE data_item_id = %d AND data_item_type = %d", $candidateID, DATA_ITEM_CANDIDATE));
@@ -67,7 +67,7 @@ foreach ($candidateIDs as $candidateID)
     echo "Cleaned up candidate {$candidateID}\n";
 }
 
-$db->query(sprintf("DELETE FROM activity_entry WHERE data_item_id = %d AND data_item_type = %d", $jobOrderID, DATA_ITEM_JOBORDER));
+$db->query(sprintf("DELETE FROM activity WHERE data_item_id = %d AND data_item_type = %d", $jobOrderID, DATA_ITEM_JOBORDER));
 $db->query(sprintf("DELETE FROM candidate_joborder_status_history WHERE joborder_id = %d", $jobOrderID));
 $db->query(sprintf("DELETE FROM candidate_joborder WHERE joborder_id = %d", $jobOrderID));
 $db->query(sprintf("DELETE FROM saved_list_entry WHERE data_item_id = %d AND data_item_type = %d", $jobOrderID, DATA_ITEM_JOBORDER));
