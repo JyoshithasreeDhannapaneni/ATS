@@ -1675,11 +1675,22 @@ class CandidatesUI extends UserInterface
             CommonErrors::fatal(COMMONERROR_BADINDEX, $this, 'Invalid candidate ID.');
         }
 
-        $candidateID = $_GET['candidateID'];
+        $candidateID = (int) $_GET['candidateID'];
 
         if (!eval(Hooks::get('CANDIDATE_DELETE'))) return;
 
         $candidates = new Candidates($this->_siteID);
+
+        /* Candidates::delete() scopes its DELETE by site_id, so a candidate
+         * belonging to a different site silently survives with no error.
+         * Verify it's actually visible under this session's site first,
+         * same guard JobOrdersUI::onDelete() already uses. */
+        $candidateData = $candidates->get($candidateID);
+        if (!$candidateData)
+        {
+            CommonErrors::fatal(COMMONERROR_BADINDEX, $this, 'Invalid candidate ID.');
+        }
+
         $candidates->delete($candidateID);
 
         /* Delete the MRU entry if present. */
@@ -1718,15 +1729,18 @@ class CandidatesUI extends UserInterface
         
         foreach ($candidateIDs as $candidateID)
         {
-            if ($candidateID > 0)
+            /* Candidates::delete() scopes its DELETE by site_id and silently
+             * affects 0 rows for a candidate outside this session's site -
+             * skip counting those instead of reporting a false success. */
+            if ($candidateID > 0 && $candidates->get($candidateID))
             {
                 $candidates->delete($candidateID);
-                
+
                 /* Delete the MRU entry if present. */
                 $_SESSION['CATS']->getMRU()->removeEntry(
                     DATA_ITEM_CANDIDATE, $candidateID
                 );
-                
+
                 $deletedCount++;
             }
         }
