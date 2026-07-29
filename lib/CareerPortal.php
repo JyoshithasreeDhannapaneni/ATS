@@ -528,6 +528,7 @@ class CareerPortalSettings
     {
         if (empty($destination))
         {
+            error_log('CareerPortalSettings::sendEmail: no destination address given for subject "' . $subject . '" - skipping send.');
             return;
         }
 
@@ -540,6 +541,16 @@ class CareerPortalSettings
             $body,
             true
         );
+
+        if (!$mailerStatus)
+        {
+            error_log(sprintf(
+                'CareerPortalSettings::sendEmail: failed to send "%s" to %s: %s',
+                $subject,
+                $destination,
+                $mailer->getError()
+            ));
+        }
     }
 }
 
