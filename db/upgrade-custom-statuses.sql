@@ -37,6 +37,23 @@ INSERT IGNORE INTO `candidate_joborder_status`
 VALUES (1060, 'Onboarded', 0, 0, 1);
 
 -- No Show (ID: 1070)
-INSERT IGNORE INTO `candidate_joborder_status` 
-(`candidate_joborder_status_id`, `short_description`, `can_be_scheduled`, `triggers_email`, `is_enabled`) 
+INSERT IGNORE INTO `candidate_joborder_status`
+(`candidate_joborder_status_id`, `short_description`, `can_be_scheduled`, `triggers_email`, `is_enabled`)
 VALUES (1070, 'No Show', 0, 0, 1);
+
+-- Hired (ID: 1080) and Withdrawn (ID: 1090) were added directly against the
+-- production database outside source control - db/upgrade-pipeline-email-
+-- templates-hired-withdrawn.sql adds their email templates and flips
+-- triggers_email on, but never created these two rows themselves. Backfilling
+-- them here (with triggers_email already on) so a fresh install/schema
+-- rebuild matches production instead of being missing these two statuses.
+
+-- Hired (ID: 1080)
+INSERT IGNORE INTO `candidate_joborder_status`
+(`candidate_joborder_status_id`, `short_description`, `can_be_scheduled`, `triggers_email`, `is_enabled`)
+VALUES (1080, 'Hired', 0, 1, 1);
+
+-- Withdrawn (ID: 1090)
+INSERT IGNORE INTO `candidate_joborder_status`
+(`candidate_joborder_status_id`, `short_description`, `can_be_scheduled`, `triggers_email`, `is_enabled`)
+VALUES (1090, 'Withdrawn', 0, 1, 1);
