@@ -143,7 +143,21 @@
                                         </span>
                                     </td>
                                 </tr>
-                                
+
+                                <tr id="interviewerTypeRowAdd" style="display: none;">
+                                    <td class="tdVertical">
+                                        <label for="interviewerType">Interview Round:</label>
+                                    </td>
+                                    <td class="tdData">
+                                        <select name="interviewerType" id="interviewerType" style="width: 200px; padding: 5px;">
+                                            <option value="L1">L1 Interviewer</option>
+                                            <option value="L2">L2 Interviewer</option>
+                                            <option value="L3">L3 Interviewer</option>
+                                            <option value="HR">HR Interviewer</option>
+                                        </select>
+                                    </td>
+                                </tr>
+
                                 <script type="text/javascript">
                                     function toggleInterviewerTypeAdd() {
                                         var role = document.getElementById('userRole').value;

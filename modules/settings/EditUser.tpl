@@ -133,7 +133,21 @@
                             </span>
                         </td>
                     </tr>
-                    
+
+                    <tr id="interviewerTypeRow" <?php if ($currentRole != 'interviewer'): ?>style="display: none;"<?php endif; ?>>
+                        <td class="tdVertical">
+                            <label for="interviewerType">Interview Round:</label>
+                        </td>
+                        <td class="tdData">
+                            <select name="interviewerType" id="interviewerType" style="width: 200px; padding: 5px;">
+                                <option value="L1" <?php if ($currentInterviewerType == 'L1'): ?>selected<?php endif; ?>>L1 Interviewer</option>
+                                <option value="L2" <?php if ($currentInterviewerType == 'L2'): ?>selected<?php endif; ?>>L2 Interviewer</option>
+                                <option value="L3" <?php if ($currentInterviewerType == 'L3'): ?>selected<?php endif; ?>>L3 Interviewer</option>
+                                <option value="HR" <?php if ($currentInterviewerType == 'HR'): ?>selected<?php endif; ?>>HR Interviewer</option>
+                            </select>
+                        </td>
+                    </tr>
+
                     <script type="text/javascript">
                         function toggleInterviewerType() {
                             var role = document.getElementById('userRole').value;
