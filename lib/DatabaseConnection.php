@@ -124,6 +124,21 @@ class DatabaseConnection
     // Query execution
     // -----------------------------------------------------------------------
 
+    /**
+     * Returns the row count captured immediately after the last query
+     * containing SQL_CALC_FOUND_ROWS - callers should use this instead of
+     * issuing their own "SELECT FOUND_ROWS()" query, since FOUND_ROWS() is
+     * only valid for the ONE statement immediately following the original
+     * SQL_CALC_FOUND_ROWS query. A second query() call in between (even
+     * this class's own internal MySQL FOUND_ROWS() prefetch) invalidates
+     * it, so a caller re-issuing "SELECT FOUND_ROWS()" afterward would
+     * actually get FOUND_ROWS() of THAT prefetch query itself (always 1).
+     */
+    public function getFoundRows()
+    {
+        return $this->_foundRows;
+    }
+
     public function query($query, $ignoreErrors = false)
     {
         if (!$this->allowQuery($query))

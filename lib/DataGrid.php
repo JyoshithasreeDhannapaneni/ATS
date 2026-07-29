@@ -1402,9 +1402,14 @@ class DataGrid
 
         $this->_rs = $db->getAllAssoc($sql);
 
-        /* Get total number of results before limit. */
-        $rs2 = $db->getAssoc("SELECT FOUND_ROWS() as rowCount");
-        $this->_totalEntries = $rs2['rowCount'];
+        /* Get total number of results before limit. FOUND_ROWS() is only
+         * valid for the ONE statement immediately following the original
+         * SQL_CALC_FOUND_ROWS query - DatabaseConnection already captures
+         * it right after running that query, so read it back from there
+         * instead of issuing a second "SELECT FOUND_ROWS()" query here
+         * (which would instead return the row count of DatabaseConnection's
+         * own internal prefetch query - always 1 - not the real total). */
+        $this->_totalEntries = $db->getFoundRows();
     }
 
     /**
