@@ -52,16 +52,8 @@ jobs:
             docker exec ats-app chown www-data:www-data /var/www/html/config.php /var/www/html/INSTALL_BLOCK
             # TEMP DIAGNOSTIC: check whether the careers-portal apply flow's
             # confirmation/notification emails logged to email_history for
-            # the test application (candidate 63 / job order 10). Uses the
-            # app container's own config.php credentials via DatabaseConnection
-            # rather than guessing the mysql root password.
-            cat <<'PHPEOF' | docker exec -i ats-app php
-            <?php
-            define('LEGACY_ROOT', '/var/www/html');
-            include_once(LEGACY_ROOT . '/config.php');
-            include_once(LEGACY_ROOT . '/lib/DatabaseConnection.php');
-            $db = DatabaseConnection::getInstance();
-            $rs = $db->getAllAssoc('SELECT email_history_id, recipients, subject, candidate_id, date FROM email_history ORDER BY date DESC LIMIT 15');
-            foreach ($rs as $row) { echo implode(' | ', $row) . PHP_EOL; }
-            if (empty($rs)) { echo 'NO ROWS FOUND in email_history at all' . PHP_EOL; }
-            PHPEOF
+            # the test application (candidate 63 / job order 10). A real,
+            # checked-in script (cron/diagnose-email-history.php) rather than
+            # inline multi-line PHP, since something in the SSH script
+            # transport was mangling literal $ variables in an inline -r/heredoc.
+            docker exec ats-app php /var/www/html/cron/diagnose-email-history.php
