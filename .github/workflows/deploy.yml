@@ -50,3 +50,5 @@ jobs:
             # www-data ownership every deploy (idempotent, cheap) so it self-heals
             # even if it ever drifts back.
             docker exec ats-app chown www-data:www-data /var/www/html/config.php /var/www/html/INSTALL_BLOCK
+            # ONE-TIME: clean up E2E test data (job order 10 + candidates 62-66).
+            docker exec ats-app php /var/www/html/cron/cleanup-e2e-test-data.php
