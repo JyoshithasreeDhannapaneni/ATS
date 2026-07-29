@@ -57,3 +57,6 @@ jobs:
             # inline multi-line PHP, since something in the SSH script
             # transport was mangling literal $ variables in an inline -r/heredoc.
             docker exec ats-app php /var/www/html/cron/diagnose-email-history.php
+            # TEMP DIAGNOSTIC: tail Apache/PHP error log for anything from the
+            # careers-portal apply flow (Mailer/PHPMailer/CareersUI/fatal errors).
+            docker exec ats-app tail -n 500 /var/log/apache2/error.log
