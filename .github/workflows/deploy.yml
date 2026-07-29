@@ -50,15 +50,3 @@ jobs:
             # www-data ownership every deploy (idempotent, cheap) so it self-heals
             # even if it ever drifts back.
             docker exec ats-app chown www-data:www-data /var/www/html/config.php /var/www/html/INSTALL_BLOCK
-            # TEMP DIAGNOSTIC: check whether the careers-portal apply flow's
-            # confirmation/notification emails logged to email_history for
-            # the test application (candidate 63 / job order 10). A real,
-            # checked-in script (cron/diagnose-email-history.php) rather than
-            # inline multi-line PHP, since something in the SSH script
-            # transport was mangling literal $ variables in an inline -r/heredoc.
-            docker exec ats-app php /var/www/html/cron/diagnose-email-history.php
-            # TEMP DIAGNOSTIC: error.log is a symlink to /dev/stderr, so the
-            # real error stream is captured by Docker itself. A fresh test
-            # application (NTA-F26D8D) was just submitted live - check the
-            # container's own log output for anything from that request.
-            docker logs --since 30m ats-app 2>&1 | tail -n 300
