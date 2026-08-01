@@ -2125,6 +2125,11 @@ class ImportUI extends UserInterface
             CommonErrors::fatal(COMMONERROR_NOTLOGGEDIN, $this);
         }
 
+        if ($this->getUserAccessLevel('import.bulkImport') < ACCESS_LEVEL_EDIT)
+        {
+            CommonErrors::fatal(COMMONERROR_PERMISSION, $this, 'Invalid user level for action.');
+        }
+
         $jobOrders = new JobOrders($this->_siteID);
         $jobOrdersRS = $jobOrders->getAll(JOBORDERS_STATUS_ACTIVE);
         $this->_template->assign('jobOrders', $jobOrdersRS);
@@ -2143,6 +2148,12 @@ class ImportUI extends UserInterface
         if (!isset($_SESSION['CATS']) || empty($_SESSION['CATS']))
         {
             echo json_encode(['success' => false, 'error' => 'Not logged in']);
+            return;
+        }
+
+        if ($this->getUserAccessLevel('import.bulkImport') < ACCESS_LEVEL_EDIT)
+        {
+            echo json_encode(['success' => false, 'error' => 'Insufficient permissions for this action']);
             return;
         }
 
@@ -2317,6 +2328,12 @@ class ImportUI extends UserInterface
             if (!isset($_SESSION['CATS']) || empty($_SESSION['CATS']))
             {
                 echo json_encode(['success' => false, 'error' => 'Not logged in. Session may have expired.']);
+                return;
+            }
+
+            if ($this->getUserAccessLevel('import.bulkImport') < ACCESS_LEVEL_EDIT)
+            {
+                echo json_encode(['success' => false, 'error' => 'Insufficient permissions for this action']);
                 return;
             }
 
@@ -2603,6 +2620,31 @@ class ImportUI extends UserInterface
             // Apply DOCX mailto email even when extractedText was empty
             if (empty($email) && !empty($docxEmail)) {
                 $email = $docxEmail;
+            }
+
+            // Reject files with no extractable signal at all rather than creating a
+            // junk candidate named after the filename (e.g. an empty/blank upload).
+            if (empty($extractedText) && empty($email) && empty($phone)) {
+                echo json_encode(['success' => false, 'error' => 'Could not extract any usable information from this file']);
+                return;
+            }
+
+            // Duplicate check by email, matching bulkImportCandidate()'s CSV-path behavior --
+            // previously this path had no dedup at all, so re-uploading the same resume
+            // silently created a second candidate record.
+            if (!empty($email)) {
+                $db = DatabaseConnection::getInstance();
+                $dupSql = sprintf(
+                    "SELECT candidate_id FROM candidate WHERE email1 = %s AND site_id = %s LIMIT 1",
+                    $db->makeQueryString($email),
+                    $this->_siteID
+                );
+                $dupRs = $db->query($dupSql);
+                if ($dupRs && $db->getNumRows($dupRs) > 0)
+                {
+                    echo json_encode(['success' => false, 'duplicate' => true, 'error' => 'Duplicate email']);
+                    return;
+                }
             }
 
             // Quality gate: reject garbage names (too short, like "Tx Ct")

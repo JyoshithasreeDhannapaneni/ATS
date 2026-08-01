@@ -29,6 +29,7 @@
 
 include_once(LEGACY_ROOT . '/lib/Pipelines.php');
 include_once(LEGACY_ROOT . '/lib/ActivityEntries.php');
+include_once(LEGACY_ROOT . '/lib/JobOrders.php');
 
 $interface = new SecureAJAXInterface();
 
@@ -81,21 +82,9 @@ if (empty($ownerCheck)) {
 
 $pipelines = new Pipelines($siteID);
 
-// Get old status before update
-$oldStatusData = $pipelines->getCandidatePipeline($candidateID);
-$oldStatus = '';
-$oldStatusID = 0;
-foreach ($oldStatusData as $pipeline)
-{
-    if ($pipeline['candidateJobOrderID'] == $candidateJobOrderID)
-    {
-        $oldStatus = $pipeline['status'];
-        $oldStatusID = $pipeline['statusID'];
-        break;
-    }
-}
-
-// Get the status description for activity logging
+// Get the status description for activity logging, and double as a whitelist --
+// previously statusID was written straight through with no check that it's one
+// of the site's actual configured statuses.
 $statuses = $pipelines->getStatuses();
 $statusDescription = '';
 foreach ($statuses as $status)
@@ -107,8 +96,56 @@ foreach ($statuses as $status)
     }
 }
 
+if ($statusDescription === '')
+{
+    $interface->outputXMLErrorPage(-1, 'Unknown status ID.');
+    die();
+}
+
+// Fetch full pipeline row (old status + current openings_available) before the
+// update, matching the fields CandidatesUI's status-change modal relies on.
+$data = $pipelines->get($candidateID, $jobOrderID);
+if (empty($data))
+{
+    $interface->outputXMLErrorPage(-1, 'The specified pipeline entry could not be found.');
+    die();
+}
+
+$oldStatus = $data['status'];
+$oldStatusID = $data['statusID'];
+
 // Update the status (this already handles history logging)
 $pipelines->setStatus($candidateID, $jobOrderID, $statusID, '', '');
+
+// Mirror CandidatesUI::_addActivityChangeStatus()'s openings-count bookkeeping --
+// the drag-and-drop path previously never touched openings_available, silently
+// desyncing it from candidates actually marked Placed.
+if ($statusID == PIPELINE_STATUS_PLACED && is_numeric($data['openingsAvailable']) && $data['openingsAvailable'] > 0)
+{
+    $jobOrders = new JobOrders($siteID);
+    $jobOrders->updateOpeningsAvailable($jobOrderID, $data['openingsAvailable'] - 1);
+}
+if ($statusID != PIPELINE_STATUS_PLACED && $oldStatusID == PIPELINE_STATUS_PLACED && is_numeric($data['openingsAvailable']))
+{
+    $jobOrders = new JobOrders($siteID);
+    $jobOrders->updateOpeningsAvailable($jobOrderID, $data['openingsAvailable'] + 1);
+}
+
+// Log an Activity entry for the status change -- previously this path included
+// ActivityEntries but never instantiated it, so Kanban drags left no trace on
+// the candidate's Activity tab (only the low-level status-history rows).
+if ($oldStatusID != $statusID)
+{
+    $activityEntries = new ActivityEntries($siteID);
+    $activityEntries->add(
+        $candidateID,
+        DATA_ITEM_CANDIDATE,
+        ACTIVITY_OTHER,
+        htmlspecialchars('Status change: ' . $oldStatus . ' -> ' . $statusDescription),
+        $_SESSION['CATS']->getUserID(),
+        $jobOrderID
+    );
+}
 
 // Trigger email automation for status change
 if ($oldStatusID != $statusID)

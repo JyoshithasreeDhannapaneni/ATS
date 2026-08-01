@@ -61,13 +61,24 @@ if (isset($_GET['code']) || isset($_GET['id_token']) || isset($_GET['error'])) {
         var form = document.createElement('form');
         form.method = 'POST';
         form.action = 'oauth_process.php';
-        
+
         var input = document.createElement('input');
         input.type = 'hidden';
         input.name = 'id_token';
         input.value = params.id_token;
         form.appendChild(input);
-        
+
+        // INF-4: forward the state Microsoft echoed back in the fragment so
+        // oauth_process.php can validate it against $_SESSION['oauth_state'] --
+        // fragment params never reach the server on their own (see comment above).
+        if (params.state) {
+            var stateInput = document.createElement('input');
+            stateInput.type = 'hidden';
+            stateInput.name = 'state';
+            stateInput.value = params.state;
+            form.appendChild(stateInput);
+        }
+
         document.body.appendChild(form);
         form.submit();
         return;

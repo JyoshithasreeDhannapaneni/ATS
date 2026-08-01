@@ -219,6 +219,8 @@ class PipelineEmailAutomation
     private function _enqueueEmail($candidateID, $jobOrderID, $statusID, $recipientEmail,
         $recipientName, $subject, $body, $userID)
     {
+        $this->_ensureQueueTableExists();
+
         $sql = sprintf(
             "INSERT INTO pipeline_email_queue
                 (candidate_id, joborder_id, status_id, site_id, user_id,
@@ -237,6 +239,45 @@ class PipelineEmailAutomation
         );
 
         return $this->_db->query($sql, true) ? $this->_db->getLastInsertID() : false;
+    }
+
+    /**
+     * Self-heal a missing `pipeline_email_queue` table.
+     *
+     * The table's own migration (db/upgrade-pipeline-email-queue.sql) is a
+     * standalone SQL file, not wired into any versioned auto-migration
+     * system -- so an environment that never had it applied would silently
+     * drop every automated pipeline-status email with no visible error
+     * (the status change itself still "succeeds"). CREATE TABLE IF NOT
+     * EXISTS is idempotent and cheap, so it's simplest to just guarantee
+     * the table exists right before every enqueue rather than depend on
+     * some out-of-band migration step having already run.
+     */
+    private function _ensureQueueTableExists()
+    {
+        $this->_db->query(
+            "CREATE TABLE IF NOT EXISTS `pipeline_email_queue` (
+              `pipeline_email_queue_id` int(11) NOT NULL AUTO_INCREMENT,
+              `candidate_id` int(11) NOT NULL,
+              `joborder_id` int(11) NOT NULL,
+              `status_id` int(11) NOT NULL,
+              `site_id` int(11) NOT NULL DEFAULT '0',
+              `user_id` int(11) NOT NULL DEFAULT '-1',
+              `recipient_email` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+              `recipient_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
+              `subject` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+              `body` text COLLATE utf8_unicode_ci NOT NULL,
+              `queue_status` varchar(20) COLLATE utf8_unicode_ci NOT NULL DEFAULT 'pending',
+              `attempts` int(11) NOT NULL DEFAULT '0',
+              `last_error` text COLLATE utf8_unicode_ci,
+              `created_at` datetime NOT NULL,
+              `sent_at` datetime DEFAULT NULL,
+              PRIMARY KEY (`pipeline_email_queue_id`),
+              KEY `IDX_queue_status` (`queue_status`),
+              KEY `IDX_candidate_joborder` (`candidate_id`, `joborder_id`)
+            ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;",
+            true
+        );
     }
 
     /**

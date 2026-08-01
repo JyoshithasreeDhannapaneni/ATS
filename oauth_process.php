@@ -44,6 +44,19 @@ if (count($parts) !== 3) {
     exit;
 }
 
+// INF-4: Validate the CSRF state param forwarded by oauth_callback.php's JS
+// against the value initiateMicrosoftSSO() stashed in the session before
+// redirecting to Microsoft. Consume it immediately so it can't be replayed.
+$postedState = isset($_POST['state']) ? $_POST['state'] : '';
+$savedState = isset($_SESSION['oauth_state']) ? $_SESSION['oauth_state'] : '';
+unset($_SESSION['oauth_state']);
+
+if (empty($savedState) || empty($postedState) || !hash_equals($savedState, $postedState)) {
+    error_log('OAuth: Invalid or missing state parameter - possible CSRF');
+    header('Location: index.php?m=login&loginError=sso_failed');
+    exit;
+}
+
 // INF-3: Verify the JWT's cryptographic signature against Microsoft's published
 // signing keys before trusting anything in the payload. Without this, any claim
 // below (email, aud, iss, exp) is attacker-controlled and worthless as a check.

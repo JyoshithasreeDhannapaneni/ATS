@@ -872,9 +872,19 @@ class ContactsUI extends UserInterface
 
         $contactID = $_GET['contactID'];
 
+        $contacts = new Contacts($this->_siteID);
+        $rs = $contacts->get($contactID);
+
+        /* Contacts::delete() scopes its DELETE by site_id, so a foreign-site ID
+         * would otherwise silently no-op while this action still redirects as
+         * if the delete succeeded -- same bug class already fixed for Candidates. */
+        if (empty($rs))
+        {
+            CommonErrors::fatal(COMMONERROR_BADINDEX, $this, 'The specified contact ID could not be found.');
+        }
+
         if (!eval(Hooks::get('CONTACTS_DELETE_PRE'))) return;
 
-        $contacts = new Contacts($this->_siteID);
         $contacts->delete($contactID);
 
         /* Delete the MRU entry if present. */

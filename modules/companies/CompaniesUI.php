@@ -560,9 +560,18 @@ class CompaniesUI extends UserInterface
             return;
         }
 
+        $companies = new Companies($this->_siteID);
+
+        /* No uniqueness constraint exists at the DB level, so this is the only
+         * place stopping "Acme Inc" from being created twice. */
+        if ($companies->companyByName($name) != -1)
+        {
+            $this->listByView('A company named "' . htmlspecialchars($name) . '" already exists.');
+            return;
+        }
+
         if (!eval(Hooks::get('CLIENTS_ON_ADD_PRE'))) return;
 
-        $companies = new Companies($this->_siteID);
         $companyID = $companies->add(
             $name, $address, $city, $state, $zip, $phone1,
             $phone2, $faxNumber, $url, $keyTechnologies, $isHot,

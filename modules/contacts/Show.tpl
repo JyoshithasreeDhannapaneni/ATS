@@ -207,7 +207,7 @@ use OpenCATS\UI\QuickActionMenu;
                     </a>
                 <?php endif; ?>
                 <?php if ($this->getUserAccessLevel('contacts.delete') >= ACCESS_LEVEL_DELETE): ?>
-                    <a id="delete_link" class="detail-action-link danger" href="<?php echo(CATSUtility::getIndexName()); ?>?m=contacts&amp;a=delete&amp;contactID=<?php echo($this->contactID); ?>" onclick="javascript:return confirm('Delete this candidate?');">
+                    <a id="delete_link" class="detail-action-link danger" href="<?php echo(CATSUtility::getIndexName()); ?>?m=contacts&amp;a=delete&amp;contactID=<?php echo($this->contactID); ?>" onclick="javascript:return confirm('Delete this contact?');">
                         <img src="images/actions/delete.gif" width="16" height="16" class="absmiddle" alt="" border="0" />Delete
                     </a>
                 <?php endif; ?>

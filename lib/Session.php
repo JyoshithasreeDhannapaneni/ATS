@@ -1344,7 +1344,19 @@ class CATSSession
             $this->_loginError = 'User not found.';
             return;
         }
-        
+
+        /* Mirror processLogin()'s disabled-account check -- SSO has no password
+         * to run through Users::isCorrectLogin(), so re-check the same
+         * access_level threshold directly against the row already fetched above. */
+        if ($rs['accessLevel'] <= ACCESS_LEVEL_DISABLED) {
+            $this->_isLoggedIn = false;
+            $this->_loginError = 'Your account is disabled or pending approval.';
+            return;
+        }
+
+        /* Mirror processLogin()'s session_regenerate_id() to avoid session fixation. */
+        session_regenerate_id(true);
+
         if (isset($_SERVER['REMOTE_ADDR'])) {
             $ip = $_SERVER['REMOTE_ADDR'];
         } else {
@@ -1378,6 +1390,15 @@ class CATSSession
         $this->_isAgreedToLicense      = ($rs['isAgreedToLicense'] == 0 ? false : true);
         $this->_accountActive          = ($rs['accountActive'] == 0 ? false : true);
         $this->_accountDeleted         = ($rs['accountDeleted'] == 0 ? false : true);
+
+        /* Mirror processLogin()'s site-level downgrade for an inactive/deleted site. */
+        if (!$this->_accountActive) {
+            $this->_accessLevel = ACCESS_LEVEL_READ;
+        }
+        if ($this->_accountDeleted) {
+            $this->_accessLevel = ACCESS_LEVEL_DISABLED;
+        }
+
         $this->_email                  = $rs['email'];
         $this->_ip                     = $ip;
         $this->_userAgent              = $userAgent;
