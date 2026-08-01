@@ -139,6 +139,7 @@
             </div>
             <div class="card-body">
                 <form method="post" action="<?php echo CATSUtility::getIndexName(); ?>?m=interviewer&amp;a=submitFeedback">
+                    <input type="hidden" name="postback" value="1" />
                     <input type="hidden" name="feedbackID" value="<?php echo intval($this->feedbackID); ?>" />
 
                     <?php
