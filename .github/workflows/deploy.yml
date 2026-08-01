@@ -50,3 +50,5 @@ jobs:
             # www-data ownership every deploy (idempotent, cheap) so it self-heals
             # even if it ever drifts back.
             docker exec ats-app chown www-data:www-data /var/www/html/config.php /var/www/html/INSTALL_BLOCK
+            # ONE-TIME: clean up orphaned test rows (calendar_event 4 + its interview_feedback rows).
+            docker exec ats-app php /var/www/html/cron/cleanup-rolecheck-rows.php
