@@ -168,8 +168,13 @@ $levelColors = array(1=>'lvl-1',2=>'lvl-2',3=>'lvl-3',4=>'lvl-4',5=>'lvl-5');
 $avatarColors = array(1=>'avatar-1',2=>'avatar-2',3=>'avatar-3',4=>'avatar-4',5=>'avatar-5');
 
 // Assign depth levels
+// A "Reports To" cycle (direct or through several people) has no server-side
+// prevention beyond the single self-reference check in updateEmployee(), so
+// this recursion must be able to survive one -- bail out on a node already
+// assigned a depth instead of recursing forever.
 $depthMap = array();
 function assignDepth($uid, $depth, &$depthMap, &$children) {
+    if (isset($depthMap[$uid])) { return; }
     $depthMap[$uid] = $depth;
     if (isset($children[$uid])) {
         foreach ($children[$uid] as $cid) {
@@ -179,8 +184,10 @@ function assignDepth($uid, $depth, &$depthMap, &$children) {
 }
 foreach ($roots as $rid) { assignDepth($rid, 1, $depthMap, $children); }
 
-function renderNode($uid, &$userMap, &$children, &$depthMap, &$levelColors, &$avatarColors) {
+function renderNode($uid, &$userMap, &$children, &$depthMap, &$levelColors, &$avatarColors, &$rendered) {
     if (!isset($userMap[$uid])) return '';
+    if (isset($rendered[$uid])) return ''; // already drawn elsewhere in the tree -- breaks cycles
+    $rendered[$uid] = true;
     $u = $userMap[$uid];
     $depth = $depthMap[$uid] ?? 1;
     $lvlClass = $levelColors[min($depth, 5)] ?? 'lvl-5';
@@ -215,7 +222,7 @@ function renderNode($uid, &$userMap, &$children, &$depthMap, &$levelColors, &$av
         $html .= '<div class="oc-connector-row"><div class="oc-connector-v"></div></div>';
         $kidNodes = '';
         foreach ($children[$uid] as $cid) {
-            $kidNodes .= '<div class="oc-child-col">'.renderNode($cid, $userMap, $children, $depthMap, $levelColors, $avatarColors).'</div>';
+            $kidNodes .= '<div class="oc-child-col">'.renderNode($cid, $userMap, $children, $depthMap, $levelColors, $avatarColors, $rendered).'</div>';
         }
         // Horizontal line across kids
         $html .= '<div class="oc-kids-group">';
@@ -288,8 +295,9 @@ function renderNode($uid, &$userMap, &$children, &$depthMap, &$levelColors, &$av
 .oc-child-col{display:flex;flex-direction:column;align-items:center;padding:0 8px;}
 .oc-child-col::before{content:'';width:2px;height:32px;background:#d1d5db;display:block;margin:0 auto;}
 </style>
+<?php $rendered = array(); ?>
 <?php foreach ($roots as $rid): ?>
-    <?php echo renderNode($rid, $userMap, $children, $depthMap, $levelColors, $avatarColors); ?>
+    <?php echo renderNode($rid, $userMap, $children, $depthMap, $levelColors, $avatarColors, $rendered); ?>
 <?php endforeach; ?>
 <?php if (empty($users)): ?>
     <div style="padding:60px;text-align:center;color:#9ca3af;font-size:14px;">No employees found. Add your first employee to build the org chart.</div>

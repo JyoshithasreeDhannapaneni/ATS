@@ -301,6 +301,13 @@ class CalendarUI extends UserInterface
         $this->_template->assign('isCurrentMonth', $isCurrentMonth);
         $this->_template->assign('eventsString', $eventsString);
         $this->_template->assign('allowEventReminders', $allowEventReminders);
+
+        /* Previously both Add/Edit Event forms hardcoded "jitsi" regardless of
+         * what an admin configured under Settings > Meeting Settings. */
+        include_once(LEGACY_ROOT . '/lib/MeetingService.php');
+        $meetingService = new MeetingService($this->_siteID);
+        $this->_template->assign('defaultMeetingPlatform', $meetingService->getDefaultPlatform());
+
         $this->_template->display('./modules/calendar/Calendar.tpl');
     }
 

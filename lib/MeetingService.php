@@ -44,19 +44,28 @@ class MeetingService
     public function getDefaultPlatform()
     {
         $sql = sprintf(
-            "SELECT value FROM settings 
-             WHERE setting = 'meeting_platform' 
+            "SELECT value FROM settings
+             WHERE setting = 'meeting_platform'
              AND site_id = %s",
             $this->_siteID
         );
-        
-        $result = @$this->_db->query($sql);
-        if ($result && @mysqli_num_rows($result) > 0) {
+
+        /* This previously called mysqli_num_rows() on the PDOStatement
+         * DatabaseConnection::query() actually returns -- a fatal TypeError
+         * on every call. It never surfaced because nothing calls this method
+         * with $platform left null (the only path that reaches it) until
+         * the Calendar wiring below. */
+        $result = $this->_db->query($sql);
+        if ($result && $this->_db->getNumRows() > 0) {
             $row = $this->_db->getAssoc();
             return $row['value'];
         }
-        
-        return self::PLATFORM_NONE;
+
+        /* No admin has ever chosen a default -- fall back to Jitsi (free,
+         * no credentials needed) rather than PLATFORM_NONE, so wiring the
+         * Calendar module up to this setting doesn't silently stop creating
+         * meeting links for every site that never touched Meeting Settings. */
+        return self::PLATFORM_JITSI;
     }
 
     /**

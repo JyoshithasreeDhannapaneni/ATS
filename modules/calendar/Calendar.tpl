@@ -145,7 +145,7 @@
                                     <tr id="meetingPlatformRow" style="display: none;">
                                         <td class="tdVertical">Platform:</td>
                                         <td class="tdData">
-                                            <input type="hidden" name="meetingPlatform" value="jitsi" />
+                                            <input type="hidden" name="meetingPlatform" value="<?php echo htmlspecialchars($this->defaultMeetingPlatform); ?>" />
                                             <div style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: linear-gradient(135deg, #devices 0%, #devices 100%); border-radius: 8px; border: 2px solid #devices;">
                                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="#1a73e8"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
                                                 <span style="font-weight: 600; font-size: 14px; color: #1a73e8;">Video Meeting</span>
@@ -314,7 +314,7 @@
                                     <tr id="meetingPlatformRowEdit" style="display: none;">
                                         <td class="tdVertical">Platform:</td>
                                         <td class="tdData">
-                                            <input type="hidden" name="meetingPlatformEdit" value="jitsi" />
+                                            <input type="hidden" name="meetingPlatformEdit" value="<?php echo htmlspecialchars($this->defaultMeetingPlatform); ?>" />
                                             <div style="display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 8px; border: 2px solid #0ea5e9;">
                                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="#1a73e8"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
                                                 <span style="font-weight: 600; font-size: 14px; color: #1a73e8;">Video Meeting</span>

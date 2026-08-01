@@ -840,6 +840,17 @@ class CompaniesUI extends UserInterface
             return;
         }
 
+        /* onAdd() has this same check (added earlier); onEdit() was missing
+         * it entirely, so renaming a company to collide with another
+         * existing company's name saved silently. Exclude self so leaving
+         * the name unchanged doesn't trip a false "duplicate". */
+        $duplicateID = $companies->companyByName($name);
+        if ($duplicateID != -1 && intval($duplicateID) != intval($companyID))
+        {
+            $this->listByView('A company named "' . htmlspecialchars($name) . '" already exists.');
+            return;
+        }
+
        if (!eval(Hooks::get('CLIENTS_ON_EDIT_PRE'))) return;
 
         $departments = $companies->getDepartments($companyID);

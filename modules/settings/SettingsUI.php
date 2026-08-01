@@ -4470,7 +4470,7 @@ class SettingsUI extends UserInterface
         switch ($action) {
             case 'setDefaultPlatform':
                 $platform = isset($_POST['defaultPlatform']) ? $_POST['defaultPlatform'] : 'none';
-                $validPlatforms = array('none', 'teams', 'zoom', 'google_meet');
+                $validPlatforms = array('none', 'teams', 'zoom', 'google_meet', 'jitsi');
                 
                 if (in_array($platform, $validPlatforms)) {
                     $db = DatabaseConnection::getInstance();
@@ -4496,7 +4496,7 @@ class SettingsUI extends UserInterface
                     }
                     
                     if ($db->query($sql)) {
-                        $platformNames = array('none' => 'None', 'teams' => 'Microsoft Teams', 'zoom' => 'Zoom', 'google_meet' => 'Google Meet');
+                        $platformNames = array('none' => 'None', 'teams' => 'Microsoft Teams', 'zoom' => 'Zoom', 'google_meet' => 'Google Meet', 'jitsi' => 'Jitsi (free, no setup)');
                         $message = "Default meeting platform set to: " . $platformNames[$platform];
                     } else {
                         $message = "Failed to save default platform setting.";

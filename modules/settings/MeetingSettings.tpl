@@ -235,6 +235,9 @@
                         <option value="google_meet" <?php if ($this->defaultPlatform == 'google_meet') echo 'selected'; ?> <?php if (!$this->googleMeetAuthorized) echo 'disabled'; ?>>
                             Google Meet <?php if (!$this->googleMeetAuthorized) echo '(Not Authorized)'; ?>
                         </option>
+                        <option value="jitsi" <?php if ($this->defaultPlatform == 'jitsi') echo 'selected'; ?>>
+                            Jitsi (free, no setup required)
+                        </option>
                     </select>
                     <p style="margin-top: 10px; color: #666; font-size: 13px;">
                         When scheduling an interview or meeting, this platform will be used automatically to create a video meeting link.
