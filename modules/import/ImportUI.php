@@ -2186,7 +2186,7 @@ class ImportUI extends UserInterface
                 $this->_siteID
             );
             $rs = $db->query($sql);
-            if ($rs && $db->getNumRows($rs) > 0)
+            if ($rs && $db->getNumRows() > 0)
             {
                 echo json_encode(['success' => false, 'duplicate' => true, 'error' => 'Duplicate email']);
                 return;
@@ -2640,7 +2640,7 @@ class ImportUI extends UserInterface
                     $this->_siteID
                 );
                 $dupRs = $db->query($dupSql);
-                if ($dupRs && $db->getNumRows($dupRs) > 0)
+                if ($dupRs && $db->getNumRows() > 0)
                 {
                     echo json_encode(['success' => false, 'duplicate' => true, 'error' => 'Duplicate email']);
                     return;
