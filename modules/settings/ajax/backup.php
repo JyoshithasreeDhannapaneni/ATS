@@ -238,12 +238,12 @@ if ($action == 'backup')
             site_id = %s",
         $siteID
     );
-    $queryResult = mysqli_query($db, $sql);
-    $totalAttachments = mysqli_num_rows($queryResult);
+    $queryResult = $db->getAllAssoc($sql);
+    $totalAttachments = count($queryResult);
 
     /* Add each attachment to the zip file. */
     $attachmentCount = 0;
-    while ($row = mysqli_fetch_assoc($queryResult))
+    foreach ($queryResult as $row)
     {
         ++$attachmentCount;
         $relativePath = sprintf(

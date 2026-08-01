@@ -46,12 +46,12 @@ class MeetingCredentials
             $this->_siteID
         );
         
-        $result = @$this->_db->query($sql);
-        if ($result && @mysqli_num_rows($result) > 0) {
+        $result = $this->_db->query($sql);
+        if ($result && $this->_db->getNumRows() > 0) {
             $row = $this->_db->getAssoc();
             return $row['value'];
         }
-        
+
         // If table doesn't exist, fall back to config
         if (!$this->tableExists()) {
             return self::SOURCE_CONFIG;
@@ -80,11 +80,11 @@ class MeetingCredentials
             $this->_siteID
         );
         
-        $result = @$this->_db->query($sql);
-        
-        if ($result && @mysqli_num_rows($result) > 0) {
+        $result = $this->_db->query($sql);
+
+        if ($result && $this->_db->getNumRows() > 0) {
             $sql = sprintf(
-                "UPDATE settings SET value = %s 
+                "UPDATE settings SET value = %s
                  WHERE setting = 'meeting_credentials_source' 
                  AND site_id = %s",
                 $this->_db->makeQueryString($source),
@@ -173,14 +173,14 @@ class MeetingCredentials
         }
         
         $sql = "SHOW TABLES LIKE 'meeting_credentials'";
-        $result = @$this->_db->query($sql);
-        
+        $result = $this->_db->query($sql);
+
         if ($result === false) {
             $exists = false;
             return false;
         }
-        
-        $exists = (@mysqli_num_rows($result) > 0);
+
+        $exists = ($this->_db->getNumRows() > 0);
         return $exists;
     }
 
@@ -208,9 +208,9 @@ class MeetingCredentials
             $this->_db->makeQueryString($key)
         );
         
-        $result = @$this->_db->query($sql);
-        
-        if ($result && @mysqli_num_rows($result) > 0) {
+        $result = $this->_db->query($sql);
+
+        if ($result && $this->_db->getNumRows() > 0) {
             $row = $this->_db->getAssoc();
             $value = $row['credential_value'];
             
@@ -268,9 +268,9 @@ class MeetingCredentials
             $this->_db->makeQueryString($key)
         );
         
-        $result = @$this->_db->query($sql);
-        
-        if ($result && @mysqli_num_rows($result) > 0) {
+        $result = $this->_db->query($sql);
+
+        if ($result && $this->_db->getNumRows() > 0) {
             // Update existing
             $sql = sprintf(
                 "UPDATE meeting_credentials 
