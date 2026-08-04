@@ -2777,6 +2777,35 @@ class CandidatesUI extends UserInterface
         $calendar = new Calendar($this->_siteID);
         $calendarEventTypes = $calendar->getAllEventTypes();
 
+        /* Interviewer picker for the Schedule Interview section -- prefer
+         * users tagged with the Interviewer role; fall back to all active
+         * users on sites that haven't set up roles, so the (optional) field
+         * still has something to pick from. */
+        include_once(LEGACY_ROOT . '/lib/UserRoles.php');
+        $db = DatabaseConnection::getInstance();
+        $interviewerUsersRS = array();
+        if (UserRoles::roleColumnExists())
+        {
+            $interviewerUsersRS = $db->getAllAssoc(sprintf(
+                "SELECT user_id AS userID, first_name AS firstName, last_name AS lastName
+                 FROM user
+                 WHERE site_id = %s AND role = %s AND access_level > 0
+                 ORDER BY first_name ASC, last_name ASC",
+                $db->makeQueryInteger($this->_siteID),
+                $db->makeQueryString(UserRoles::ROLE_INTERVIEWER)
+            ));
+        }
+        if (empty($interviewerUsersRS))
+        {
+            $interviewerUsersRS = $db->getAllAssoc(sprintf(
+                "SELECT user_id AS userID, first_name AS firstName, last_name AS lastName
+                 FROM user
+                 WHERE site_id = %s AND access_level > 0
+                 ORDER BY first_name ASC, last_name ASC",
+                $db->makeQueryInteger($this->_siteID)
+            ));
+        }
+
         if (!eval(Hooks::get('CANDIDATE_ADD_ACTIVITY_CHANGE_STATUS'))) return;
 
         if (SystemUtility::isSchedulerEnabled() && !$_SESSION['CATS']->isDemo())
@@ -2796,6 +2825,7 @@ class CandidatesUI extends UserInterface
         $this->_template->assign('allowEventReminders', $allowEventReminders);
         $this->_template->assign('userEmail', $_SESSION['CATS']->getEmail());
         $this->_template->assign('calendarEventTypes', $calendarEventTypes);
+        $this->_template->assign('interviewerUsersRS', $interviewerUsersRS);
         $this->_template->assign('statusChangeTemplate', $statusChangeTemplate);
         $this->_template->assign('onlyScheduleEvent', $onlyScheduleEvent);
         $this->_template->assign('emailDisabled', $emailDisabled);
@@ -4262,12 +4292,35 @@ class CandidatesUI extends UserInterface
                 $eventJobOrderID = -1;
             }
 
+            /* Optional interviewer selection for the Schedule Interview
+             * section -- omitted entirely just leaves interviewer_user_id
+             * NULL, preserving existing behavior for anyone not using it. */
+            $interviewerUserIDRaw = $this->getTrimmedInput('interviewerUserID', $_POST);
+            $interviewerUserID = ($interviewerUserIDRaw !== '' && intval($interviewerUserIDRaw) > 0)
+                ? intval($interviewerUserIDRaw)
+                : null;
+
             $calendar = new Calendar($this->_siteID);
+
+            /* Soft (non-blocking) double-booking check -- mirrors the
+             * existing 3-month cooling-period warning pattern used for
+             * reapplication (Pipelines::isInCoolingPeriod()): warn, don't
+             * block. */
+            $interviewerConflicts = array();
+            if ($interviewerUserID !== null)
+            {
+                $interviewerConflicts = $calendar->getInterviewerConflicts(
+                    $interviewerUserID, $date, $duration,
+                    $_SESSION['CATS']->getTimeZoneOffset()
+                );
+            }
+
             $eventID = $calendar->addEvent(
                 $eventTypeID, $date, $description, $allDay, $this->_userID,
                 $candidateID, DATA_ITEM_CANDIDATE, $eventJobOrderID, $title,
                 $duration, $reminderEnabled, $reminderEmail, $reminderTime,
-                $publicEntry, $_SESSION['CATS']->getTimeZoneOffset()
+                $publicEntry, $_SESSION['CATS']->getTimeZoneOffset(),
+                $interviewerUserID
             );
 
             if ($eventID <= 0)
@@ -4297,6 +4350,15 @@ class CandidatesUI extends UserInterface
                 htmlspecialchars($formattedDate)
 
             );
+
+            if (!empty($interviewerConflicts))
+            {
+                $eventHTML .= '<p style="color: #b45309;"><span class="bold">Note:</span> '
+                    . 'This interviewer already has ' . count($interviewerConflicts)
+                    . ' overlapping event(s) scheduled around this time. '
+                    . 'The interview has still been scheduled.</p>';
+            }
+
             $eventScheduled = true;
         }
         else

@@ -65,7 +65,7 @@ class ContactsUI extends UserInterface
         $this->_authenticationRequired = true;
         $this->_moduleDirectory = 'contacts';
         $this->_moduleName = 'contacts';
-        $this->_moduleTabText = 'Contacts';
+        $this->_moduleTabText = '';
         $this->_subTabs = array(
             'Add Contact'     => CATSUtility::getIndexName() . '?m=contacts&amp;a=add*al=' . ACCESS_LEVEL_EDIT . '@contacts.add',
             'Search Contacts' => CATSUtility::getIndexName() . '?m=contacts&amp;a=search'

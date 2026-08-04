@@ -54,6 +54,10 @@ foreach ($pipelineRS as $row)
         continue;
     }
 
+    $daysInStage = isset($row['dateModifiedInt']) && $row['dateModifiedInt'] > 0
+        ? (int) floor((time() - $row['dateModifiedInt']) / 86400)
+        : null;
+
     $columns[$statusID]['candidates'][] = [
         'candidateID' => $row['candidateID'],
         'candidateJobOrderID' => $row['candidateJobOrderID'],
@@ -64,6 +68,7 @@ foreach ($pipelineRS as $row)
         'status' => $row['status'],
         'ratingValue' => $row['ratingValue'],
         'dateCreated' => $row['dateCreated'],
+        'daysInStage' => $daysInStage,
         'isHot' => $row['isHotCandidate'] ?? 0,
         'hasAttachment' => $row['attachmentPresent'] ?? 0,
         'ownerName' => trim(($row['ownerFirstName'] ?? '') . ' ' . ($row['ownerLastName'] ?? '')),

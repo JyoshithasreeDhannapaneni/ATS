@@ -301,8 +301,10 @@ class Calendar
     public function addEvent($type, $date, $description, $allDay, $enteredBy,
         $dataItemID, $dataItemType, $jobOrderID, $title, $duration,
         $reminderEnabled, $reminderEmail, $reminderTime, $isPublic,
-        $timeZoneOffset)
+        $timeZoneOffset, $interviewerUserID = null)
     {
+        $this->_ensureInterviewerColumn();
+
         $sql = sprintf(
             "INSERT INTO calendar_event (
                 type,
@@ -321,7 +323,8 @@ class Calendar
                 reminder_enabled,
                 reminder_email,
                 reminder_time,
-                public
+                public,
+                interviewer_user_id
             )
             VALUES (
                 %s,
@@ -335,6 +338,7 @@ class Calendar
                 %s,
                 NOW(),
                 NOW(),
+                %s,
                 %s,
                 %s,
                 %s,
@@ -357,7 +361,8 @@ class Calendar
             ($reminderEnabled ? '1' : '0'),
             $this->_db->makeQueryString($reminderEmail),
             $this->_db->makeQueryInteger($reminderTime),
-            ($isPublic ? '1' : '0')
+            ($isPublic ? '1' : '0'),
+            empty($interviewerUserID) ? 'NULL' : $this->_db->makeQueryInteger($interviewerUserID)
         );
 
         $queryResult = $this->_db->query($sql);
@@ -367,6 +372,81 @@ class Calendar
         }
 
         return $this->_db->getLastInsertID();
+    }
+
+    /**
+     * Self-heals the interviewer_user_id column on calendar_event -- this
+     * fork's own migrations (db/upgrade-*.sql) aren't wired into any
+     * versioned auto-migration system, so the schema addition is applied
+     * idempotently here on first use instead, matching the established
+     * pattern (OrgChartUI::_ensureColumns(), PipelineEmailAutomation::
+     * _ensureQueueTableExists()).
+     */
+    private function _ensureInterviewerColumn()
+    {
+        try
+        {
+            $this->_db->query(
+                "ALTER TABLE calendar_event ADD COLUMN IF NOT EXISTS interviewer_user_id INT NULL",
+                true
+            );
+        }
+        catch (Exception $e) {}
+    }
+
+    /**
+     * Finds existing calendar events for a given interviewer whose
+     * [date, date + duration) window overlaps the requested slot. Used to
+     * show a soft (non-blocking) double-booking warning when scheduling an
+     * interview -- mirrors the existing "soft warning, don't block" pattern
+     * used by Pipelines::isInCoolingPeriod() for reapplication.
+     *
+     * @param integer Interviewer user ID.
+     * @param string SQL-format date/time string for the proposed event,
+     *               already adjusted to server time (i.e. same form passed
+     *               to addEvent(), pre-DATE_SUB conversion is handled here).
+     * @param integer Proposed event duration in minutes.
+     * @param integer Time zone offset from GMT (same convention as addEvent()).
+     * @return array Conflicting calendar_event rows (title, date, duration).
+     */
+    public function getInterviewerConflicts($interviewerUserID, $date, $duration, $timeZoneOffset)
+    {
+        $this->_ensureInterviewerColumn();
+
+        if (empty($interviewerUserID))
+        {
+            return array();
+        }
+
+        $durationMinutes = intval($duration) > 0 ? intval($duration) : 60;
+
+        $sql = sprintf(
+            "SELECT
+                calendar_event_id AS calendarEventID,
+                title,
+                date,
+                duration
+            FROM calendar_event
+            WHERE
+                interviewer_user_id = %s
+            AND
+                site_id = %s
+            AND
+                date < DATE_ADD(DATE_SUB(%s, INTERVAL %s HOUR), INTERVAL %s MINUTE)
+            AND
+                DATE_ADD(date, INTERVAL GREATEST(duration, 1) MINUTE) > DATE_SUB(%s, INTERVAL %s HOUR)
+            ORDER BY
+                date ASC",
+            $this->_db->makeQueryInteger($interviewerUserID),
+            $this->_db->makeQueryInteger($this->_siteID),
+            $this->_db->makeQueryString($date),
+            $this->_db->makeQueryInteger($timeZoneOffset),
+            $this->_db->makeQueryInteger($durationMinutes),
+            $this->_db->makeQueryString($date),
+            $this->_db->makeQueryInteger($timeZoneOffset)
+        );
+
+        return $this->_db->getAllAssoc($sql);
     }
 
     /**

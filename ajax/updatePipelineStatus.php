@@ -136,12 +136,19 @@ if ($statusID != PIPELINE_STATUS_PLACED && $oldStatusID == PIPELINE_STATUS_PLACE
 // the candidate's Activity tab (only the low-level status-history rows).
 if ($oldStatusID != $statusID)
 {
+    $note = $interface->getTrimmedInput('note');
+    $activityDescription = 'Status change: ' . $oldStatus . ' -> ' . $statusDescription;
+    if ($note !== '')
+    {
+        $activityDescription .= ' — ' . $note;
+    }
+
     $activityEntries = new ActivityEntries($siteID);
     $activityEntries->add(
         $candidateID,
         DATA_ITEM_CANDIDATE,
         ACTIVITY_OTHER,
-        htmlspecialchars('Status change: ' . $oldStatus . ' -> ' . $statusDescription),
+        htmlspecialchars($activityDescription),
         $_SESSION['CATS']->getUserID(),
         $jobOrderID
     );

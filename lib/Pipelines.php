@@ -718,6 +718,7 @@ class Pipelines
                     MAX(candidate_joborder.date_created), '%%m-%%d-%%y'
                 ) AS dateCreated,
                 UNIX_TIMESTAMP(MAX(candidate_joborder.date_created)) AS dateCreatedInt,
+                UNIX_TIMESTAMP(MAX(candidate_joborder.date_modified)) AS dateModifiedInt,
                 MAX(candidate_joborder_status.short_description) AS status,
                 MAX(candidate_joborder.candidate_joborder_id) AS candidateJobOrderID,
                 MAX(candidate_joborder.rating_value) AS ratingValue,

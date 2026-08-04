@@ -214,6 +214,17 @@
                                         <textarea name="description" id="description" cols="20" class="inputbox" style="width: 180px; height:60px;"></textarea>
                                     </div>
 
+                                    <div style="margin-bottom: 4px;">
+                                        <label id="interviewerUserIDLabel" for="interviewerUserID">Interviewer (optional)</label><br />
+                                        <select id="interviewerUserID" name="interviewerUserID" class="inputbox" style="width: 180px;">
+                                            <option value="">-- None --</option>
+                                            <?php foreach ($this->interviewerUsersRS as $interviewerUser): ?>
+                                                <option value="<?php echo($interviewerUser['userID']); ?>"><?php $this->_($interviewerUser['firstName'] . ' ' . $interviewerUser['lastName']); ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                        <div style="font-size: 11px; color: #888;">Selecting an interviewer will warn (but not block) if they're already booked at this time.</div>
+                                    </div>
+
                                     <div <?php if (!$this->allowEventReminders): ?>style="display:none;"<?php endif; ?>>
                                         <input type="checkbox" name="reminderToggle" onclick="if (this.checked) document.getElementById('reminderArea').style.display = ''; else document.getElementById('reminderArea').style.display = '';">&nbsp;<label>Set Reminder</label><br />
                                     </div>

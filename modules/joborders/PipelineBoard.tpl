@@ -119,6 +119,117 @@
             pointer-events: none;
         }
 
+        .candidate-search-wrapper input {
+            padding: 10px 14px;
+            border: 1.5px solid var(--kb-gray-300);
+            border-radius: 10px;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            color: var(--kb-gray-700);
+            background: #fff;
+            min-width: 220px;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .candidate-search-wrapper input:focus {
+            border-color: var(--kb-primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        }
+
+        .candidate-card.search-hidden {
+            display: none;
+        }
+
+        .card-days-tag {
+            background: var(--kb-gray-100);
+            color: var(--kb-gray-500);
+        }
+
+        .card-days-tag.stale {
+            background: #fef2f2;
+            color: var(--kb-red);
+        }
+
+        /* ===== Quick Note Modal ===== */
+        .quick-note-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(17, 24, 39, 0.45);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .quick-note-modal {
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            width: 360px;
+            max-width: 90vw;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            font-family: 'Inter', sans-serif;
+            animation: fadeInUp 0.2s ease;
+        }
+
+        .quick-note-modal h4 {
+            margin: 0 0 10px;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--kb-gray-800);
+        }
+
+        .quick-note-modal h4 span {
+            font-weight: 400;
+            color: var(--kb-gray-400);
+            font-size: 12px;
+        }
+
+        .quick-note-modal textarea {
+            width: 100%;
+            min-height: 70px;
+            padding: 10px;
+            border: 1.5px solid var(--kb-gray-300);
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            color: var(--kb-gray-700);
+            resize: vertical;
+            outline: none;
+            box-sizing: border-box;
+        }
+
+        .quick-note-modal textarea:focus {
+            border-color: var(--kb-primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        }
+
+        .quick-note-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 12px;
+        }
+
+        .quick-note-btn {
+            padding: 8px 18px;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .quick-note-primary {
+            background: var(--kb-primary);
+            color: #fff;
+        }
+
+        .quick-note-primary:hover {
+            background: #1d4ed8;
+        }
+
         .board-stats {
             display: flex;
             gap: 16px;
@@ -544,6 +655,9 @@
                         <?php endforeach; ?>
                     </select>
                 </div>
+                <div class="candidate-search-wrapper" id="candidateSearchWrapper" style="display: none;">
+                    <input type="text" id="candidateSearchInput" placeholder="Filter by candidate name..." oninput="filterCandidateCards(this.value)" />
+                </div>
             </div>
         </div>
 
@@ -562,6 +676,17 @@
         </div>
     </div>
 
+    <!-- Quick Note Modal (shown after a drag-drop status change) -->
+    <div class="quick-note-overlay" id="quickNoteOverlay" style="display: none;">
+        <div class="quick-note-modal">
+            <h4>Add a note? <span>(optional)</span></h4>
+            <textarea id="quickNoteInput" placeholder="e.g. Great communication skills, moving to next round..." maxlength="1000"></textarea>
+            <div class="quick-note-actions">
+                <button type="button" class="quick-note-btn quick-note-primary" id="quickNoteSubmitBtn">Move</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         var sessionCookie = '<?php echo $_SESSION['CATS']->getCookie(); ?>';
         var currentJobOrderID = null;
@@ -572,6 +697,7 @@
                 document.getElementById('noJobState').style.display = 'flex';
                 document.getElementById('loadingState').style.display = 'none';
                 document.getElementById('boardStats').style.display = 'none';
+                document.getElementById('candidateSearchWrapper').style.display = 'none';
                 return;
             }
 
@@ -629,6 +755,8 @@
             // Update stats
             document.getElementById('totalCandidates').textContent = totalCandidates;
             document.getElementById('boardStats').style.display = 'flex';
+            document.getElementById('candidateSearchWrapper').style.display = 'block';
+            document.getElementById('candidateSearchInput').value = '';
 
             // Render columns
             data.columns.forEach(function(col) {
@@ -674,7 +802,7 @@
                     var newStatusID = this.getAttribute('data-status-id');
 
                     if (cardData.currentStatusID !== newStatusID) {
-                        updateCandidateStatus(
+                        showQuickNoteModal(
                             cardData.candidateJobOrderID,
                             cardData.candidateID,
                             currentJobOrderID,
@@ -709,6 +837,7 @@
             card.setAttribute('draggable', 'true');
             card.setAttribute('data-candidate-id', candidate.candidateID);
             card.setAttribute('data-cjo-id', candidate.candidateJobOrderID);
+            card.setAttribute('data-candidate-name', (candidate.firstName + ' ' + candidate.lastName).toLowerCase());
 
             // Drag events
             card.addEventListener('dragstart', function(e) {
@@ -757,6 +886,12 @@
                 html += '<span class="card-tag resume-tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Resume</span>';
             }
 
+            if (candidate.daysInStage !== null && candidate.daysInStage !== undefined) {
+                var staleClass = candidate.daysInStage >= 14 ? ' stale' : '';
+                var daysLabel = candidate.daysInStage === 1 ? '1 day in stage' : candidate.daysInStage + ' days in stage';
+                html += '<span class="card-tag card-days-tag' + staleClass + '">' + escapeHtml(daysLabel) + '</span>';
+            }
+
             html += '</div>';
             html += '<div class="card-date">Added ' + escapeHtml(candidate.dateCreated) + (candidate.ownerName ? ' &middot; ' + escapeHtml(candidate.ownerName) : '') + '</div>';
 
@@ -764,22 +899,72 @@
             return card;
         }
 
-        function updateCandidateStatus(candidateJobOrderID, candidateID, jobOrderID, newStatusID) {
+        function filterCandidateCards(query) {
+            var normalized = query.trim().toLowerCase();
+            document.querySelectorAll('.candidate-card').forEach(function(card) {
+                var matches = !normalized || card.getAttribute('data-candidate-name').indexOf(normalized) !== -1;
+                card.classList.toggle('search-hidden', !matches);
+            });
+        }
+
+        var pendingMove = null;
+
+        function showQuickNoteModal(candidateJobOrderID, candidateID, jobOrderID, newStatusID) {
+            pendingMove = {
+                candidateJobOrderID: candidateJobOrderID,
+                candidateID: candidateID,
+                jobOrderID: jobOrderID,
+                newStatusID: newStatusID
+            };
+            document.getElementById('quickNoteInput').value = '';
+            document.getElementById('quickNoteOverlay').style.display = 'flex';
+            document.getElementById('quickNoteInput').focus();
+        }
+
+        function submitQuickNote() {
+            if (!pendingMove) {
+                return;
+            }
+            var note = document.getElementById('quickNoteInput').value;
+            document.getElementById('quickNoteOverlay').style.display = 'none';
+            updateCandidateStatus(
+                pendingMove.candidateJobOrderID,
+                pendingMove.candidateID,
+                pendingMove.jobOrderID,
+                pendingMove.newStatusID,
+                note
+            );
+            pendingMove = null;
+        }
+
+        document.getElementById('quickNoteSubmitBtn').addEventListener('click', submitQuickNote);
+        document.getElementById('quickNoteInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                submitQuickNote();
+            }
+        });
+
+        function updateCandidateStatus(candidateJobOrderID, candidateID, jobOrderID, newStatusID, note) {
             var xhr = new XMLHttpRequest();
-            var params = 'f=updatePipelineStatus' +
-                '&candidateJobOrderID=' + candidateJobOrderID +
+
+            // POST (not GET) -- the optional note is free-text about a
+            // candidate, and query strings land in access/proxy logs.
+            var params = 'candidateJobOrderID=' + candidateJobOrderID +
                 '&candidateID=' + candidateID +
                 '&jobOrderID=' + jobOrderID +
-                '&statusID=' + newStatusID;
+                '&statusID=' + newStatusID +
+                '&note=' + encodeURIComponent(note || '');
 
-            xhr.open('GET', 'ajax.php?' + params, true);
+            xhr.open('POST', 'ajax.php?f=updatePipelineStatus', true);
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
             xhr.onreadystatechange = function() {
                 if (xhr.readyState === 4) {
                     // Reload the board to reflect changes
                     loadPipeline(currentJobOrderID);
                 }
             };
-            xhr.send();
+            xhr.send(params);
         }
 
         function escapeHtml(text) {

@@ -227,6 +227,45 @@ class InterviewFeedback
     }
 
     /**
+     * Get all still-pending feedback across all interviewers whose
+     * interview happened more than $daysThreshold days ago. Used by
+     * cron/send-overdue-feedback-digest.php to build one digest email per
+     * interviewer -- unlike getPendingForUser(), this isn't scoped to the
+     * currently logged-in user, since a cron script has no session.
+     */
+    public function getOverdue($daysThreshold = 3)
+    {
+        $sql = sprintf(
+            "SELECT
+                f.feedback_id AS feedbackID,
+                f.interviewer_user_id AS interviewerUserID,
+                u.first_name AS interviewerFirstName,
+                u.last_name AS interviewerLastName,
+                u.email AS interviewerEmail,
+                c.first_name AS candidateFirstName,
+                c.last_name AS candidateLastName,
+                ce.title AS eventTitle,
+                ce.date AS eventDate,
+                jo.title AS jobTitle,
+                DATEDIFF(NOW(), ce.date) AS daysOverdue
+             FROM interview_feedback f
+             LEFT JOIN user u ON f.interviewer_user_id = u.user_id
+             LEFT JOIN candidate c ON f.candidate_id = c.candidate_id
+             LEFT JOIN calendar_event ce ON f.calendar_event_id = ce.calendar_event_id
+             LEFT JOIN joborder jo ON f.joborder_id = jo.joborder_id
+             WHERE f.status = 'pending'
+             AND f.site_id = %s
+             AND ce.date IS NOT NULL
+             AND ce.date < DATE_SUB(NOW(), INTERVAL %d DAY)
+             ORDER BY f.interviewer_user_id ASC, ce.date ASC",
+            $this->_siteID,
+            intval($daysThreshold)
+        );
+
+        return $this->_db->getAllAssoc($sql);
+    }
+
+    /**
      * Get interview stage summary for a candidate+job pipeline entry.
      * Returns which stages are complete, pending, or not started.
      */

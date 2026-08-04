@@ -88,6 +88,10 @@ class ReportsUI extends UserInterface
                 $this->analyticsDashboard();
                 break;
 
+            case 'exportAnalyticsCSV':
+                $this->exportAnalyticsCSV();
+                break;
+
             case 'reports':
             default:
                 $this->reports();
@@ -102,6 +106,122 @@ class ReportsUI extends UserInterface
         $this->_template->assign('active', $this);
         $this->_template->assign('subActive', 'Analytics Dashboard');
         $this->_template->display('./modules/reports/AnalyticsDashboard.tpl');
+    }
+
+    private function exportAnalyticsCSV()
+    {
+        if ($this->getUserAccessLevel('reports.analyticsDashboard') < ACCESS_LEVEL_READ)
+        {
+            CommonErrors::fatal(COMMONERROR_PERMISSION, $this, 'You do not have permission to export analytics data.');
+            return;
+        }
+
+        include_once(LEGACY_ROOT . '/lib/Analytics.php');
+
+        $periodDays = isset($_GET['period']) ? intval($_GET['period']) : 90;
+        $jobOrderID = (isset($_GET['joborderID']) && $_GET['joborderID'] !== '')
+            ? intval($_GET['joborderID'])
+            : null;
+
+        $analytics = new Analytics($this->_siteID);
+
+        $rows = array();
+        $rows[] = array('Analytics Export');
+        $rows[] = array('Period (days)', $periodDays);
+        $rows[] = array();
+
+        $summary = $analytics->getDashboardSummary();
+        $rows[] = array('Summary');
+        $rows[] = array('Metric', 'Value');
+        $rows[] = array('Active Candidates', $summary['activeCandidates']);
+        $rows[] = array('Active Job Orders', $summary['activeJobOrders']);
+        $rows[] = array('Open Positions', $summary['openPositions']);
+        $rows[] = array('Placements This Month', $summary['placementsThisMonth']);
+        $rows[] = array('Upcoming Interviews', $summary['upcomingInterviews']);
+        $rows[] = array();
+
+        $funnel = $analytics->getPipelineFunnel($jobOrderID);
+        $rows[] = array('Pipeline Funnel');
+        $rows[] = array('Status', 'Count');
+        foreach ($funnel as $stage)
+        {
+            $rows[] = array($stage['status'], $stage['count']);
+        }
+        $rows[] = array();
+
+        $conversions = $analytics->getConversionRates($periodDays, $jobOrderID);
+        $rows[] = array('Stage Conversion Rates');
+        $rows[] = array('From', 'To', 'From Count', 'To Count', 'Rate (%)');
+        foreach ($conversions as $conversion)
+        {
+            $rows[] = array(
+                $conversion['from'], $conversion['to'], $conversion['fromCount'],
+                $conversion['toCount'], $conversion['rate']
+            );
+        }
+        $rows[] = array();
+
+        $timeToHire = $analytics->getTimeToHire($periodDays);
+        $rows[] = array('Time to Hire');
+        $rows[] = array('Metric', 'Value');
+        $rows[] = array('Average Days', $timeToHire['avgDays']);
+        $rows[] = array('Minimum Days', $timeToHire['minDays']);
+        $rows[] = array('Maximum Days', $timeToHire['maxDays']);
+        $rows[] = array('Total Placements', $timeToHire['totalPlacements']);
+        $rows[] = array();
+
+        $recruiters = $analytics->getRecruiterPerformance($periodDays);
+        $rows[] = array('Recruiter Performance');
+        $rows[] = array('Recruiter', 'Candidates Added', 'Submitted', 'Interviewing', 'Placed');
+        foreach ($recruiters as $recruiter)
+        {
+            $rows[] = array(
+                trim($recruiter['firstName'] . ' ' . $recruiter['lastName']),
+                $recruiter['candidatesAdded'], $recruiter['submitted'],
+                $recruiter['interviewing'], $recruiter['placed']
+            );
+        }
+        $rows[] = array();
+
+        $trend = $analytics->getHiringTrend(12);
+        $rows[] = array('Hiring Trend (12 Months)');
+        $rows[] = array('Month', 'Placements');
+        foreach ($trend as $month)
+        {
+            $rows[] = array($month['month'], $month['placements']);
+        }
+        $rows[] = array();
+
+        $sources = $analytics->getSourceEffectiveness($periodDays);
+        $rows[] = array('Candidate Source Effectiveness');
+        $rows[] = array('Source', 'Total Candidates', 'Interviewed', 'Placed');
+        foreach ($sources as $source)
+        {
+            $rows[] = array(
+                $source['source'], $source['totalCandidates'],
+                $source['interviewed'], $source['placed']
+            );
+        }
+
+        $output = '';
+        foreach ($rows as $row)
+        {
+            $columns = array();
+            foreach ($row as $value)
+            {
+                $columns[] = '"' . str_replace('"', '""', $value) . '"';
+            }
+            $output .= implode(',', $columns) . "\r\n";
+        }
+
+        if (!eval(Hooks::get('REPORTS_EXPORT_ANALYTICS_CSV'))) return;
+
+        $filename = 'analytics-export.csv';
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Content-Length: ' . strlen($output));
+        header('Connection: close');
+        header('Content-Type: text/x-csv; name=' . $filename . '; charset=utf-8');
+        echo $output;
     }
 
     private function reports()

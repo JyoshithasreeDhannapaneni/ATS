@@ -23,6 +23,10 @@
             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
             Refresh
         </button>
+        <button class="analytics-refresh-btn" onclick="exportAnalyticsCSV()">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export CSV
+        </button>
     </div>
 
     <!-- Summary Cards -->
@@ -129,6 +133,12 @@ async function fetchAnalytics(type, params = {}) {
     const query = new URLSearchParams({f: 'getAnalytics', type, period, ...params});
     const resp = await fetch('ajax.php?' + query.toString());
     return await resp.json();
+}
+
+function exportAnalyticsCSV() {
+    const period = document.getElementById('periodDays').value;
+    const query = new URLSearchParams({m: 'reports', a: 'exportAnalyticsCSV', period});
+    window.location.href = 'index.php?' + query.toString();
 }
 
 async function loadAllAnalytics() {
