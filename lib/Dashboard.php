@@ -98,6 +98,122 @@ class Dashboard
     }
 
     /**
+     * Returns upcoming interview-type calendar events across the whole site
+     * (not just the current user's own events - see Calendar::
+     * getUpcomingEventsHTML() for that narrower, user-scoped equivalent),
+     * for the dashboard's "Upcoming Interviews" widget.
+     *
+     * @param integer Trailing window in days.
+     * @param integer Max rows to return.
+     * @return array upcoming interview events
+     */
+    public function getUpcomingInterviews($days = 7, $limit = 5)
+    {
+        /* Self-heal interviewer_user_id the same way Calendar::addEvent()/
+         * getInterviewerConflicts() do - this fork's migrations aren't wired
+         * into any versioned auto-migration system. */
+        try
+        {
+            $this->_db->query(
+                "ALTER TABLE calendar_event ADD COLUMN IF NOT EXISTS interviewer_user_id INT NULL",
+                true
+            );
+        }
+        catch (Exception $e) {}
+
+        $sql = sprintf(
+            "SELECT
+                calendar_event.calendar_event_id AS eventID,
+                calendar_event.title AS title,
+                DATE_FORMAT(calendar_event.date, '%%m-%%d-%%y') AS eventDate,
+                DATE_FORMAT(calendar_event.date, '%%h:%%i %%p') AS eventTime,
+                calendar_event.date AS eventDateSort,
+                candidate.candidate_id AS candidateID,
+                candidate.first_name AS candidateFirstName,
+                candidate.last_name AS candidateLastName,
+                joborder.title AS jobTitle,
+                interviewer.first_name AS interviewerFirstName,
+                interviewer.last_name AS interviewerLastName
+            FROM
+                calendar_event
+            LEFT JOIN candidate ON
+                calendar_event.data_item_id = candidate.candidate_id
+                AND calendar_event.data_item_type = %s
+            LEFT JOIN joborder ON
+                calendar_event.joborder_id = joborder.joborder_id
+            LEFT JOIN user AS interviewer ON
+                calendar_event.interviewer_user_id = interviewer.user_id
+            WHERE
+                calendar_event.site_id = %s
+            AND
+                calendar_event.type IN (%s, %s, %s, %s)
+            AND
+                calendar_event.date >= NOW()
+            AND
+                calendar_event.date <= DATE_ADD(NOW(), INTERVAL %s DAY)
+            ORDER BY
+                eventDateSort ASC
+            LIMIT %s",
+            DATA_ITEM_CANDIDATE,
+            $this->_siteID,
+            CALENDAR_EVENT_L1_INTERVIEW,
+            CALENDAR_EVENT_L2_INTERVIEW,
+            CALENDAR_EVENT_L3_INTERVIEW,
+            CALENDAR_EVENT_HR_INTERVIEW,
+            $this->_db->makeQueryInteger($days),
+            $this->_db->makeQueryInteger($limit)
+        );
+
+        return $this->_db->getAllAssoc($sql);
+    }
+
+    /**
+     * Returns the most recent activity log entries across all candidates
+     * site-wide, for the dashboard's "Recent Activity" widget. Scoped to
+     * candidate activity (the overwhelming majority of activity entries in
+     * this app) rather than handling every data-item type generically.
+     *
+     * @param integer Max rows to return.
+     * @return array recent activity entries
+     */
+    public function getRecentActivity($limit = 8)
+    {
+        $sql = sprintf(
+            "SELECT
+                activity.activity_id AS activityID,
+                activity_type.short_description AS typeDescription,
+                activity.notes AS notes,
+                DATE_FORMAT(activity.date_created, '%%m-%%d-%%y %%h:%%i %%p') AS dateCreated,
+                activity.date_created AS dateCreatedSort,
+                candidate.candidate_id AS candidateID,
+                candidate.first_name AS candidateFirstName,
+                candidate.last_name AS candidateLastName,
+                entered_by_user.first_name AS enteredByFirstName,
+                entered_by_user.last_name AS enteredByLastName
+            FROM
+                activity
+            LEFT JOIN activity_type ON
+                activity.type = activity_type.activity_type_id
+            LEFT JOIN candidate ON
+                activity.data_item_id = candidate.candidate_id
+            LEFT JOIN user AS entered_by_user ON
+                activity.entered_by = entered_by_user.user_id
+            WHERE
+                activity.site_id = %s
+            AND
+                activity.data_item_type = %s
+            ORDER BY
+                dateCreatedSort DESC
+            LIMIT %s",
+            $this->_siteID,
+            DATA_ITEM_CANDIDATE,
+            $this->_db->makeQueryInteger($limit)
+        );
+
+        return $this->_db->getAllAssoc($sql);
+    }
+
+    /**
      * Returns a count of placements (candidates moved to Placed) within the
      * given trailing window, for the dashboard's "Recent Hires" stat tile.
      * Unlike getPlacements(), this isn't capped at 10 rows and skips the

@@ -139,6 +139,20 @@
 .db-card-body::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
 .db-card-body { scrollbar-width: thin; scrollbar-color: #e2e8f0 transparent; }
 
+/* ── List rows (Upcoming Interviews / Recent Activity) ── */
+.db-list-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 12px 20px; border-bottom: 1px solid #f3f4f6; font-size: 13px;
+    text-decoration: none; color: inherit; transition: background 0.15s;
+}
+.db-list-item:last-child { border-bottom: none; }
+.db-list-item:hover { background: #f9fafb; }
+.db-list-item:hover .db-list-title { color: #2563eb; }
+.db-list-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.db-list-title { color: #111827; font-weight: 500; }
+.db-list-sub { color: #6b7280; font-size: 12px; }
+.db-list-meta { color: #9ca3af; font-size: 11px; white-space: nowrap; flex-shrink: 0; text-align: right; line-height: 1.4; }
+
 /* ── Empty states ────────────────────────────────── */
 .db-empty {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -259,6 +273,84 @@ $roleInfo = $roleLabels[$role] ?? $roleLabels['admin'];
             });
     }
     </script>
+
+    <!-- ── Upcoming Interviews + Recent Activity ────── -->
+    <div class="db-grid-2">
+
+        <!-- Upcoming Interviews -->
+        <div class="db-card">
+            <div class="db-card-head">
+                <div class="db-card-title">
+                    <svg width="16" height="16" fill="none" stroke="#d97706" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    Upcoming Interviews
+                </div>
+                <a href="<?php echo CATSUtility::getIndexName(); ?>?m=calendar" class="db-view-all">View all</a>
+            </div>
+            <div class="db-card-body">
+                <?php if (!empty($this->upcomingInterviewsRS)): ?>
+                    <?php foreach ($this->upcomingInterviewsRS as $interview): ?>
+                        <a class="db-list-item" href="<?php echo CATSUtility::getIndexName(); ?>?m=candidates&amp;a=show&amp;candidateID=<?php echo (int) $interview['candidateID']; ?>">
+                            <div class="db-list-main">
+                                <span class="db-list-title"><?php echo htmlspecialchars(trim($interview['candidateFirstName'] . ' ' . $interview['candidateLastName']) ?: $interview['title']); ?></span>
+                                <span class="db-list-sub">
+                                    <?php echo htmlspecialchars($interview['jobTitle'] ?: $interview['title']); ?>
+                                    <?php if (!empty($interview['interviewerFirstName'])): ?>
+                                        &middot; with <?php echo htmlspecialchars($interview['interviewerFirstName'] . ' ' . $interview['interviewerLastName']); ?>
+                                    <?php endif; ?>
+                                </span>
+                            </div>
+                            <div class="db-list-meta"><?php echo htmlspecialchars($interview['eventDate']); ?><br><?php echo htmlspecialchars($interview['eventTime']); ?></div>
+                        </a>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <div class="db-empty" style="padding:30px 20px;">
+                        <div class="db-empty-icon">
+                            <svg width="22" height="22" fill="none" stroke="#9ca3af" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                        </div>
+                        <p>No upcoming interviews</p>
+                        <small>Interviews scheduled in the next 7 days will appear here</small>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="db-card">
+            <div class="db-card-head">
+                <div class="db-card-title">
+                    <svg width="16" height="16" fill="none" stroke="#2563eb" stroke-width="2" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                    Recent Activity
+                </div>
+                <a href="<?php echo CATSUtility::getIndexName(); ?>?m=activity&amp;a=listByView" class="db-view-all">View all</a>
+            </div>
+            <div class="db-card-body">
+                <?php if (!empty($this->recentActivityRS)): ?>
+                    <?php foreach ($this->recentActivityRS as $activityRow): ?>
+                        <a class="db-list-item" href="<?php echo CATSUtility::getIndexName(); ?>?m=candidates&amp;a=show&amp;candidateID=<?php echo (int) $activityRow['candidateID']; ?>">
+                            <div class="db-list-main">
+                                <span class="db-list-title"><?php echo htmlspecialchars(trim($activityRow['candidateFirstName'] . ' ' . $activityRow['candidateLastName'])); ?></span>
+                                <span class="db-list-sub">
+                                    <?php echo htmlspecialchars($activityRow['typeDescription']); ?>
+                                    <?php if (!empty($activityRow['enteredByFirstName'])): ?>
+                                        by <?php echo htmlspecialchars($activityRow['enteredByFirstName'] . ' ' . $activityRow['enteredByLastName']); ?>
+                                    <?php endif; ?>
+                                </span>
+                            </div>
+                            <div class="db-list-meta"><?php echo htmlspecialchars($activityRow['dateCreated']); ?></div>
+                        </a>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <div class="db-empty" style="padding:30px 20px;">
+                        <div class="db-empty-icon">
+                            <svg width="22" height="22" fill="none" stroke="#9ca3af" stroke-width="1.5" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                        </div>
+                        <p>No recent activity</p>
+                        <small>Logged calls, notes, and status changes will appear here</small>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
 
     <?php endif; /* admin/recruiter */ ?>
 

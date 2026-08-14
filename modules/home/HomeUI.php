@@ -172,6 +172,10 @@ class HomeUI extends UserInterface
         $this->_template->assign('openJobOrdersURL', $openJobOrdersURL);
         $this->_template->assign('closedJobOrdersURL', $closedJobOrdersURL);
 
+        /* Upcoming Interviews + Recent Activity widgets below the stat tiles. */
+        $this->_template->assign('upcomingInterviewsRS', $dashboard->getUpcomingInterviews(7, 5));
+        $this->_template->assign('recentActivityRS', $dashboard->getRecentActivity(8));
+
         $this->_template->display('./modules/home/Home.tpl');
     }
 
