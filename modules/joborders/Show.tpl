@@ -496,23 +496,72 @@ function jo_display($value, $fallback = '&mdash;') {
 
             <br />
 
-            <p class="note">Candidates in Job Order</p>
+            <style>
+            /* ── Candidates in Job Order (legacy AJAX-rendered pipeline table) ── */
+            #pipelineSectionTitle {
+                font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase;
+                letter-spacing: 0.06em; margin: 0 0 12px;
+            }
+            #ajaxPipelineControl {
+                font-size: 12px; color: #6b7280; display: flex; align-items: center; gap: 6px; margin: 0 0 10px;
+            }
+            #ajaxPipelineControl select#numberOfEntriesSelect {
+                padding: 5px 10px; border: 1px solid #e5e7eb; border-radius: 6px;
+                font-size: 12px; color: #374151; background: #fff;
+            }
+            #ajaxPipelineControl a { color: #2563eb; text-decoration: none; }
+            #ajaxPipelineControl a:hover { color: #1d4ed8; }
+            #ajaxPipelineTable { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; margin-bottom: 12px; }
+            #ajaxPipelineTable table { width: 100%; border-collapse: collapse; font-size: 13px; }
+            #ajaxPipelineTable th {
+                background: #fafafa; border-bottom: 1px solid #e5e7eb; padding: 10px 12px; text-align: left;
+            }
+            #ajaxPipelineTable th a {
+                color: #6b7280; font-size: 11px; font-weight: 700; text-transform: uppercase;
+                letter-spacing: 0.05em; text-decoration: none;
+            }
+            #ajaxPipelineTable th a:hover { color: #2563eb; }
+            #ajaxPipelineTable td {
+                padding: 10px 12px; border-bottom: 1px solid #f3f4f6; vertical-align: middle !important; color: #374151;
+            }
+            #ajaxPipelineTable tr:last-child td { border-bottom: none; }
+            #ajaxPipelineTable tr:hover td { background: #f9fafb; }
+            #ajaxPipelineTable a.jobLinkHot, #ajaxPipelineTable a.jobLinkCold, #ajaxPipelineTable a.jobLinkSubmitted {
+                text-decoration: none; font-weight: 500; color: #2563eb;
+            }
+            #ajaxPipelineTable a.jobLinkHot:hover, #ajaxPipelineTable a.jobLinkCold:hover, #ajaxPipelineTable a.jobLinkSubmitted:hover {
+                color: #1d4ed8;
+            }
+            #ajaxPipelineTable .pipeline-status-badge {
+                display: inline-block; padding: 3px 10px; border-radius: 999px;
+                background: #f3f4f6; color: #374151; font-size: 11px; font-weight: 600;
+                text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap;
+            }
+            #pipelineExportBar { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #6b7280; }
+            #pipelineExportBar a { color: #2563eb; text-decoration: none; font-weight: 500; }
+            #pipelineExportBar a:hover { color: #1d4ed8; }
+            </style>
+
+            <p id="pipelineSectionTitle">Candidates in Job Order</p>
 
             <p id="ajaxPipelineControl">
-                Number of visible entries:&nbsp;&nbsp;
+                Number of visible entries:
                 <select id="numberOfEntriesSelect" onchange="PipelineJobOrder_changeLimit(<?php $this->_($this->data['jobOrderID']); ?>, this.value, <?php if ($this->isPopup) echo(1); else echo(0); ?>, 'ajaxPipelineTable', '<?php echo($this->sessionCookie); ?>', 'ajaxPipelineTableIndicator', '<?php echo(CATSUtility::getIndexName()); ?>');" class="selectBox">
                     <option value="15" <?php if ($this->pipelineEntriesPerPage == 15): ?>selected<?php endif; ?>>15 entries</option>
                     <option value="30" <?php if ($this->pipelineEntriesPerPage == 30): ?>selected<?php endif; ?>>30 entries</option>
                     <option value="50" <?php if ($this->pipelineEntriesPerPage == 50): ?>selected<?php endif; ?>>50 entries</option>
                     <option value="99999" <?php if ($this->pipelineEntriesPerPage == 99999): ?>selected<?php endif; ?>>All entries</option>
-                </select>&nbsp;
+                </select>
                 <span id="ajaxPipelineNavigation">
-                </span>&nbsp;
+                </span>
                 <img src="images/indicator.gif" alt="" id="ajaxPipelineTableIndicator" />
             </p>
 
             <div id="ajaxPipelineTable"></div>
-            <input type="checkbox" name="select_all" onclick="selectAll_candidates(this)" title="Select all candidates" /> <a href="javascript:void(0);" onclick="exportFromPipeline()" title="Export selected candidates">Export</a>&nbsp;&nbsp;&nbsp;&nbsp;
+            <div id="pipelineExportBar">
+                <input type="checkbox" name="select_all" onclick="selectAll_candidates(this)" title="Select all candidates" />
+                <a href="javascript:void(0);" onclick="exportFromPipeline()" title="Export selected candidates">Export</a>
+            </div>
             <script type="text/javascript">
             	function exportFromPipeline(){
 <?php

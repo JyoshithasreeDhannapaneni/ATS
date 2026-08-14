@@ -957,7 +957,7 @@ class JobOrdersDataGrid extends DataGrid
                                      'exportable' => false,
                                      'filterable' => false),
 
-            'ID' =>        array(     'pagerRender'    => 'return $rsData[\'jobOrderID\'];',
+            'ID' =>        array(     'pagerRender'    => 'if ($rsData[\'isHot\'] == 1) $className =  \'jobLinkHot\'; else $className = \'jobLinkCold\'; return \'<a href="'.CATSUtility::getIndexName().'?m=joborders&amp;a=show&amp;jobOrderID=\'.$rsData[\'jobOrderID\'].\'" class="\'.$className.\'">\'.$rsData[\'jobOrderID\'].\'</a>\';',
                                       'sortableColumn' => 'jobOrderID',
                                       'pagerWidth'     => 33,
                                       'pagerOptional'  => true,
