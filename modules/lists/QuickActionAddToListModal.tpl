@@ -1,10 +1,8 @@
 <?php /* $Id: QuickActionAddToListModal.tpl 3198 2007-10-14 23:36:43Z will $ */ ?>
 <?php TemplateUtility::printModalHeader('Candidates', array('js/lists.js'), 'Add to '.$this->dataItemDesc.' Static Lists'); ?>
-    <table>
-        <tr>
-            <td><!--Add to Static Lists-->Select the lists you want to add the item<?php if (count($this->dataItemIDArray) > 1): ?>s<?php endif; ?> to.</td>
-       </tr>
-    </table>
+
+<div class="form-container">
+    <div class="form-note"><!--Add to Static Lists-->Select the lists you want to add the item<?php if (count($this->dataItemIDArray) > 1): ?>s<?php endif; ?> to.</div>
             <div class="addToListListBox" id="addToListBox">
                 <input type="hidden" style="width:200px;" id="dataItemArray" value="<?php $this->_(implode(',', $this->dataItemIDArray)); ?>">
                 <?php foreach($this->savedListsRS as $index => $data): ?>
@@ -44,18 +42,18 @@
                     <img src="images/indicator.gif">&nbsp;Saving Changes...
                 </div>
             </div>
-            <br />
-            <div style="float:right;" id="actionArea">
-                <input type="button" class="button" value="New List" onclick="addListRow();">&nbsp;
-                <input type="button" class="button" value="Add To Lists" onclick="addItemsToList('<?php echo($this->sessionCookie); ?>', <?php echo($this->dataItemType); ?>);">&nbsp;
-                <input type="button" class="button" value="Cancel" onclick="parentHidePopWin();">&nbsp;
-            </div>
-            <div style="display:none; font: normal normal normal 12px/130% Arial, Tahoma, sans-serif;" id="addingToListAjaxing">
+            <div id="addingToListAjaxing" class="form-note" style="display:none;">
                 <img src="images/indicator.gif">&nbsp;Adding to Lists, Please Wait <?php if (count($this->dataItemIDArray) > 20): ?>(This could take awhile)<?php endif; ?>...
             </div>
-            <div style="display:none; font: normal normal normal 12px/130% Arial, Tahoma, sans-serif;" id="addingToListAjaxingComplete">
+            <div id="addingToListAjaxingComplete" class="form-note" style="display:none;">
                 <img src="images/indicator.gif">&nbsp;Items have been added to lists successfully.
             </div>
+            <div class="form-actions" id="actionArea">
+                <button type="button" class="form-btn form-btn-secondary" onclick="addListRow();">New List</button>
+                <button type="button" class="form-btn form-btn-primary" onclick="addItemsToList('<?php echo($this->sessionCookie); ?>', <?php echo($this->dataItemType); ?>);">Add To Lists</button>
+                <button type="button" class="form-btn form-btn-secondary" onclick="parentHidePopWin();">Cancel</button>
+            </div>
+        </div>
             <script type="text/javascript">
                 function relabelEvenOdd()
                 {

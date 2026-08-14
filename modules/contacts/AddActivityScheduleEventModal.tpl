@@ -145,8 +145,10 @@
             </tr>
 
         </table>
-        <input type="submit" class="button" name="submit" id="submit" value="Save" />&nbsp;
-        <input type="button" class="button" name="close" value="Cancel" onclick="parentGoToURL('<?php echo(CATSUtility::getIndexName()); ?>?m=contacts&amp;a=show&amp;contactID=<?php echo($this->contactID); ?>');" />
+        <div class="form-actions">
+            <button type="submit" class="form-btn form-btn-primary" name="submit" id="submit">Save</button>
+            <button type="button" class="form-btn form-btn-secondary" name="close" onclick="parentGoToURL('<?php echo(CATSUtility::getIndexName()); ?>?m=contacts&amp;a=show&amp;contactID=<?php echo($this->contactID); ?>');">Cancel</button>
+        </div>
     </form>
 
     <script type="text/javascript">
@@ -171,10 +173,10 @@
     <?php endif; ?>
 
     <?php echo($this->eventHTML); ?>
-    
-    <form>
-        <input type="button" name="close" class="button" value="Close" onclick="parentGoToURL('<?php echo(CATSUtility::getIndexName()); ?>?m=contacts&amp;a=show&amp;contactID=<?php echo($this->contactID); ?>');" />
-    </form>
+
+    <div class="form-actions">
+        <button type="button" class="form-btn form-btn-primary" onclick="parentGoToURL('<?php echo(CATSUtility::getIndexName()); ?>?m=contacts&amp;a=show&amp;contactID=<?php echo($this->contactID); ?>');">Close</button>
+    </div>
 <?php endif; ?>
 
     </body>

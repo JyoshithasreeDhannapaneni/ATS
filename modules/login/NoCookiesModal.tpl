@@ -1,20 +1,18 @@
 <?php /* $Id: NoCookiesModal.tpl 1927 2007-02-22 06:03:24Z will $ */ ?>
 <?php TemplateUtility::printModalHeader('Login'); ?>
-        <div style="text-align: center;">
-            <p style="background-image: url('images/orange_gradient.jpg'); background-repeat: repeat-x; padding: 4px; margin-top: 0px; margin-bottom: 8px; width: 100%; font: normal normal bold  12px/120% Verdana, Tahoma, sans-serif; color: #F6F6F6;">
-                 CATS Warning
-            </p>
-            <br />
-            <div style="font: normal normal 12px Arial, Tahoma, sans-serif">
-                Cookies are not enabled on your browser.  <br />CATS requires cookies in order to login.<br />
-                <br />
-                Please enable cookies within your web <br />
-                browser, then revisit the CATS page.
-                <br />
-            </div>
-            <br />
-            <br />
-            <input type="button" class="button" value="Retry" onclick="parentGoToURL(parent.document.location.href);">
-        </div>
+
+<div class="form-container">
+    <div class="form-header">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <h2>Cookies Required</h2>
+    </div>
+    <div class="form-section" style="text-align: center;">
+        <p>Cookies are not enabled on your browser. This application requires cookies in order to log in.</p>
+        <p>Please enable cookies in your web browser, then revisit this page.</p>
+    </div>
+    <div class="form-actions" style="justify-content: center;">
+        <button type="button" class="form-btn form-btn-primary" onclick="parentGoToURL(parent.document.location.href);">Retry</button>
+    </div>
+</div>
     </body>
 </html>

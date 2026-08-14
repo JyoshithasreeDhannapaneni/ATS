@@ -1383,6 +1383,72 @@ input[type="submit"], input[type="button"] {
     .form-column:first-child { border-right: none; border-bottom: 1px solid var(--gray-200); }
 }
 
+/* ============================================================
+   OPTION CARDS — styled radio/checkbox choices, for modals and
+   forms that previously rendered bare native inputs in a table.
+   ============================================================ */
+
+.option-card-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.option-card {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    background: #fff;
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.option-card:hover {
+    border-color: var(--gray-300);
+    background: var(--gray-50);
+}
+
+.option-card:has(input:checked) {
+    border-color: var(--primary);
+    background: var(--primary-50);
+}
+
+.option-card input[type="radio"],
+.option-card input[type="checkbox"] {
+    margin-top: 2px;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    accent-color: var(--primary);
+}
+
+.option-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.option-card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gray-800);
+}
+
+.option-card-description {
+    font-size: 12px;
+    color: var(--gray-500);
+}
+
+/* Nested content (e.g. a "copy from" select) that should only be
+   usable/visually active when its parent option card is selected. */
+.option-card-extra {
+    margin-top: var(--space-2);
+    padding-left: 28px;
+}
+
 
 /* ============================================================
    DATA TABLES — Modern Card Style

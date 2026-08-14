@@ -6,21 +6,28 @@
             <input type="hidden" name="postback" id="postback" value="postback" />
             <input type="hidden" id="companyID" name="companyID" value="<?php echo($this->companyID); ?>" />
 
-            <table class="editTable">
-                <tr>
-                    <td class="tdVertical">Attachment:</td>
-                    <td class="tdData"><input type="file" id="file" name="file" /></td>
-                </tr>
-            </table>
-            <input type="submit" class="button" name="submit" id="submit" value="Create Attachment" />&nbsp;
-            <input type="button" class="button" name="cancel" value="Cancel" onclick="parentHidePopWin();" />
+            <div class="form-container">
+                <div class="form-section">
+                    <div class="form-row">
+                        <div class="form-label">Attachment</div>
+                        <div class="form-input"><input type="file" id="file" name="file" /></div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="form-btn form-btn-primary" name="submit" id="submit">Create Attachment</button>
+                    <button type="button" class="form-btn form-btn-secondary" name="cancel" onclick="parentHidePopWin();">Cancel</button>
+                </div>
+            </div>
         </form>
     <?php else: ?>
-        <p>The file has been successfully attached.</p>
-
-        <form>
-            <input type="button" name="close" value="Close" onclick="parentHidePopWinRefresh();" />
-        </form>
+        <div class="form-container">
+            <div class="form-section">
+                <p>The file has been successfully attached.</p>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="form-btn form-btn-primary" name="close" onclick="parentHidePopWinRefresh();">Close</button>
+            </div>
+        </div>
     <?php endif; ?>
     </body>
 </html>

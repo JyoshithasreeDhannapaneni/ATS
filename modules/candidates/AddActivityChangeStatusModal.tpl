@@ -254,12 +254,14 @@
             </tr>
 
         </table>
-        <input type="submit" class="button" name="submit" id="submit" value="Save" />&nbsp;
+        <div class="form-actions">
+        <button type="submit" class="form-btn form-btn-primary" name="submit" id="submit">Save</button>
 <?php if ($this->isJobOrdersMode): ?>
-        <input type="button" class="button" name="close" value="Cancel" onclick="parentGoToURL('<?php echo(CATSUtility::getIndexName()); ?>?m=joborders&amp;a=show&amp;jobOrderID=<?php echo($this->selectedJobOrderID); ?>');" />
+        <button type="button" class="form-btn form-btn-secondary" name="close" onclick="parentGoToURL('<?php echo(CATSUtility::getIndexName()); ?>?m=joborders&amp;a=show&amp;jobOrderID=<?php echo($this->selectedJobOrderID); ?>');">Cancel</button>
 <?php else: ?>
-        <input type="button" class="button" name="close" value="Cancel" onclick="parentGoToURL('<?php echo(CATSUtility::getIndexName()); ?>?m=candidates&amp;a=show&amp;candidateID=<?php echo($this->candidateID); ?>');" />
+        <button type="button" class="form-btn form-btn-secondary" name="close" onclick="parentGoToURL('<?php echo(CATSUtility::getIndexName()); ?>?m=candidates&amp;a=show&amp;candidateID=<?php echo($this->candidateID); ?>');">Cancel</button>
 <?php endif; ?>
+        </div>
     </form>
 
     <script type="text/javascript">
@@ -294,13 +296,13 @@
 
     <?php echo($this->notificationHTML); ?>
 
-    <form>
+    <div class="form-actions">
 <?php if ($this->isJobOrdersMode): ?>
-        <input type="button" name="close" class="button" value="Close" onclick="parentGoToURL('<?php echo(CATSUtility::getIndexName()); ?>?m=joborders&amp;a=show&amp;jobOrderID=<?php echo($this->regardingID); ?>');" />
+        <button type="button" class="form-btn form-btn-primary" onclick="parentGoToURL('<?php echo(CATSUtility::getIndexName()); ?>?m=joborders&amp;a=show&amp;jobOrderID=<?php echo($this->regardingID); ?>');">Close</button>
 <?php else: ?>
-        <input type="button" name="close" class="button" value="Close" onclick="parentGoToURL('<?php echo(CATSUtility::getIndexName()); ?>?m=candidates&amp;a=show&amp;candidateID=<?php echo($this->candidateID); ?>');" />
+        <button type="button" class="form-btn form-btn-primary" onclick="parentGoToURL('<?php echo(CATSUtility::getIndexName()); ?>?m=candidates&amp;a=show&amp;candidateID=<?php echo($this->candidateID); ?>');">Close</button>
 <?php endif; ?>
-    </form>
+    </div>
 <?php endif; ?>
 
     </body>
