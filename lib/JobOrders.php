@@ -374,6 +374,50 @@ class JobOrders
     }
 
     /**
+     * Count of job orders currently in the "Open" status group
+     * (Active, On Hold, Full) - see JobOrderStatuses.
+     */
+    public function getOpenCount()
+    {
+        $sql = sprintf(
+            "SELECT
+                COUNT(*) AS totalJobOrders
+            FROM
+                joborder
+            WHERE
+                joborder.site_id = %s
+            AND
+                joborder.status IN %s",
+            $this->_siteID,
+            JobOrderStatuses::getOpenStatusSQL()
+        );
+
+        return $this->_db->getColumn(0, 0, $sql);
+    }
+
+    /**
+     * Count of job orders currently in the "Closed" status group
+     * (Closed, Canceled) - see JobOrderStatuses.
+     */
+    public function getClosedCount()
+    {
+        $sql = sprintf(
+            "SELECT
+                COUNT(*) AS totalJobOrders
+            FROM
+                joborder
+            WHERE
+                joborder.site_id = %s
+            AND
+                joborder.status IN %s",
+            $this->_siteID,
+            JobOrderStatuses::getClosedStatusSQL()
+        );
+
+        return $this->_db->getColumn(0, 0, $sql);
+    }
+
+    /**
      * Returns all relevent job order information for a given job order ID.
      *
      * @param integer job order ID

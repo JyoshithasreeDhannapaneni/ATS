@@ -143,6 +143,23 @@ class JobOrderStatuses
         return $result;
     }
 
+    /**
+     * Returns job order statuses for the "Closed" group (Closed, Canceled)
+     * in a format for MySQL IN() query - mirrors getOpenStatusSQL().
+     */
+    public static function getClosedStatusSQL(){
+        $result = "";
+        $array = self::getAll()['Closed'];
+        foreach($array as $status){
+            $result .= "'".$status."',";
+        }
+        if(strlen($result) > 0){
+            $result = substr($result, 0, strlen($result) - 1);
+            $result = "(".$result.")";
+        }
+        return $result;
+    }
+
     public static function getDefaultStatus(){
         if(defined('JOB_ORDER_STATUS_DEFAULT')){
             return JOB_ORDER_STATUS_DEFAULT;

@@ -89,51 +89,19 @@ class HomeUI extends UserInterface
 
 
     private function home()
-    {        
+    {
          if (!eval(Hooks::get('HOME'))) return;
-        
+
         NewVersionCheck::getNews();
-        
+
         $dashboard = new Dashboard($this->_siteID);
-        $placedRS = $dashboard->getPlacements();
-        
+
+        /* Interviewer role view still shows an upcoming-interviews list. */
         $calendar = new Calendar($this->_siteID);
         $upcomingEventsHTML = $calendar->getUpcomingEventsHTML(7, UPCOMING_FOR_DASHBOARD);
-        
-        $calendar = new Calendar($this->_siteID);
-        $upcomingEventsFupHTML = $calendar->getUpcomingEventsHTML(7, UPCOMING_FOR_DASHBOARD_FUP);        
 
-        /* Important cand datagrid */
-
-        $dataGridProperties = array(
-            'rangeStart'    => 0,
-            'maxResults'    => 15,
-            'filterVisible' => false
-        );
-
-        $dataGrid = DataGrid::get("home:ImportantPipelineDashboard", $dataGridProperties);
-
-        $this->_template->assign('dataGrid', $dataGrid);
-
-        $dataGridProperties = array(
-            'rangeStart'    => 0,
-            'maxResults'    => 15,
-            'filterVisible' => false
-        );
-
-        /* Only show a month of activities. */
-        $dataGridProperties['startDate'] = '';
-        $dataGridProperties['endDate'] = '';
-        $dataGridProperties['period'] = 'DATE_SUB(CURDATE(), INTERVAL 1 MONTH)';
-
-        $dataGrid2 = DataGrid::get("home:CallsDataGrid", $dataGridProperties);
-
-        $this->_template->assign('dataGrid2', $dataGrid2);
-        
         $this->_template->assign('active', $this);
-        $this->_template->assign('placedRS', $placedRS);
         $this->_template->assign('upcomingEventsHTML', $upcomingEventsHTML);
-        $this->_template->assign('upcomingEventsFupHTML', $upcomingEventsFupHTML);
         $this->_template->assign('wildCardQuickSearch', '');
 
         /* Determine user role for role-based dashboard */
@@ -168,9 +136,41 @@ class HomeUI extends UserInterface
         $statistics = new Statistics($this->_siteID);
 
         $candidateCountResult = $candidates->getCount();
-        $jobOrderCountResult = $jobOrders->getCount();
+        $jobOrdersOpenCountResult = $jobOrders->getOpenCount();
+        $jobOrdersClosedCountResult = $jobOrders->getClosedCount();
         $this->_template->assign('candidateCount', is_array($candidateCountResult) ? $candidateCountResult[0] : $candidateCountResult);
-        $this->_template->assign('jobOrderCount', is_array($jobOrderCountResult) ? $jobOrderCountResult[0] : $jobOrderCountResult);
+        $this->_template->assign('jobOrdersOpenCount', is_array($jobOrdersOpenCountResult) ? $jobOrdersOpenCountResult[0] : $jobOrdersOpenCountResult);
+        $this->_template->assign('jobOrdersClosedCount', is_array($jobOrdersClosedCountResult) ? $jobOrdersClosedCountResult[0] : $jobOrdersClosedCountResult);
+
+        /* Default "Recent Hires" window is the trailing 30 days; the
+         * dashboard's period selector re-fetches this via
+         * ajax/getRecentHiresCount.php without a page reload. */
+        $this->_template->assign('recentHiresCount', $dashboard->getPlacementsCount(30));
+
+        /* Deep-link the Jobs Open / Jobs Closed stat tiles straight into the
+         * matching pre-filtered Job Orders list view, using the same
+         * parameters<gridID> mechanism DataGrid's own column-sort links use
+         * (see DataGrid::get()) - filter text/order mirrors
+         * JobOrderStatuses::getFilters()'s default array (index 0 = Open,
+         * 3 = Closed), same convention JobOrdersUI::listByView() relies on
+         * for its own default filter. */
+        include_once(LEGACY_ROOT . '/lib/JobOrderStatuses.php');
+        $jobOrderFilters = JobOrderStatuses::getFilters();
+        $gridID = 'joborders:JobOrdersListByViewDataGrid';
+        $openJobOrdersURL = CATSUtility::getIndexName() . '?m=joborders&' . http_build_query(array(
+            'parameters' . $gridID => json_encode(array(
+                'rangeStart' => 0, 'maxResults' => 50,
+                'filter' => 'Status==' . $jobOrderFilters[0], 'filterVisible' => false
+            ))
+        ));
+        $closedJobOrdersURL = CATSUtility::getIndexName() . '?m=joborders&' . http_build_query(array(
+            'parameters' . $gridID => json_encode(array(
+                'rangeStart' => 0, 'maxResults' => 50,
+                'filter' => 'Status==' . $jobOrderFilters[3], 'filterVisible' => false
+            ))
+        ));
+        $this->_template->assign('openJobOrdersURL', $openJobOrdersURL);
+        $this->_template->assign('closedJobOrdersURL', $closedJobOrdersURL);
 
         $this->_template->display('./modules/home/Home.tpl');
     }

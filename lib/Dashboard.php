@@ -98,7 +98,44 @@ class Dashboard
     }
 
     /**
-     * Returns an associative array with 4 rows of either the last 4 weeks or 4 months 
+     * Returns a count of placements (candidates moved to Placed) within the
+     * given trailing window, for the dashboard's "Recent Hires" stat tile.
+     * Unlike getPlacements(), this isn't capped at 10 rows and skips the
+     * candidate/company/user joins since only the count is needed.
+     *
+     * @param integer|null Trailing window in days, or null for all-time.
+     * @return integer placement count
+     */
+    public function getPlacementsCount($periodDays = null)
+    {
+        $periodCriterion = '';
+        if ($periodDays !== null)
+        {
+            $periodCriterion = sprintf(
+                "AND date >= DATE_SUB(NOW(), INTERVAL %s DAY)",
+                $this->_db->makeQueryInteger($periodDays)
+            );
+        }
+
+        $sql = sprintf(
+            "SELECT
+                COUNT(*) AS placementCount
+            FROM
+                candidate_joborder_status_history
+            WHERE
+                status_to = 800
+            AND
+                site_id = %s
+            %s",
+            $this->_siteID,
+            $periodCriterion
+        );
+
+        return (int) $this->_db->getColumn(0, 0, $sql);
+    }
+
+    /**
+     * Returns an associative array with 4 rows of either the last 4 weeks or 4 months
      * statistics on submitted, interviewing, and placed candidates.
      *
      * @param integer pipeline view indentifier
