@@ -136,7 +136,7 @@ class Dashboard
                 interviewer.last_name AS interviewerLastName
             FROM
                 calendar_event
-            LEFT JOIN candidate ON
+            INNER JOIN candidate ON
                 calendar_event.data_item_id = candidate.candidate_id
                 AND calendar_event.data_item_type = %s
             LEFT JOIN joborder ON
@@ -194,7 +194,7 @@ class Dashboard
                 activity
             LEFT JOIN activity_type ON
                 activity.type = activity_type.activity_type_id
-            LEFT JOIN candidate ON
+            INNER JOIN candidate ON
                 activity.data_item_id = candidate.candidate_id
             LEFT JOIN user AS entered_by_user ON
                 activity.entered_by = entered_by_user.user_id
