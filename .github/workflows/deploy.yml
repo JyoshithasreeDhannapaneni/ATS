@@ -24,7 +24,18 @@ jobs:
           script_stop: true
           script: |
             cd /opt/ATS
-            git fetch origin
+            # Diagnostic: the last few deploys failed with "Proxy CONNECT
+            # aborted" trying to reach github.com. Print whatever proxy
+            # config is actually in effect so we can see cause, not just
+            # symptom, whether or not the override below fixes it.
+            echo "http_proxy=$http_proxy https_proxy=$https_proxy"
+            echo "git http.proxy=$(git config --get http.proxy) https.proxy=$(git config --get https.proxy)"
+            # Override any configured proxy for just this fetch - if the
+            # box doesn't actually need a proxy to reach GitHub (or the
+            # configured one is stale/broken), this bypasses it without
+            # touching the server's persistent git/environment config.
+            env -u http_proxy -u https_proxy -u HTTP_PROXY -u HTTPS_PROXY \
+              git -c http.proxy= -c https.proxy= fetch origin
             # checkout refuses whenever the working tree has local edits to a
             # file that also changed upstream, even if the two now agree - so
             # switch branch (best-effort) then force the tree to match the
