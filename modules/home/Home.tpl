@@ -64,35 +64,31 @@
 }
 .db-stat {
     background: #fff;
-    border-radius: 14px;
-    border: 1px solid #e5e7eb;
-    padding: 20px 22px;
+    border-radius: 12px;
+    border: 1px solid #e9eaee;
+    padding: 18px 20px;
     display: flex;
     align-items: center;
-    gap: 16px;
-    transition: box-shadow 0.2s, transform 0.2s;
+    gap: 14px;
+    transition: box-shadow 0.15s, border-color 0.15s, transform 0.15s;
     cursor: pointer;
     text-decoration: none;
     color: inherit;
     position: relative;
-    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
 }
-.db-stat::before {
-    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
-    width: 4px; border-radius: 14px 0 0 14px;
+.db-stat:hover {
+    border-color: #d8dae0;
+    box-shadow: 0 4px 14px rgba(16, 24, 40, 0.07);
+    transform: translateY(-1px);
 }
-.db-stat.blue::before  { background: #2563eb; }
-.db-stat.green::before { background: #059669; }
-.db-stat.purple::before{ background: #7c3aed; }
-.db-stat.red::before   { background: #dc2626; }
-.db-stat:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.08); transform: translateY(-2px); }
 .db-stat-icon {
-    width: 48px; height: 48px; border-radius: 50%;
+    width: 44px; height: 44px; border-radius: 10px;
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 .db-stat.blue  .db-stat-icon { background: #eff6ff; }
 .db-stat.green .db-stat-icon { background: #ecfdf5; }
-.db-stat.purple.db-stat .db-stat-icon { background: #f5f3ff; }
+.db-stat.purple .db-stat-icon { background: #f5f3ff; }
 .db-stat.red   .db-stat-icon { background: #fef2f2; }
 .db-stat-num {
     font-size: 28px; font-weight: 800; line-height: 1; color: #111827;
@@ -117,11 +113,11 @@
 .db-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
 .db-card-head {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 16px 20px 14px; border-bottom: 1px solid #f3f4f6;
+    padding: 20px 24px 18px; border-bottom: 1px solid #f3f4f6;
 }
 .db-card-title {
-    display: flex; align-items: center; gap: 8px;
-    font-size: 14px; font-weight: 600; color: #111827;
+    display: flex; align-items: center; gap: 9px;
+    font-size: 15px; font-weight: 600; color: #111827;
 }
 .db-card-title svg { flex-shrink: 0; }
 .db-view-all {
@@ -130,7 +126,7 @@
 }
 .db-view-all:hover, .db-view-all:link, .db-view-all:visited { color: #2563eb; text-decoration: none; }
 .db-view-all:hover { color: #1d4ed8; }
-.db-card-body { padding: 0; }
+.db-card-body { padding: 0; min-height: 320px; display: flex; flex-direction: column; }
 /* Thin, flat scrollbar for scrollable card bodies (e.g. My Recent Calls) —
  * avoids the browser's default scrollbar with bulky up/down arrow buttons. */
 .db-card-body::-webkit-scrollbar { width: 6px; }
@@ -141,29 +137,29 @@
 
 /* ── List rows (Upcoming Interviews / Recent Activity) ── */
 .db-list-item {
-    display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    padding: 12px 20px; border-bottom: 1px solid #f3f4f6; font-size: 13px;
+    display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    padding: 16px 24px; border-bottom: 1px solid #f3f4f6; font-size: 14px;
     text-decoration: none; color: inherit; transition: background 0.15s;
 }
 .db-list-item:last-child { border-bottom: none; }
 .db-list-item:hover { background: #f9fafb; }
 .db-list-item:hover .db-list-title { color: #2563eb; }
-.db-list-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.db-list-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .db-list-title { color: #111827; font-weight: 500; }
-.db-list-sub { color: #6b7280; font-size: 12px; }
-.db-list-meta { color: #9ca3af; font-size: 11px; white-space: nowrap; flex-shrink: 0; text-align: right; line-height: 1.4; }
+.db-list-sub { color: #6b7280; font-size: 13px; }
+.db-list-meta { color: #9ca3af; font-size: 12px; white-space: nowrap; flex-shrink: 0; text-align: right; line-height: 1.5; }
 
 /* ── Empty states ────────────────────────────────── */
 .db-empty {
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    padding: 40px 20px; text-align: center;
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 40px 24px; text-align: center;
 }
 .db-empty-icon {
-    width: 52px; height: 52px; border-radius: 50%; background: #f3f4f6;
-    display: flex; align-items: center; justify-content: center; margin-bottom: 12px;
+    width: 64px; height: 64px; border-radius: 50%; background: #f3f4f6;
+    display: flex; align-items: center; justify-content: center; margin-bottom: 16px;
 }
-.db-empty p { margin: 0 0 4px; font-size: 14px; font-weight: 500; color: #374151; }
-.db-empty small { font-size: 12px; color: #9ca3af; display: block; margin-bottom: 16px; }
+.db-empty p { margin: 0 0 6px; font-size: 15px; font-weight: 500; color: #374151; }
+.db-empty small { font-size: 13px; color: #9ca3af; display: block; margin-bottom: 16px; }
 
 /* ── Recent Hires period dropdown ─────────────────── */
 .db-period-select {
@@ -303,9 +299,9 @@ $roleInfo = $roleLabels[$role] ?? $roleLabels['admin'];
                         </a>
                     <?php endforeach; ?>
                 <?php else: ?>
-                    <div class="db-empty" style="padding:30px 20px;">
+                    <div class="db-empty">
                         <div class="db-empty-icon">
-                            <svg width="22" height="22" fill="none" stroke="#9ca3af" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                            <svg width="26" height="26" fill="none" stroke="#9ca3af" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                         </div>
                         <p>No upcoming interviews</p>
                         <small>Interviews scheduled in the next 7 days will appear here</small>
@@ -340,9 +336,9 @@ $roleInfo = $roleLabels[$role] ?? $roleLabels['admin'];
                         </a>
                     <?php endforeach; ?>
                 <?php else: ?>
-                    <div class="db-empty" style="padding:30px 20px;">
+                    <div class="db-empty">
                         <div class="db-empty-icon">
-                            <svg width="22" height="22" fill="none" stroke="#9ca3af" stroke-width="1.5" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                            <svg width="26" height="26" fill="none" stroke="#9ca3af" stroke-width="1.5" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
                         </div>
                         <p>No recent activity</p>
                         <small>Logged calls, notes, and status changes will appear here</small>
