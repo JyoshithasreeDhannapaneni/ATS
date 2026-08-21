@@ -2321,8 +2321,7 @@ a[href*="currentAlpha"]:hover {
 }
 
 /* Pagination and filter controls container */
-.pager, 
-[class*="pager"],
+.pager,
 table + p,
 p.note + table + p {
     display: flex;
@@ -2332,6 +2331,21 @@ p.note + table + p {
     padding: 12px 0;
     font-size: 13px;
     color: var(--gray-600);
+}
+
+/* Legacy DataGrid prev/next links (lib/DataGrid.php, lib/Pager.php) - these
+ * sit *inside* the container styled above, so they must stay inline. The
+ * old [class*="pager"] selector matched this class by substring and made
+ * each link its own full-width flex block, stacking them vertically. */
+.pagerPrevNext {
+    display: inline;
+    color: var(--gray-600);
+    text-decoration: none;
+}
+
+a.pagerPrevNext:hover {
+    color: var(--primary);
+    text-decoration: underline;
 }
 
 /* Page navigation links */

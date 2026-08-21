@@ -137,6 +137,7 @@ table#calendarMonth td {
     vertical-align: top;
     height: 100px;
     width: 14.28%;
+    overflow: hidden;
     transition: background 0.15s ease;
 }
 
@@ -223,6 +224,7 @@ table#calendarWeek td {
     padding: 12px;
     vertical-align: top;
     min-height: 60px;
+    overflow: hidden;
 }
 
 table#calendarWeek td.empty {
@@ -282,7 +284,9 @@ table#calendarDay td.today {
    ============================================================ */
 .calendarEntry,
 .calendarEntryMultiple {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 6px;
     padding: 4px 8px;
     margin: 2px 0;
     border-radius: 4px;
@@ -293,12 +297,52 @@ table#calendarDay td.today {
     border-left: 3px solid;
     background: #fff;
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    overflow: hidden;
+    white-space: nowrap;
 }
 
 .calendarEntry:hover,
 .calendarEntryMultiple:hover {
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     transform: translateY(-1px);
+}
+
+/* Event chip internals - single-line, ellipsis-truncated so long titles
+ * never wrap/overflow the fixed-height day cell. */
+.calendarEntryTitle {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.calendarEntryMeta {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    flex-shrink: 0;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.calendarEntryReminder {
+    width: 10px;
+    height: 10px;
+    flex-shrink: 0;
+    opacity: 0.7;
+}
+
+.calendarEntryDuration {
+    opacity: 0.65;
+    flex-shrink: 0;
+}
+
+/* The candidate/company/contact link inside displayDataItemSmall carries
+ * its own legacy MRU icon (images/mru/*.gif) - hide it here so the chip
+ * stays clean; the icon is still shown wherever else that link renders. */
+.calendarEntryMeta img[src*="mru"] {
+    display: none;
 }
 
 /* Event type colors */

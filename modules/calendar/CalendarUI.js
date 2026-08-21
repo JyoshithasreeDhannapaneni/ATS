@@ -37,48 +37,34 @@ function generateCalendarEntrySmall(time, title, separator, entry)
     var visibleEntryID = visibleEntries.length;
     visibleEntries = visibleEntries.concat(entry);
 
-    var iconSet   = '<span nowrap="nowrap"><nobr>';
-    var typeImage = getImageByType(entry.getData('eventType'));
-    var string = '';
-
-
-    if (typeImage != '')
-    {
-        // FIXME: Show actual type of event instead of "Type of Event" in title.
-        iconSet += '<img class="absmiddle" src="' + typeImage + '" title="Type of Event" /> ';
-    }
-
-    iconSet += entry.getData('displayDataItemSmall');
+    var eventType = entry.getData('eventType');
+    var iconSet   = '<span class="calendarEntryMeta">' + entry.getData('displayDataItemSmall');
 
     if (entry.getData('reminderEnabled') == 1)
     {
-        iconSet += '<img class="absmiddle" src="' + imageAlert + '" title="Reminder Set" /> ';
+        iconSet += '<img class="calendarEntryReminder" src="' + imageAlert + '" title="Reminder Set" />';
     }
 
-    if (entry.getData('public') == 1)
-    {
-        iconSet += '<img class="absmiddle" src="images/public.gif" title="Public Entry" /> ';
-    }
+    iconSet += '</span>';
 
-    iconSet += '</nobr></nowrap>';
-
-    string += '<table><tr><td class="calendarEntry" onclick="handleClickEntry(visibleEntries['
+    var string = '<div class="calendarEntry event-type-' + eventType
+        + '" onclick="handleClickEntry(visibleEntries['
         + visibleEntryID
         + ']);" onmouseover="noAddEvent = true;" onmouseout="noAddEvent = false;">';
 
     if (entry.getData('allDay') != '1')
     {
-        string += '<span class="bold">'+ time + '</span> '
-            + iconSet + separator + '&nbsp;';
+        string += '<span class="bold">' + time + '</span>' + iconSet;
     }
     else
     {
-        string += iconSet + '&nbsp;';
+        string += iconSet;
     }
 
-    string += title + " - " + entry.getData('enteredByFirstName') + " " + entry.getData('enteredByLastName');
+    string += '<span class="calendarEntryTitle">' + title + ' - '
+        + entry.getData('enteredByFirstName') + ' ' + entry.getData('enteredByLastName') + '</span>';
 
-    string +='</td></tr></table>';
+    string += '</div>';
     return string;
 }
 
@@ -87,69 +73,44 @@ function generateCalendarEntryDayView(time, title, position, idDiv, idEntry, sep
     var visibleEntryID = visibleEntries.length;
     visibleEntries = visibleEntries.concat(entry);
 
-    var iconSet = '<span nowrap="nowrap"><nobr>';
-    var typeImage = getImageByType(entry.getData('eventType'));
-    var string = '';
-
-    iconSet += entry.getData('displayDataItemSmall');
-
-    if (typeImage != '')
-    {
-        // FIXME: Show actual type of event instead of "Type of Event" in title.
-        iconSet += '<img class="absmiddle" src="' + typeImage + '" title="Type of Event" /> ';
-    }
+    var eventType = entry.getData('eventType');
+    var iconSet   = '<span class="calendarEntryMeta">' + entry.getData('displayDataItemSmall');
 
     if (entry.getData('reminderEnabled') == 1)
     {
-        iconSet += '<img class="absmiddle" src="' + imageAlert + '" title="Reminder Set" /> ';
+        iconSet += '<img class="calendarEntryReminder" src="' + imageAlert + '" title="Reminder Set" />';
     }
 
-    if (entry.getData('public') == 1)
-    {
-        iconSet += '<img class="absmiddle" src="images/public.gif" title="Public Entry" /> ';
-    }
+    iconSet += '</span>';
 
-    iconSet += '</nobr></nowrap>';
-
-    if (entry.getData('allDay') != '1')
-    {
-        string += '<table><tr><td class="calendarEntry" id="'
-            + idEntry + '" onclick="handleClickEntry(visibleEntries['
-            + visibleEntryID
-            + ']);" onmouseover="noAddEvent = true;" onmouseout="noAddEvent = false;">';
-    }
-    else
-    {
-        string += '<table><tr><td class="calendarEntry" id="'
-            + idEntry + '" onclick="handleClickEntry(visibleEntries['
-            + visibleEntryID
-            + ']);" onmouseover="noAddEvent = true;" onmouseout="noAddEvent = false;">';
-    }
+    var string = '<div class="calendarEntry event-type-' + eventType + '" id="'
+        + idEntry + '" onclick="handleClickEntry(visibleEntries['
+        + visibleEntryID
+        + ']);" onmouseover="noAddEvent = true;" onmouseout="noAddEvent = false;">';
 
     if (entry.getData('allDay') != '1')
     {
         var durationText = getDurationString(entry.getData('duration'));
 
-        string += '<span class="bold">' + time + '</span> '
-            + iconSet + '('
-            + durationText + ') ' + separator + '&nbsp;';
+        string += '<span class="bold">' + time + '</span> <span class="calendarEntryDuration">('
+            + durationText + ')</span>' + iconSet;
     }
     else
     {
-        string += iconSet + '&nbsp;';
+        string += iconSet;
     }
 
-    string += title + " - " + entry.getData('enteredByFirstName') + " " + entry.getData('enteredByLastName');
+    string += '<span class="calendarEntryTitle">' + title + ' - '
+        + entry.getData('enteredByFirstName') + ' ' + entry.getData('enteredByLastName') + '</span>';
 
-    string +='</td></tr></table>';
-    
+    string += '</div>';
+
     return string;
 }
 
 function generateCalendarEntryGrouped(text)
 {
-    return '<table><tr><td class="calendarEntryMultiple" style="font-weight: bold;">'
-        + text + '</td></tr></table>';
+    return '<div class="calendarEntryMultiple">' + text + '</div>';
 }
 
 function calendarUpcomingEvents()
